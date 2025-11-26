@@ -1,0 +1,21 @@
+# LightRAG Service Requirements
+# TD-006 CORTEX (SESA3002a Protocol)
+# Cognitive Core for WORLD_OLLAMA
+
+# Core LightRAG framework
+lightrag-hku>=0.0.0.7
+
+# FastAPI server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+
+# Async support
+nest-asyncio>=1.6.0
+
+# Ollama client
+httpx>=0.27.0
+requests>=2.32.0
+
+# Logging and monitoring
+python-multipart>=0.0.12

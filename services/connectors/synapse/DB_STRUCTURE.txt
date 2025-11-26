@@ -1,0 +1,314 @@
+=== ╨б╨в╨а╨г╨Ъ╨в╨г╨а╨Р ╨С╨Ф OPEN WEBUI v0.6.38 ===
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: alembic_version
+  - version_num: VARCHAR(32) ЁЯФС PRIMARY KEY
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: auth
+  - id: VARCHAR(255)
+  - email: VARCHAR(255)
+  - password: TEXT
+  - active: INTEGER
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: channel
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - name: TEXT
+  - description: TEXT
+  - data: JSON
+  - meta: JSON
+  - access_control: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  - type: TEXT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: channel_member
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - channel_id: TEXT
+  - user_id: TEXT
+  - created_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: chat
+  - id: VARCHAR(255)
+  - user_id: VARCHAR(255)
+  - title: TEXT
+  - share_id: VARCHAR(255)
+  - archived: INTEGER
+  - created_at: DATETIME
+  - updated_at: DATETIME
+  - chat: JSON
+  - pinned: BOOLEAN
+  - meta: JSON
+  - folder_id: TEXT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 6
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: chatidtag
+  - id: VARCHAR(255)
+  - tag_name: VARCHAR(255)
+  - chat_id: VARCHAR(255)
+  - user_id: VARCHAR(255)
+  - timestamp: INTEGER
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: config
+  - id: INTEGER ЁЯФС PRIMARY KEY
+  - data: JSON
+  - version: INTEGER
+  - created_at: DATETIME
+  - updated_at: DATETIME
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: document
+  - id: INTEGER ЁЯФС PRIMARY KEY
+  - collection_name: VARCHAR(255)
+  - name: VARCHAR(255)
+  - title: TEXT
+  - filename: TEXT
+  - content: TEXT
+  - user_id: VARCHAR(255)
+  - timestamp: INTEGER
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: feedback
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - version: BIGINT
+  - type: TEXT
+  - data: JSON
+  - meta: JSON
+  - snapshot: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: file
+  - id: TEXT
+  - user_id: TEXT
+  - filename: TEXT
+  - meta: JSON
+  - created_at: INTEGER
+  - hash: TEXT
+  - data: JSON
+  - updated_at: BIGINT
+  - path: TEXT
+  - access_control: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: folder
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - parent_id: TEXT
+  - user_id: TEXT ЁЯФС PRIMARY KEY
+  - name: TEXT
+  - items: JSON
+  - meta: JSON
+  - is_expanded: BOOLEAN
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  - data: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: function
+  - id: TEXT
+  - user_id: TEXT
+  - name: TEXT
+  - type: TEXT
+  - content: TEXT
+  - meta: TEXT
+  - created_at: INTEGER
+  - updated_at: INTEGER
+  - valves: TEXT
+  - is_active: INTEGER
+  - is_global: INTEGER
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: group
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - name: TEXT
+  - description: TEXT
+  - data: JSON
+  - meta: JSON
+  - permissions: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: group_member
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - group_id: TEXT
+  - user_id: TEXT
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: knowledge
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - name: TEXT
+  - description: TEXT
+  - data: JSON
+  - meta: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  - access_control: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: memory
+  - id: VARCHAR(255)
+  - user_id: VARCHAR(255)
+  - content: TEXT
+  - updated_at: INTEGER
+  - created_at: INTEGER
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: message
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - channel_id: TEXT
+  - content: TEXT
+  - data: JSON
+  - meta: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  - parent_id: TEXT
+  - reply_to_id: TEXT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: message_reaction
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - message_id: TEXT
+  - name: TEXT
+  - created_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: migratehistory
+  - id: INTEGER ЁЯФС PRIMARY KEY
+  - name: VARCHAR(255)
+  - migrated_at: DATETIME
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 18
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: model
+  - id: TEXT
+  - user_id: TEXT
+  - base_model_id: TEXT
+  - name: TEXT
+  - meta: TEXT
+  - params: TEXT
+  - created_at: INTEGER
+  - updated_at: INTEGER
+  - access_control: JSON
+  - is_active: BOOLEAN
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: note
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - title: TEXT
+  - data: JSON
+  - meta: JSON
+  - access_control: JSON
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: oauth_session
+  - id: TEXT ЁЯФС PRIMARY KEY
+  - user_id: TEXT
+  - provider: TEXT
+  - token: TEXT
+  - expires_at: BIGINT
+  - created_at: BIGINT
+  - updated_at: BIGINT
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: prompt
+  - id: INTEGER ЁЯФС PRIMARY KEY
+  - command: VARCHAR(255)
+  - user_id: VARCHAR(255)
+  - title: TEXT
+  - content: TEXT
+  - timestamp: INTEGER
+  - access_control: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: tag
+  - id: VARCHAR(255) ЁЯФС PRIMARY KEY
+  - name: VARCHAR(255)
+  - user_id: VARCHAR(255) ЁЯФС PRIMARY KEY
+  - meta: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 3
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: tool
+  - id: TEXT
+  - user_id: TEXT
+  - name: TEXT
+  - content: TEXT
+  - specs: TEXT
+  - meta: TEXT
+  - created_at: INTEGER
+  - updated_at: INTEGER
+  - valves: TEXT
+  - access_control: JSON
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 0
+
+ЁЯУЛ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р: user
+  - id: VARCHAR(255)
+  - name: VARCHAR(255)
+  - email: VARCHAR(255)
+  - role: VARCHAR(255)
+  - profile_image_url: TEXT
+  - api_key: VARCHAR(255)
+  - created_at: INTEGER
+  - updated_at: INTEGER
+  - last_active_at: INTEGER
+  - settings: TEXT
+  - info: TEXT
+  - oauth_sub: TEXT
+  - username: VARCHAR(50)
+  - bio: TEXT
+  - gender: TEXT
+  - date_of_birth: DATE
+  ЁЯУК ╨Ч╨░╨┐╨╕╤Б╨╡╨╣: 1
+
+
+=== ╨Ф╨Х╨в╨Р╨Ы╨Ш ╨Т╨Р╨Ц╨Э╨л╨е ╨в╨Р╨С╨Ы╨Ш╨ж ===
+
+ЁЯЫая╕П ╨в╨Р╨С╨Ы╨Ш╨ж╨Р function (type=tool):
+  ID: knowledge_base
+    Name: Knowledge Base
+    Description: ╨Ф╨╛╤Б╤В╤Г╨┐ ╨║ ╨▒╨░╨╖╨╡ ╨╖╨╜╨░╨╜╨╕╨╣ WORLD_OLLAMA (331 ╨┤╨╛╨║╤Г╨╝╨╡╨╜╤В)
+
+ЁЯдЦ ╨в╨Р╨С╨Ы╨Ш╨ж╨Р model:
+  ID: qwen
+    Name: qwen
+    Base: qwen2.5:14b-instruct-q4_k_m
+    Tools: ['knowledge_base']
+    Functions: ['knowledge_base']
+
+ЁЯСд ╨в╨Р╨С╨Ы╨Ш╨ж╨Р user:
+  ID: 49011eee-6b38-4a32-b944-c76035ae4612
+    Name: Andrey Grushin
+    Email: zakonnet@gmail.com
+    Role: admin
+
+ЁЯТм ╨в╨Р╨С╨Ы╨Ш╨ж╨Р chat (╨┐╨╛╤Б╨╗╨╡╨┤╨╜╨╕╨╡ 3):
+  ID: 935db620-ac32-4025-baa9-a86e1678ce52
+    User: 49011eee-6b38-4a32-b944-c76035ae4612
+    Title: ЁЯПЧ Project WORLD_OLLAMA
+    Created: 1764092361
+
+  ID: 64f6eb47-0787-48f2-91b1-4317944c5746
+    User: 49011eee-6b38-4a32-b944-c76035ae4612
+    Title: ЁЯЪз Project Structure & Status
+    Created: 1764092296
+
+  ID: f73b91cb-4551-469e-b09a-f0d65a020cd9
+    User: 49011eee-6b38-4a32-b944-c76035ae4612
+    Title: Project Structure Overview ЁЯПЧ
+    Created: 1764092174
+
+тЬЕ ╨б╨Ы╨Х╨Я╨Ю╨Ъ ╨Ч╨Р╨Т╨Х╨а╨и╨Б╨Э

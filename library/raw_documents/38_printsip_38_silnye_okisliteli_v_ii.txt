@@ -1,0 +1,361 @@
+﻿КОГНИТИВНОЕ ГОРЕНИЕ: Архитектурная интеграция принципа TRIZ №38 «Сильные окислители» для радикального повышения качества генеративных систем ИИ
+
+
+
+
+Введение: От генерации к термодинамике смысла
+
+
+Современный ландшафт искусственного интеллекта переживает фундаментальный фазовый переход. Мы отходим от парадигмы стохастической генерации, основанной на вероятностном предсказании следующего токена, к парадигме агентного рассуждения, где качество ответа определяется не столько объемом обучающей выборки, сколько глубиной и интенсивностью логической обработки в момент инференса. В инженерной практике этот сдвиг аналогичен переходу от атмосферных двигателей внутреннего сгорания к высокопроизводительным реактивным системам. Однако, как и в термодинамике, эффективность процесса преобразования "сырого топлива" (пользовательского запроса) в "полезную работу" (валидный код, научное заключение, архитектурное решение) критически зависит от условий реакции.
+В данной исследовательской работе мы постулируем, что Принцип №38 Теории решения изобретательских задач (ТРИЗ) — «Сильные окислители» (Strong Oxidants / Boosted Interaction) — является наиболее точной и продуктивной концептуальной моделью для проектирования систем ИИ следующего поколения. ТРИЗ №38 предписывает замену обычной атмосферы на обогащенную кислородом, переход к чистому кислороду, использование ионизированного газа (озона) или плазмы для интенсификации процессов.1 Применительно к когнитивной архитектуре, "окислителем" выступает концентрация контекстуальной информации, строгость логических ограничений и агрессивность верификационных механизмов.
+Цель данного отчета — представить исчерпывающую архитектуру «Когнитивного двигателя внутреннего сгорания», где неопределенность "сжигается" в условиях сверхинтенсивной инференс-среды. Мы детально исследуем технологии обогащения контекста (Oxygen Injection), применение метафоры аэрокосмических двигателей для управления знаниями (LOX vs. Atmospheric) и создание агрессивных сред ионизированной критики для стерилизации ошибок.
+________________
+
+
+Глава 1. Технологии Обогащенного Контекста: Протоколы «Впрыска Кислорода»
+
+
+В химической кинетике скорость и полнота реакции горения лимитируются концентрацией окислителя. В генеративном ИИ "реакция" синтеза ответа часто затухает или идет по побочному пути (галлюцинации) из-за так называемой "бедности промпта" — недостатка контекстуального кислорода. Пользовательские запросы часто фрагментарны, двусмысленны и лишены необходимых ограничений. Принцип №38 в своей первой подкатегории («Заменить обычный воздух обогащенным») диктует необходимость внедрения систем автоматического обогащения входных данных.
+
+
+1.1 Автоматический «Впрыск Кислорода» через Мета-Промптинг
+
+
+«Впрыск кислорода» в когнитивной архитектуре реализуется через Мета-промптинг (Meta-Prompting) — технику, при которой модель не приступает к решению задачи немедленно, а сначала генерирует или извлекает оптимальный набор инструкций (мета-промпт) для управления собственной генерацией.3 Это создает среду с повышенной плотностью инструкций, гарантирующую, что процесс "горения" (рассуждения) будет проходить при оптимальных условиях.
+
+
+1.1.1 Механика и архитектура инжектора
+
+
+Система автоматического обогащения действует как промежуточный слой (middleware) между пользователем и базовой моделью (LLM). Этот слой перехватывает "сырой" запрос и пропускает его через цикл обогащения, прежде чем допустить к исполнению. Исследования показывают, что мета-промптинг позволяет трансформировать абстрактные задачи в структурированные шаблоны рассуждений, значительно повышая точность решения математических и логических задач по сравнению со стандартным few-shot промптингом.3
+Процесс инжекции состоит из трех фаз:
+1. Детекция интенции (Сжатие): Агент-аналитик выделяет ядро запроса, отсеивая синтаксический шум (азот).
+2. Каталитическое обогащение (Injection): Система обращается к библиотеке лучших практик и "впрыскивает" скрытые инструкции, которые пользователь подразумевал, но не эксплицировал.
+   * Пример: Если пользователь запрашивает код на Python, система автоматически добавляет требования соответствия стандарту PEP 8 5, использования аннотаций типов (type hinting) и обработки исключений, даже если эти требования отсутствовали в оригинальном запросе.6
+3. Структурная реконфигурация: Запрос переписывается в формат, принуждающий модель к определенному паттерну мышления (например, Chain-of-Thought или Persona Adoption).7
+
+
+1.1.2 Эмпирические доказательства: Утечки системных промптов (System Prompts)
+
+
+Наиболее убедительным доказательством эффективности "кислородного впрыска" служат архитектуры современных IDE с ИИ, таких как Cursor и GitHub Copilot. Утечки их системных промптов (System Prompts) демонстрируют, что эти инструменты никогда не передают запрос пользователя в "атмосферном" виде. Они обогащают его сотнями строк скрытых инструкций ("кислорода"), определяющих поведение агента.8
+Анализ утекших промптов показывает наличие жестких директив:
+* Императив чистоты: «Всегда следуй лучшим практикам для данного языка».
+* Императив лаконичности: «Не будь многословным, давай только код».
+* Псевдокод и планирование: Требование сначала написать план решения в псевдокоде перед генерацией финального решения.10
+Эти скрытые инструкции действуют как катализаторы, направляющие энергию модели в узкое, продуктивное русло. Без этого "обогащения" модель, подобно двигателю на обедненной смеси, работала бы нестабильно, выдавая синтаксически верный, но архитектурно слабый код.
+
+
+1.2 Гипотетические вкрапления: HyDE как синтетический окислитель
+
+
+Особой формой обогащения контекста является метод HyDE (Hypothetical Document Embeddings). В рамках метафоры ТРИЗ 38, HyDE можно рассматривать как создание синтетического окислителя там, где отсутствует естественный.
+Проблема классического поиска (RAG) заключается в том, что "бедный" запрос пользователя может не иметь семантического пересечения с правильным ответом в базе знаний (ситуация "zero-shot retrieval failure"). HyDE решает эту проблему, заставляя модель галлюцинировать (генерировать) гипотетический идеальный документ-ответ.11
+Этот гипотетический документ, даже содержащий фактические ошибки, обладает идеальной семантической структурой и насыщен ключевыми терминами, которых не было в запросе. Векторизация этого "фантома" позволяет найти реальные документы, которые семантически близки к идеальному ответу. Таким образом, мы используем способность модели к генерации для создания "кислородной подушки", которая затем используется для точного поиска реальных фактов.13 Это применение принципа 38 в чистом виде: мы модифицируем среду (запрос), насыщая её синтетическими элементами для усиления реакции поиска.
+
+
+1.3 Система Внимания Второго Порядка (System 2 Attention): Скрубберы Азота
+
+
+Если мета-промптинг добавляет кислород, то технология System 2 Attention (S2A) занимается удалением инертных газов (азота), которые мешают горению. В стандартных трансформерах механизм внимания (Attention) является "мягким" (soft attention) — он распределяет веса по всем токенам контекста, включая нерелевантные детали и отвлекающие факторы (distractors). Это приводит к тому, что модель может "отравиться" ложными корреляциями или мнением, случайно попавшим в контекст.15
+S2A реализует двухступенчатый процесс:
+1. Регенерация контекста: Модель сначала анализирует входной контекст и переписывает его, удаляя всё, что не имеет прямой причинно-следственной связи с задачей.
+2. Генерация ответа: Решение генерируется уже на основе очищенного контекста.17
+Это эквивалентно процессу очистки топлива или фильтрации воздуха перед подачей в камеру сгорания. Удаление "шумовых примесей" повышает температуру горения (качество рассуждения) и снижает вероятность галлюцинаций, вызванных сбивающими с толку факторами (sycophancy bias).18
+________________
+
+
+Глава 2. «Озонирование»: Применение моделей рассуждения (Reasoning Models)
+
+
+ТРИЗ Принцип 38 гласит: «Если обогащенного воздуха недостаточно, используйте чистый кислород. Если чистого кислорода недостаточно, используйте ионизированный газ (озон)». В химии озон ($O_3$) — это аллотропная модификация кислорода с гораздо более высоким энергетическим потенциалом и реакционной способностью. В сфере ИИ аналогом озона выступают модели рассуждения (Reasoning Models), такие как серия OpenAI o1.19
+
+
+2.1 Физика «времени на размышление»: Масштабирование вычислений при инференсе
+
+
+Стандартные LLM (например, GPT-4o, Claude 3.5) работают в режиме "System 1" (по Канеману) — быстрое, интуитивное, линейное предсказание токенов. Это стабильное горение. Модели класса o1 реализуют "System 2" — медленное, энергозатратное, деликатное мышление.
+"Озоном" здесь является Chain-of-Thought (CoT), который происходит скрыто от пользователя. При получении запроса модель не выдает ответ сразу. Она входит в состояние высокоинтенсивных вычислений, генерируя тысячи "токенов мысли" (thought tokens), которые не показываются в финальном выводе.21 Этот процесс представляет собой масштабирование вычислений во время тестирования (test-time compute scaling).
+
+
+2.1.1 Сжигание неопределенности
+
+
+Почему модели рассуждения подобны озону? Озон используется для стерилизации и окисления особо стойких загрязнений. Аналогично, "время на размышление" используется для "выжигания" логических противоречий и неопределенности, с которыми не справляются обычные модели.
+В процессе скрытого рассуждения модель:
+1. Генерирует план решения.
+2. Выполняет шаг.
+3. Верифицирует результат. Если обнаружена ошибка (логическая "примесь"), модель откатывается назад (backtracking) и пробует альтернативный путь.19
+4. Синтезирует итог.
+Этот итеративный процесс позволяет решать задачи олимпиадного уровня по математике и программированию, где цена ошибки на промежуточном этапе фатальна.21 Исследования показывают прямую корреляцию (scaling law) между объемом выделенного на "размышление" времени и точностью решения сложных задач (AIME, Codeforces).21
+
+
+2.2 Разрешение логических противоречий
+
+
+Озон крайне нестабилен и стремится вступить в реакцию. Модели рассуждения проявляют схожую "агрессивность" по отношению к двусмысленности. В отличие от стандартных моделей, которые склонны сглаживать противоречия или галлюцинировать правдоподобный ответ, модели типа o1 используют дополнительные вычислительные ресурсы для активного разрешения конфликтов в данных.
+При наличии противоречивых инструкций в промпте, "озонированная" модель с большей вероятностью задаст уточняющий вопрос или проведет внутреннюю проверку гипотез, чтобы устранить логический конфликт до генерации ответа.24 Это критически важно для задач, требующих строгой логики, например, при анализе юридических контрактов или верификации научного кода.25
+________________
+
+
+Глава 3. Аэрокосмическая Метафора: Жидкостный Ракетный Двигатель и Форсаж
+
+
+Переход от обработки естественного языка к автономным агентам требует смены инженерной метафоры. Мы предлагаем рассматривать когнитивный агент как аэрокосмический двигатель переменного цикла, способный переключаться между "атмосферным дыханием" и использованием внутренних запасов "жидкого кислорода" (LOX), а также включать форсажную камеру для кратковременного, но мощного рывка.
+
+
+3.1 Переход с «Атмосферного дыхания» (RAG) на «Жидкий кислород» (Parametric/Long Context)
+
+
+Retrieval-Augmented Generation (RAG) — это режим "воздушно-реактивного двигателя" (ВРД). Агент забирает "воздух" (информацию) из внешней среды (векторной базы данных) для поддержания горения. Это эффективно и экономично, но имеет ограничения по "высоте" (сложности задач) и "скорости" (латентности).
+Parametric Memory & Long Context — это режим "ракетного двигателя" (ЖРД). Агент использует собственные внутренние знания (параметрическую память) или загружает огромный объем контекста непосредственно в промпт (до 1-2 миллионов токенов), что аналогично бакам с жидким кислородом (LOX) на борту.26
+
+
+3.1.1 Ограничения RAG: Эффект разреженного воздуха
+
+
+При решении сложных задач, требующих синтеза информации из множества источников (multi-hop reasoning), RAG сталкивается с проблемой фрагментации. Поиск возвращает разрозненные куски ("разреженный воздух"), лишенные связности. Более того, наличие нерелевантных чанков (шума) в контексте может сбить модель с толку (эффект "Lost in the Middle").27 В терминах ТРИЗ, концентрация окислителя падает, и реакция затухает.
+
+
+3.1.2 Adaptive RAG и HippoRAG: Клапаны переключения режимов
+
+
+Для оптимизации мы используем архитектуру Adaptive RAG.28 Это "интеллектуальный клапан", который анализирует сложность запроса:
+* Низкая сложность: Используется RAG (атмосферный режим).
+* Высокая сложность / Глобальный анализ: Система отключает поиск и загружает полные документы в контекстное окно (режим LOX) или полагается на параметрические знания.
+Для улучшения связности используется HippoRAG — система, имитирующая гиппокамп человека, которая использует графы знаний для ассоциативного поиска, обеспечивая более высокую "плотность" релевантной информации, чем стандартный векторный поиск.30
+
+
+3.2 Форсажная камера: Режим «Boost Mode» для рефакторинга
+
+
+В авиации форсаж (afterburner) — это впрыск топлива непосредственно в выхлопную струю для получения кратковременного прироста тяги ценой огромного расхода топлива. В ИИ аналогом форсажа являются итеративные циклы самокоррекции (Self-Correction Loops) и сэмплирование Best-of-N.
+
+
+3.2.1 Термодинамика рефакторинга
+
+
+В режиме "Boost Mode" агент не удовлетворяется первым полученным ответом (Zero-shot). Он запускает цикл Reflexion 31:
+1. Генерация: Создается черновик кода или текста.
+2. Тестирование (Сгорание): Черновик прогоняется через юнит-тесты или верификаторы.
+3. Рефлексия (Впрыск топлива): Ошибки тестов подаются обратно на вход модели с инструкцией проанализировать причины сбоя.
+4. Повторная генерация: Модель переписывает код.
+Этот процесс "сжигает" токены (ресурс) с огромной скоростью, но позволяет достичь качества, недоступного при однократном проходе. Исследования показывают, что применение таких циклов повышает точность кодирования (HumanEval) с 60% до 80%+.31
+
+
+3.2.2 Best-of-N: Параллельное сгорание
+
+
+Еще более мощный метод — Best-of-N Sampling.33 Мы запускаем $N$ параллельных процессов генерации (например, 64 варианта решения), а затем используем модель-верификатор (Reward Model) для выбора лучшего результата. Это эквивалентно одновременной работе нескольких камер сгорания, из которых энергия отбирается только у самой эффективной.
+
+
+3.2.3 V-STaR: Тренировка верификаторов
+
+
+Для эффективной работы форсажа необходимы точные датчики. Методология V-STaR (Self-Taught Reasoner with Verifiers) предлагает тренировать верификаторы на ошибках, совершенных самой моделью в процессе обучения.35 Это создает замкнутый цикл, где система учится отличать "чистое горение" (верный ответ) от "копоти" (ошибок), постоянно повышая эффективность форсажного режима.
+________________
+
+
+Глава 4. Агрессивные среды: Ионизация и Стерилизация
+
+
+Последняя стадия применения принципа ТРИЗ 38 — использование ионизированного газа (плазмы). Плазма — это крайне агрессивная среда, способная разрушать молекулярные связи и стерилизовать биологические объекты. В когнитивной архитектуре мы создаем среды ионизированной критики для уничтожения слабых аргументов, логических ошибок и галлюцинаций.
+
+
+4.1 Ионизированная критика: Агент-Адверсарий
+
+
+В стандартном режиме LLM склонны к "сикофанству" (sycophancy) — стремлению согласиться с пользователем, даже если он неправ. Чтобы противостоять этому, мы вводим Агента-Адверсария (Adversarial Critic).37
+Этот агент настроен на "радиоактивный скептицизм". Его задача — атаковать сгенерированное решение.
+* Промпт Адверсария: «Ты — безжалостный аудитор безопасности. Твоя цель — найти уязвимости в этом коде или логические дыры в аргументации. Если ошибок нет, придумай граничные условия, которые сломают систему».39
+* Цикл стерилизации: Генератор должен защитить свое решение или переписать его (мутировать), чтобы выжить под "облучением" критики. Этот процесс (Critique-Guided Improvement) продолжается до тех пор, пока решение не станет устойчивым.40
+
+
+4.2 Конституционный ИИ как фоновая радиация
+
+
+Технология Constitutional AI (CAI), разработанная Anthropic, создает постоянное поле "фоновой радиации", которое подавляет нежелательное поведение без участия человека.41
+Принцип 38в ("Использовать ионизирующее излучение") здесь реализуется через внедрение "Конституции" — набора правил, которые модель использует для самокритики.
+1. Генерация: Модель создает ответ.
+2. Критика (Облучение): Модель проверяет ответ на соответствие Конституции (например, "Ответ должен быть безопасным, правдивым и не содержать PII").
+3. Коррекция: Модель переписывает ответ, удаляя нарушения.43
+Этот процесс происходит автоматически и скрыто, обеспечивая "стерильность" выхода.
+
+
+4.3 Защита от Промпт-инъекций: Барьеры ионизации
+
+
+В эпоху RAG возникает новая угроза — непрямые промпт-инъекции (Indirect Prompt Injection), когда злоумышленник внедряет вредоносные инструкции в документы (веб-страницы, PDF), которые затем "всасываются" агентом через RAG.44 Если агент "проглатывает" такой документ без проверки, он может быть скомпрометирован.
+Применение принципа ионизации здесь критично:
+* Санитизация входа: Весь контент из внешних источников (RAG) должен проходить через "камеру дезактивации" — отдельную LLM, настроенную исключительно на поиск и нейтрализацию скрытых инструкций, прежде чем попасть в основной контекст.46
+* Guardrails: Детерминированные фильтры (Guardrails AI, NVIDIA NeMo), которые блокируют вывод, если он содержит признаки успешной атаки или утечки данных.48
+________________
+
+
+Глава 5. Практическая реализация: «Когнитивный Двигатель Внутреннего Сгорания»
+
+
+Объединяя вышеописанные принципы, мы предлагаем интегральную архитектуру системы генерации нового поколения.
+
+
+5.1 Архитектура цикла сгорания
+
+
+Система работает как многоступенчатый каскад:
+Стадия
+	Аналогия ТРИЗ 38
+	Технология
+	Описание процесса
+	1. Впуск
+	Обогащение воздуха
+	Meta-Prompting / HyDE
+	Запрос пользователя анализируется. Инжектор добавляет инструкции (PEP8, форматы). HyDE генерирует синтетический контекст для улучшения поиска.
+	2. Сжатие
+	Скрубберы (очистка)
+	System 2 Attention
+	Из контекста удаляется "азот" — нерелевантные детали, отвлекающие факторы.
+	3. Воспламенение
+	Жидкий кислород / Озон
+	Reasoning Models (o1) / Adaptive RAG
+	В зависимости от сложности, запускается либо быстрый инференс (RAG), либо глубокое рассуждение (LOX/o1) с загрузкой полного контекста.
+	4. Рабочий ход (Форсаж)
+	Катализаторы / Дожигание
+	Reflexion / Best-of-N
+	Черновик ответа проходит через тесты. Ошибки запускают циклы рефакторинга (RCI). Генерируется N вариантов, выбирается лучший.
+	5. Выхлоп
+	Ионизация / Стерилизация
+	Adversarial Critic / Guardrails
+	"Радиоактивный" критик атакует решение. Guardrails проверяют финальный вывод на безопасность и соответствие стандартам.
+	
+
+5.2 Таблица: Сравнительный анализ режимов работы
+
+
+Для наглядности сравним эффективность режимов в зависимости от типа задачи.
+Характеристика
+	Атмосферный режим (Standard RAG)
+	Форсажный режим (Boosted / o1-like)
+	Окислитель
+	Внешний контекст (Vector DB)
+	Внутренняя логика (Reasoning) + Полный контекст
+	Латентность
+	Низкая (секунды)
+	Высокая (десятки секунд - минуты)
+	Стоимость (Токены)
+	Низкая ($)
+	Экстремально высокая ($$$$)
+	Устойчивость к шуму
+	Низкая (галлюцинации при шуме)
+	Высокая (сжигает шум логикой)
+	Применение
+	Чат-боты, поиск фактов
+	Кодогенерация, наука, юриспруденция
+	Механизм коррекции
+	Отсутствует (Greedy decoding)
+	Reflexion, Backtracking, Verification
+	
+
+5.3 Экономика качества (Trade-offs)
+
+
+Внедрение принципа "Сильных окислителей" неизбежно ведет к росту стоимости инференса. "Сжигать" токены в циклах рассуждения (CoT) и рефлексии дороже, чем генерировать ответ в один проход. Однако, в критических доменах (Software Engineering, FinTech), стоимость ошибки (бага, уязвимости) на порядки превышает стоимость вычислений.
+Математика масштабирования инференса (Inference Scaling Laws) доказывает, что для сложных задач выгоднее потратить 100x токенов на рассуждение (Test-time compute) маленькой модели, чем использовать модель в 100x раз больше, но в режиме "System 1".20 Это открывает путь к использованию компактных, но "агрессивных" агентов, работающих в режиме постоянного форсажа.
+________________
+
+
+Заключение
+
+
+Интеграция Принципа №38 «Сильные окислители» в архитектуру генеративного ИИ позволяет преодолеть ограничения стохастической природы языковых моделей. Переходя от пассивного предсказания токенов к активному «когнитивному горению» — процессу, насыщенному обогащенным контекстом, глубоким рассуждением и агрессивной верификацией, — мы создаем системы, способные к подлинной автономности и надежности.
+Будущее качественной генерации лежит не только в увеличении параметров моделей, но и в создании реакторов с экстремальными условиями для инференса, где любая неопределенность сжигается дотла, оставляя лишь кристаллически чистую структуру смысла.
+________________
+
+
+Использованные материалы (Citations)
+
+
+В отчете использованы данные из источников:.1
+Источники
+1. 40 Inventive Principles of TRIZ: A Practical Guide for Process Innovation, дата последнего обращения: ноября 25, 2025, https://leanoutsidethebox.com/40-inventive-principles-of-triz/
+2. TRIZ Inventive Principles 33 through 40 - Quality Assurance Solutions, дата последнего обращения: ноября 25, 2025, https://www.quality-assurance-solutions.com/TRIZ-Inventive-Principles-33.html
+3. What is Meta Prompting? - IBM, дата последнего обращения: ноября 25, 2025, https://www.ibm.com/think/topics/meta-prompting
+4. Meta Prompting | Prompt Engineering Guide, дата последнего обращения: ноября 25, 2025, https://www.promptingguide.ai/techniques/meta-prompting
+5. PEP 8 – Style Guide for Python Code, дата последнего обращения: ноября 25, 2025, https://peps.python.org/pep-0008/
+6. Prompting LLMs for Programming & Code completion (Python Focused) | by Sohaib Malik, дата последнего обращения: ноября 25, 2025, https://medium.com/@sohaibmalikdev/prompting-llms-for-programming-code-completion-python-focused-d7294da0074f
+7. Meta prompting methods and templates : r/PromptDesign - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/PromptDesign/comments/1fvg2ww/meta_prompting_methods_and_templates/
+8. Cursor AI's Leaked Prompt: 7 Prompt Engineering Tricks for Vibe Coders - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/data-science-in-your-pocket/cursor-ais-leaked-prompt-7-prompt-engineering-tricks-for-vibe-coders-c75ebda1a24b
+9. This guy Literally LEAKED the $10B Cursor System Prompt! - YouTube, дата последнего обращения: ноября 25, 2025, https://www.youtube.com/watch?v=oztb1qdfsnA
+10. FULL LEAKED Devin AI System Prompts and Tools : r/LocalLLaMA - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/LocalLLaMA/comments/1k1fk88/full_leaked_devin_ai_system_prompts_and_tools/
+11. What is HyDE (Hypothetical Document Embeddings) and when should I use it? - Milvus, дата последнего обращения: ноября 25, 2025, https://milvus.io/ai-quick-reference/what-is-hyde-hypothetical-document-embeddings-and-when-should-i-use-it
+12. [2212.10496] Precise Zero-Shot Dense Retrieval without Relevance Labels - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2212.10496
+13. Hypothetical Document Embeddings (HyDE) - Haystack Docs, дата последнего обращения: ноября 25, 2025, https://docs.haystack.deepset.ai/docs/hypothetical-document-embeddings-hyde
+14. Better RAG with HyDE - Hypothetical Document Embeddings - Zilliz Learn, дата последнего обращения: ноября 25, 2025, https://zilliz.com/learn/improve-rag-and-information-retrieval-with-hyde-hypothetical-document-embeddings
+15. How to Use System 2 Attention Prompting to Improve LLM Accuracy - PromptHub, дата последнего обращения: ноября 25, 2025, https://www.prompthub.us/blog/how-to-use-system-2-attention-prompting-to-improve-llm-accuracy
+16. [2311.11829] System 2 Attention (is something you might need too) - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2311.11829
+17. System 2 Attention (S2A) Prompting: Filtering Irrelevant Context, дата последнего обращения: ноября 25, 2025, https://learnprompting.org/docs/advanced/zero_shot/s2a
+18. Inside System 2 Attention: Meta AI New Method to Improve Reasoning in LLMs, дата последнего обращения: ноября 25, 2025, https://jrodthoughts.medium.com/inside-system-2-attention-meta-ai-new-method-to-improve-reasoning-in-llms-4424751a6be1
+19. What is test-time compute and how to scale it? - Hugging Face, дата последнего обращения: ноября 25, 2025, https://huggingface.co/blog/Kseniase/testtimecompute
+20. Revisiting the Test-Time Scaling of o1-like Models: Do they Truly Possess Test-Time Scaling Capabilities? - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2502.12215v1
+21. Learning to reason with LLMs | OpenAI, дата последнего обращения: ноября 25, 2025, https://openai.com/index/learning-to-reason-with-llms/
+22. o1: A Technical Primer - LessWrong, дата последнего обращения: ноября 25, 2025, https://www.lesswrong.com/posts/byNYzsfFmb2TpYFPW/o1-a-technical-primer
+23. Inference Scaling Reshapes AI Governance - Toby Ord, дата последнего обращения: ноября 25, 2025, https://www.tobyord.com/writing/inference-scaling-reshapes-ai-governance
+24. Reasoning best practices - OpenAI API, дата последнего обращения: ноября 25, 2025, https://platform.openai.com/docs/guides/reasoning-best-practices
+25. Ten Tests: GPT4o vs OpenAI 01 Reasoning with Logic Puzzles - YouTube, дата последнего обращения: ноября 25, 2025, https://www.youtube.com/watch?v=iINPTCQWy9E
+26. Long Context Models Explained: Do We Still Need RAG?, дата последнего обращения: ноября 25, 2025, https://www.louisbouchard.ai/long-context-vs-rag/
+27. Long Context vs. RAG for LLMs: An Evaluation and Revisits - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2501.01880v1
+28. Adaptive RAG: The Ultimate Guide to Dynamic Retrieval-Augmented Generation, дата последнего обращения: ноября 25, 2025, https://www.machinelearningplus.com/gen-ai/adaptive-rag-ultimate-guide-to-dynamic-retrieval-augmented-generation/
+29. Adaptive RAG explained: What to know in 2025 - Meilisearch, дата последнего обращения: ноября 25, 2025, https://www.meilisearch.com/blog/adaptive-rag
+30. From RAG to Memory: Non-Parametric Continual Learning for Large Language Models, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2502.14802v1
+31. Reflexion | Prompt Engineering Guide, дата последнего обращения: ноября 25, 2025, https://www.promptingguide.ai/techniques/reflexion
+32. [2303.17491] Language Models can Solve Computer Tasks - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2303.17491
+33. [2502.12668] Evaluation of Best-of-N Sampling Strategies for Language Model Alignment, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2502.12668
+34. Aligning Reinforcement Learning with Best-of-N Sampling via max@k Optimization - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2510.23393v1
+35. V-STaR: Training Verifiers for Self-Taught Reasoners - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2402.06457v2
+36. [2402.06457] V-STaR: Training Verifiers for Self-Taught Reasoners - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2402.06457
+37. Adversarial collaboration between AI coding tools improves solution quality for complex tasks : r/LocalLLaMA - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/LocalLLaMA/comments/1navnzc/adversarial_collaboration_between_ai_coding_tools/
+38. LLM Critics Help Catch LLM Bugs - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2407.00215v1
+39. A Survey on Code Generation with LLM-based Agents - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2508.00083v1
+40. The Lighthouse of Language: Enhancing LLM Agents via Critique-Guided Improvement, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2503.16024v2
+41. Constitutional AI explained - Toloka AI, дата последнего обращения: ноября 25, 2025, https://toloka.ai/blog/constitutional-ai-explained/
+42. Constitutional AI: Harmlessness from AI Feedback - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/pdf/2212.08073
+43. Constitutional AI: Harmlessness from AI Feedback - Anthropic, дата последнего обращения: ноября 25, 2025, https://www.anthropic.com/research/constitutional-ai-harmlessness-from-ai-feedback
+44. LLM01:2025 Prompt Injection - OWASP Gen AI Security Project, дата последнего обращения: ноября 25, 2025, https://genai.owasp.org/llmrisk/llm01-prompt-injection/
+45. how-microsoft-defends-against-indirect-prompt-injection-attacks, дата последнего обращения: ноября 25, 2025, https://www.microsoft.com/en-us/msrc/blog/2025/07/how-microsoft-defends-against-indirect-prompt-injection-attacks
+46. LLM Prompt Injection Prevention - OWASP Cheat Sheet Series, дата последнего обращения: ноября 25, 2025, https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html
+47. Securing Amazon Bedrock Agents: A guide to safeguarding against indirect prompt injections | Artificial Intelligence - AWS, дата последнего обращения: ноября 25, 2025, https://aws.amazon.com/blogs/machine-learning/securing-amazon-bedrock-agents-a-guide-to-safeguarding-against-indirect-prompt-injections/
+48. Bridging the Safety Gap: A Guardrail Pipeline for Trustworthy LLM Inferences - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2502.08142v1
+49. What Are AI Guardrails? - IBM, дата последнего обращения: ноября 25, 2025, https://www.ibm.com/think/topics/ai-guardrails
+50. Scaling test-time compute - a Hugging Face Space by HuggingFaceH4, дата последнего обращения: ноября 25, 2025, https://huggingface.co/spaces/HuggingFaceH4/blogpost-scaling-test-time-compute
+51. 40 Inventive Principles - The Triz Journal, дата последнего обращения: ноября 25, 2025, https://the-trizjournal.com/40-inventive-principles-examples/
+52. 40 Inventive Principles with Examples for Human Factors and Ergonomics - Altshuller Institute for TRIZ Studies, дата последнего обращения: ноября 25, 2025, http://aitriz.org/documents/TRIZCON/Proceedings/Hipple-Caplan-and-Tschirhart-40-Inventive-Principles-with-Examples.pdf
+53. The Art of Inventive Prompting: A TRIZ Perspective - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/384679851_The_Art_of_Inventive_Prompting_A_TRIZ_Perspective
+54. Trading inference-time compute for adversarial robustness - OpenAI, дата последнего обращения: ноября 25, 2025, https://openai.com/index/trading-inference-time-compute-for-adversarial-robustness/
+55. Enhance your prompts with meta prompting | OpenAI Cookbook, дата последнего обращения: ноября 25, 2025, https://cookbook.openai.com/examples/enhance_your_prompts_with_meta_prompting
+56. CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing, дата последнего обращения: ноября 25, 2025, https://openreview.net/forum?id=Sx038qxjek
+57. Automatically Correcting Large Language Models: Surveying the Landscape of Diverse Automated Correction Strategies | Transactions of the Association for Computational Linguistics - MIT Press Direct, дата последнего обращения: ноября 25, 2025, https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00660/120911/Automatically-Correcting-Large-Language-Models
+58. The Power of Reflection in Agentic Workflows: Introducing Dynamic Dot | by Agent2.AI, дата последнего обращения: ноября 25, 2025, https://medium.com/@media_91660/the-power-of-reflection-in-agentic-workflows-introducing-dynamic-dot-3411707c8303
+59. Direct Prompt Injection: A Critical New Security Challenge for Software Engineers & QA's, дата последнего обращения: ноября 25, 2025, https://medium.com/@samuel.sperling/direct-prompt-injection-a-critical-new-security-challenge-for-software-engineers-qas-16723ef57efc
+60. System Prompt Hardening: The Backbone of Automated AI Security - SPLX, дата последнего обращения: ноября 25, 2025, https://splx.ai/blog/system-prompt-hardening-the-backbone-of-automated-ai-security
+61. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | by i-king-of-ml, дата последнего обращения: ноября 25, 2025, https://medium.com/analytics-vidhya/retrieval-augmented-generation-for-knowledge-intensive-nlp-tasks-c4f5dbb2fcbf
+62. [D] retrieval-augmented generation vs Long-context LLM, are we sure the latter will substitute the first? : r/MachineLearning - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/MachineLearning/comments/1fabu65/d_retrievalaugmented_generation_vs_longcontext/
+63. What is Test Time Compute? | CSA, дата последнего обращения: ноября 25, 2025, https://cloudsecurityalliance.org/blog/2024/12/13/test-time-compute
+64. saschaschramm/best-of-n-sampling - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/saschaschramm/best-of-n-sampling
+65. [2410.05318] Improving LLM Reasoning through Scaling Inference Computation with Collaborative Verification - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2410.05318
+66. Public Constitutional AI - Digital Commons @ Georgia Law - UGA, дата последнего обращения: ноября 25, 2025, https://digitalcommons.law.uga.edu/cgi/viewcontent.cgi?article=1819&context=glr
+67. RedCodeAgent: Automatic red-teaming agent against diverse code agents - Microsoft, дата последнего обращения: ноября 25, 2025, https://www.microsoft.com/en-us/research/blog/redcodeagent-automatic-red-teaming-agent-against-diverse-code-agents/
+68. Can LLM Agents Really Debate? A Controlled Study of Multi-Agent Debate in Logical Reasoning - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2511.07784v1
+69. Debate4MATH: Multi-Agent Debate for Fine-Grained Reasoning in Math - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2025.findings-acl.862.pdf
+70. I Built a Multi-Agent Debate Tool Integrating all the smartest models - Does This Improve Answers? : r/LLM - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/LLM/comments/1nipb52/i_built_a_multiagent_debate_tool_integrating_all/
+71. Improving Factuality and Reasoning in Language Models through Multiagent Debate, дата последнего обращения: ноября 25, 2025, https://composable-models.github.io/llm_debate/
+72. [2303.11366] Reflexion: Language Agents with Verbal Reinforcement Learning - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2303.11366
+73. microsoft/vscode-autopep8: Formatting support for python using autopep8. - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/microsoft/vscode-autopep8
+74. Adaptive RAG: Elevating Query Handling with Smarter Retrieval and Generation - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@sumakbn/adaptive-rag-elevating-query-handling-with-smarter-retrieval-and-generation-f5853f5e6ff1
+75. [2403.14403] Adaptive-RAG: Learning to Adapt Retrieval-Augmented Large Language Models through Question Complexity - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2403.14403
+76. Self-Reflective Retrieval-Augmented Generation (SELF-RAG) | by Cobus Greyling - Medium, дата последнего обращения: ноября 25, 2025, https://cobusgreyling.medium.com/self-reflective-retrieval-augmented-generation-self-rag-f5cbad4412d5
+77. Self-RAG: AI That Knows When to Double-Check - Analytics Vidhya, дата последнего обращения: ноября 25, 2025, https://www.analyticsvidhya.com/blog/2025/01/self-rag/
+78. Self-RAG: Learning to Retrieve, Generate, and Critique through Self-Reflection - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2310.11511
+79. Decoding the RAG Paper: Why Hybrid Memory Matters for Modern NLP Systems - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@mudassar.hakim/decoding-the-rag-paper-why-hybrid-memory-matters-for-modern-nlp-systems-e013aba94e49
+80. Amazon Bedrock Guardrails expands support for code domain | Artificial Intelligence - AWS, дата последнего обращения: ноября 25, 2025, https://aws.amazon.com/blogs/machine-learning/amazon-bedrock-guardrails-expands-support-for-code-domain/
+81. Your LLM Output Is Confidently Wrong. Here's How To Fix It. | by Mike Oaten | Tikos Tech, дата последнего обращения: ноября 25, 2025, https://medium.com/tikos-tech/your-llm-output-is-confidently-wrong-heres-how-to-fix-it-08194fdf92b9
+82. 5 Steps to Handle LLM Output Failures - Ghost, дата последнего обращения: ноября 25, 2025, https://latitude-blog.ghost.io/blog/5-steps-to-handle-llm-output-failures/
+83. Adding guardrails to large language models. - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/guardrails-ai/guardrails

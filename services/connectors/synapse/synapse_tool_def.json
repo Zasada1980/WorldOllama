@@ -1,0 +1,74 @@
+{
+  "type": "function",
+  "function": {
+    "name": "lookup_knowledge",
+    "description": "Поиск информации в базе знаний проекта WORLD_OLLAMA (331 документ). Используйте этот инструмент для получения технических деталей, документации, отчетов по темам: GPU overclocking (RTX 5060 Ti), SSL certificates, AI agents (LangGraph, CrewAI), ТРИЗ principles, LightRAG, Project structure, и другие технические вопросы. База знаний содержит 1469 сущностей и 1560 связей в графе знаний.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Точный и подробный поисковый запрос. Будьте конкретны и используйте технические термины. Примеры: 'Как разогнать память RTX 5060 Ti через MSI Afterburner?', 'Структура проекта WORLD_OLLAMA', 'Принципы ТРИЗ для решения технических противоречий', 'Сравнение LangGraph и CrewAI'."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["naive", "local", "global", "hybrid"],
+          "description": "Режим поиска в графе знаний. 'hybrid' (рекомендуется) - комбинированный поиск для максимальной полноты. 'local' - локальный entity-based поиск. 'global' - глобальный граф-поиск. 'naive' - прямой векторный поиск (быстрее, но менее точно).",
+          "default": "hybrid"
+        }
+      },
+      "required": ["query"]
+    },
+    "returns": {
+      "type": "string",
+      "description": "Текстовый ответ из базы знаний (обычно 2000-3000 символов контекстуальной информации). Если информация не найдена, возвращается сообщение 'Информация не найдена в базе знаний CORTEX.'"
+    }
+  },
+  "integration_notes": {
+    "cortex_endpoint": "http://localhost:8004/query",
+    "timeout": "30-90 seconds (LLM generation time)",
+    "coverage": "331/336 documents (98.5%)",
+    "knowledge_graph": "1469 nodes, 1560 edges",
+    "languages": "Russian + English (auto-detected)",
+    "deployment": "TD-006 CORTEX (LightRAG 1.4.9.8)",
+    "limitations": [
+      "Rerank disabled (bug workaround v1.4.9.8)",
+      "5 documents pending (non-critical)",
+      "Queries may take 30-90s (normal for deep analysis)"
+    ]
+  },
+  "usage_examples": [
+    {
+      "description": "Технический вопрос про GPU",
+      "query": "Как безопасно разогнать память RTX 5060 Ti?",
+      "mode": "hybrid",
+      "expected_response_length": "2000-3000 chars"
+    },
+    {
+      "description": "Структура проекта",
+      "query": "Какова файловая структура WORLD_OLLAMA?",
+      "mode": "local",
+      "expected_response_length": "1500-2500 chars"
+    },
+    {
+      "description": "Концептуальный вопрос",
+      "query": "В чем разница между LangGraph и CrewAI для AI агентов?",
+      "mode": "hybrid",
+      "expected_response_length": "2500-3500 chars"
+    }
+  ],
+  "ollama_function_schema": {
+    "name": "lookup_knowledge",
+    "description": "Search WORLD_OLLAMA knowledge base (331 technical documents, GraphRAG with 1469 entities). Topics: GPU overclocking, SSL, AI agents, ТРИЗ, project docs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Detailed search query with technical terms"
+        }
+      },
+      "required": ["query"]
+    }
+  }
+}

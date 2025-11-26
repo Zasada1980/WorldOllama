@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.1.0",
+  "market_context": {
+    "currency": "₪",
+    "usd_to_ils_rate": 3.6
+  },
+  "profiles": {
+    "default": "high_margin",
+    "high_margin": {
+      "name": "Жёсткая маржа 30%+",
+      "target_margin": 0.30,
+      "pvr_threshold": 0.85,
+      "description": "Классический режим, нацеленный на максимальную прибыль с каждой сделки."
+    },
+    "quick_turnover": {
+      "name": "Быстрый оборот",
+      "target_margin": 0.15,
+      "pvr_threshold": 0.95,
+      "description": "Режим для высоколиквидных товаров, где важна скорость продажи, а не максимальная маржа."
+    }
+  },
+  "coefficients": {
+    "state_and_warranty": {
+      "new_warranty": { "rvi_modifier": 1.15, "keywords": ["חדש באריזה", "new in box", "с гарантией"] },
+      "used_warranty": { "rvi_modifier": 1.05, "keywords": ["באחריות", "with warranty", "есть чек"] },
+      "used_ok": { "rvi_modifier": 1.0, "keywords": ["משומש", "used", "במצב טוב"] },
+      "used_after_mining": { "rvi_modifier": 0.8, "keywords": ["بعد التعدين", "after mining", "לאחר כרייה", "после майнинга"] },
+      "for_parts": { "rvi_modifier": 0.3, "keywords": ["לחלקים", "for parts", "на запчасти"] }
+    },
+    "liquidity": {
+      "high": {
+        "margin_modifier": -0.05,
+        "components": ["3060", "3060 ti", "1660 super", "10400f", "12400f", "5600x", "5800x"]
+      },
+      "low": {
+        "margin_modifier": 0.10,
+        "components": ["xeon", "quadro", "radeon pro", "threadripper", "titan"]
+      }
+    }
+  },
+  "rules": {
+    "incompatibility_penalty_factor": 0.5,
+    "max_component_age_years": 10,
+    "unknown_data_penalty_factor": 0.9
+  },
+  "scoring_weights": {
+    "build": { "cpu": 0.4, "gpu": 0.4, "ram": 0.1, "other": 0.1 },
+    "gpu_solo": { "cpu": 0, "gpu": 0.9, "ram": 0, "other": 0.1 },
+    "cpu_kit": { "cpu": 0.6, "gpu": 0, "ram": 0.2, "other": 0.2 }
+  }
+}

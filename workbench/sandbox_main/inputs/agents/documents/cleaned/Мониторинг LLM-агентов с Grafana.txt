@@ -1,0 +1,533 @@
+Анализ Полноты Информации: Мониторинг LLM-агентов с Помощью Grafana, Prometheus и OpenTelemetry
+
+
+
+
+I. Анализ Публичных Дашбордов Grafana: Оценка по Критерию 1 (JSON Export)
+
+
+Анализ "авторитетных сайтов программирования", в частности Grafana Community, на предмет наличия готовых дашбордов для мониторинга LLM-агентов, выявляет существенный пробел в полноте информации, несмотря на формальное выполнение базовых критериев.
+
+
+A. Механика Экспорта JSON (Критерий 1)
+
+
+Критерий 1 (Grafana dashboard JSON export) выполняется тривиально с механической точки зрения. Платформа Grafana по своей сути спроектирована для обмена дашбордами в формате JSON.1 Любой дашборд, созданный в Grafana, может быть экспортирован как JSON-объект, который инкапсулирует полную компоновку, переменные, стили, запросы к источникам данных и метаданные.2 Процесс хорошо документирован и включает в себя шаги "Share dashboard" -> "Export".3
+Таким образом, запрос на "JSON export" следует интерпретировать не как вопрос о возможности экспорта, а как вопрос о наличии зрелых, комплексных и переносимых JSON-моделей, специально предназначенных для мониторинга LLM-агентов, на публичных площадках.
+
+
+B. Аудит Существующих Дашбордов на Grafana Community
+
+
+Прямой аудит Grafana Community 4 выявляет несколько дашбордов, связанных с LLM, но ни одного универсального, независимого от фреймворка решения для "LLM-агентов". Вместо этого существующие дашборды, как правило, привязаны к конкретным инструментам или шлюзам.
+1. TrueFoundry LLM Gateway (ID 23388): Этот дашборд предназначен для мониторинга конкретного продукта — "LLM Gateway".5 Он отслеживает метрики запросов, но привязан к инфраструктуре TrueFoundry, а не к общей концепции LLM-агента.
+2. Langchain Observability Dashboard (ID 19623): На первый взгляд, этот дашборд 6 кажется прямым ответом на запрос. Однако при ближайшем рассмотрении он предоставлен сторонним вендором (xpuls.ai) и требует интеграции их проприетарного SDK (xpuls-ml-sdk).6 JSON-модель этого дашборда бесполезна без этого специфического SDK, который генерирует ожидаемые метрики. Это пример "вендорской привязки" (vendor lock-in), а не общедоступное решение.
+3. Open WebUI Dashboard (ID 22867): Этот дашборд 7 предназначен для мониторинга Open WebUI и локально запущенных LLM. Он представляет ценность, поскольку подтверждает важность критериев 2 и 3, явно включая панели для "Total prompt tokens", "Average Token/s" и "Average duration".7 Однако его метрики специфичны для Open WebUI.
+4. LiteLLM Dashboard (ID 24055): Это наиболее зрелый и релевантный публичный дашборд из проанализированных.8 Он явно реализует ключевые критерии:
+   * Критерий 2 (Latency): Включает вычисление перцентилей: percentile(..., 75|90|95|99).
+   * Критерий 3 (Tokens): Использует метрики токенов: gen_ai.usage.prompt_tokens, gen_ai.usage.completion_tokens, llm.usage.total_tokens.
+   * Недостаток: Он разработан для источника данных Azure Monitor и извлекает метрики из customDimensions, специфичных для LiteLLM, а не из общего стандарта.
+
+
+C. Синтез и Анализ Пробелов (Gap Analysis) для Раздела I
+
+
+Аудит показывает, что на Grafana Community не существует единого, авторитетного, независимого от фреймворка дашборда для "LLM-агентов", который бы полностью удовлетворял всем критериям.
+Проблема заключается не в JSON (Критерий 1), а в данных. Все доступные дашборды (ID 19623, 22867, 24055) жестко привязаны к конкретным инструментам, которые генерируют нестандартизированные метрики.6
+Более того, существует фундаментальный концептуальный разрыв. Запрос касается LLM-агентов. Агент представляет собой сложную последовательность операций (например, RAG-цепочка, использование инструментов), которая может включать множество вызовов LLM, векторных поисков и вызовов API.9 Дашборды, подобные LiteLLM 8, отслеживают отдельные LLM-вызовы (инференс). Они не отслеживают общую "сквозную" (end-to-end) задержку выполнения всей задачи агента. Если RAG-агент выполняет один поиск в векторной базе данных и два LLM-вызова, существующие дашборды покажут три отдельных события, но скроют общую задержку выполнения, которую ощущает пользователь.
+Следовательно, "полнота информации" на существующих публичных дашбордах отсутствует. Для создания действительно полного и переносимого дашборда требуется общий стандарт для инструментации как LLM-вызовов, так и самих агентских цепочек.
+________________
+Таблица 1: Сравнительный Анализ Публичных Дашбордов LLM в Grafana Community
+
+
+ID Дашборда
+	Название / Поставщик
+	Критерий 1 (JSON)
+	Критерий 2 (Latency p95)
+	Критерий 3 (Tokens)
+	Критерий 4 (Errors)
+	Ключевая Зависимость (Источник Метрик)
+	19623
+	Langchain Observability (xpuls.ai)
+	Да
+	Неявно
+	Неявно
+	Неявно
+	Проприетарный xpuls-ml-sdk 6
+	22867
+	Open WebUI Dashboard
+	Да
+	Только Average
+	Да (названия панелей)
+	Неявно
+	Специфичные метрики Open WebUI 7
+	24055
+	LiteLLM Dashboard
+	Да
+	Да (p75-p99)
+	Да (имена метрик)
+	Неявно
+	Azure Monitor (из customDimensions LiteLLM) 8
+	23388
+	TrueFoundry LLM Gateway
+	Да
+	Неявно
+	Неявно
+	Неявно
+	Специфичные метрики TrueFoundry Gateway 5
+	________________
+
+
+II. Фундамент Мониторинга: Стандартизация с OpenTelemetry (OTel)
+
+
+Как показано в Разделе I, проблема создания переносимого дашборда заключается в отсутствии стандартизированного уровня метрик. Решением этой проблемы является внедрение OpenTelemetry (OTel) — стандарта де-факто для наблюдаемости, который Grafana Labs активно продвигает для мониторинга LLM.11 OTel предоставляет три столпа (трассировки, метрики и логи) 10, которые необходимы для устранения выявленных пробелов.
+
+
+A. Экосистема Инструментации OTel для LLM
+
+
+Для генерации стандартизированных телеметрических данных из LLM-приложения (например, созданного на LangChain) разработчики должны использовать OTel-совместимые библиотеки инструментации. Эти библиотеки автоматически перехватывают вызовы LLM, выполнение цепочек и обращения к векторным базам данных.
+Ключевые проекты в этой экосистеме включают:
+* opentelemetry-instrumentation-langchain: Официальная библиотека PyPI, предназначенная для автоматической трассировки приложений LangChain, захватывая выполнение цепочек и вызовы инструментов.13
+* OpenLLMetry: Набор OTel-расширений, специально созданный для наблюдаемости LLM-приложений поверх OTel.15
+* OpenLIT: Аналогичная библиотека, предоставляющая авто-инструментацию на базе OTel для LLM и VectorDBs, предназначенную для работы с Prometheus и Grafana.17
+Интеграция одной из этих библиотек является необходимым первым шагом для генерации стандартизированных метрик, которые затем могут быть использованы в Grafana.
+
+
+B. Семантические Конвенции OTel GenAI
+
+
+Ключом к созданию универсального дашборда является использование "семантических конвенций" OTel. Это "камень Розетты", определяющий стандартные имена для метрик и атрибутов, связанных с Generative AI.18 Приложения, использующие эти конвенции, будут генерировать метрики с одинаковыми именами, что делает дашборд переносимым.
+Хотя семантические конвенции OTel для GenAI все еще находятся в стадии "Development" 20, они уже определяют ключевые атрибуты, необходимые для выполнения критериев запроса:
+* Критерий 3 (Tokens): Конвенции определяют стандартные атрибуты для подсчета токенов, которые затем преобразуются в метрики Prometheus 21:
+   * llm.token_count.prompt (или llm.usage.input_tokens)
+   * llm.token_count.completion (или llm.usage.output_tokens)
+   * llm.token_count.total (или llm.usage.total_tokens 8)
+* Критерий 2 (Latency): Конвенции OTel 19 определяют метрики длительности, такие как gen_ai.client.duration или rpc.client.duration (для вызовов API к LLM). Эти метрики должны быть типа Histogram для расчета перцентилей.
+* Критерий 4 (Errors): OTel имеет стандартный атрибут error.type.22 Инструментация автоматически помечает спаны с ошибками (например, HTTP 503 от OpenAI), что позволяет создавать метрики для отслеживания частоты ошибок.
+________________
+Таблица 2: Матрица Метрик OTel GenAI для Prometheus/Grafana (Рецепт Дашборда)
+Эта таблица представляет собой "blueprint" для построения дашборда, сопоставляя критерии заказчика с конкретными техническими реализациями в стеке OTel/Prometheus.
+Критерий Заказчика
+	Семантическое Имя OTel (Конвенция)
+	Тип Метрики OTel
+	Имя Метрики в Prometheus (Конвенция)
+	Ключевая Функция PromQL
+	Критерий 2 (Latency)
+	gen_ai.client.duration
+	Histogram
+	gen_ai_client_duration_bucket
+	histogram_quantile()
+	Критерий 3 (Tokens)
+	llm.token_count.total
+	Counter
+	llm_token_count_total
+	sum(increase())
+	Критерий 4 (API Errors)
+	rpc.client.requests (с error.type)
+	Counter
+	rpc_client_requests_total{status="ERROR"}
+	sum(rate())
+	________________
+
+
+III. Архитектура Панелей Задержки (Latency): Реализация Критерия 2
+
+
+
+
+A. Техническое Обоснование: avg против histogram
+
+
+Мониторинг средней (avg) задержки для LLM-агентов является недостаточным и часто вводит в заблуждение. Один медленный вызов, например, из-за "холодного старта" модели, будет "размыт" сотнями быстрых ответов из кэша, скрывая реальную проблему.
+Критерий 2 (p50, p95, p99) является "золотым стандартом" Site Reliability Engineering (SRE), поскольку он измеряет "хвост" распределения (tail latency).24 p95 показывает, какую задержку испытывают 5% пользователей с наихудшим опытом, а p99 — 1%.24 Для вычисления перцентилей в Prometheus требуется использование метрики типа Histogram.25
+
+
+B. Инструментация OTel и Метрики Prometheus
+
+
+Инструментарий OTel (например, OpenLLMetry) будет генерировать метрику gen_ai.client.duration (или rpc.client.duration) типа Histogram. Когда эта метрика экспортируется в Prometheus, она представляется в виде набора временных рядов 25:
+1. gen_ai_client_duration_bucket{le="...",...} (Кумулятивные ведра (buckets) для наблюдений)
+2. gen_ai_client_duration_sum{...} (Сумма всех наблюдаемых значений)
+3. gen_ai_client_duration_count{...} (Общее количество наблюдений)
+
+
+C. Рецепты PromQL для Панелей Grafana (Критерий 2)
+
+
+Для создания панелей "Time series" в Grafana, отображающих перцентили задержки, следует использовать следующие PromQL-запросы:
+P99 Latency (Time Series):
+
+
+Фрагмент кода
+
+
+
+
+histogram_quantile(
+ 0.99,
+ sum(rate(gen_ai_client_duration_bucket[5m])) by (le, gen_ai_request_model)
+)
+
+* Разбор: rate() используется для нормализации _bucket (которые по своей сути являются Counters).25 sum() агрегирует ведра по всем экземплярам (pods) вашего приложения. histogram_quantile() вычисляет 99-й перцентиль.28 Агрегация by (le,...) является обязательной.
+P50 и P95 Latency:
+Панели создаются дублированием того же запроса, заменяя 0.99 на 0.50 и 0.95 соответственно.
+
+
+D. Расширенный Анализ: Задержка Агента (Agent) против Задержки LLM (Inference)
+
+
+Как было выявлено в Разделе I, LLM-агент — это трассировка (trace) из множества вызовов (spans).9 Приведенные выше запросы отслеживают только задержку одного вызова LLM (inference). Это не позволяет диагностировать проблемы в логике агента (например, медленный поиск в RAG).
+Решение (SpanMetrics): OTel Collector включает процессор spanmetrics, который автоматически генерирует метрики Histogram из данных трассировки. Этот процессор создаст метрику, представляющую общую длительность выполнения агента, например: trace_duration_bucket{service_name="my-rag-agent"}.
+PromQL для Сквозной Задержки Агента (p95):
+
+
+Фрагмент кода
+
+
+
+
+histogram_quantile(
+ 0.95,
+ sum(rate(trace_duration_bucket{service_name="my-rag-agent"}[5m])) by (le)
+)
+
+Рекомендация по Архитектуре: Полный дашборд Grafana должен содержать две отдельные панели: "Agent End-to-End Latency (p95)" (используя trace_duration_bucket) и "LLM Inference Latency (p95)" (используя gen_ai_client_duration_bucket). Это позволяет инженеру немедленно определить источник проблемы: медленная логика агента (RAG, поиск) или медленный ответ LLM-провайдера.
+
+
+IV. Архитектура Панелей Затрат: Агрегация Токенов (Критерий 3)
+
+
+
+
+A. Техническое Обоснование: Counter
+
+
+Использование токенов — это монотонно возрастающее значение (оно никогда не уменьшается). Это делает его идеальным кандидатом для метрики OTel типа Counter.30 Инструментация OTel (согласно конвенциям 21 или специфичным реализациям 32) будет генерировать метрики Counter для отслеживания токенов.
+
+
+B. Рецепты PromQL для Панелей Grafana (Критерий 3)
+
+
+Предполагая, что OTel генерирует метрику llm_token_count_total с меткой direction="prompt" или direction="completion" (на основе OTel-конвенций 21):
+Панель "Stat": Общее Использование Токенов (за выбранный диапазон):
+
+
+Фрагмент кода
+
+
+
+
+sum(increase(llm_token_count_total[$__range])) by (gen_ai_request_model, direction)
+
+* Разбор: increase() — это ключевая функция PromQL для Counters. Она вычисляет прирост значения счетчика за указанный диапазон времени.30 Использование переменной Grafana $__range автоматически привязывает расчет к выбранному пользователем диапазону времени на дашборде.
+Панель "Time series": Скорость Потребления Токенов (в секунду):
+
+
+Фрагмент кода
+
+
+
+
+sum(rate(llm_token_count_total[5m])) by (gen_ai_request_model, direction)
+
+* Разбор: rate() показывает нормализованную скорость потребления токенов в секунду.33 Это полезно для выявления всплесков нагрузки. Эта панель в Grafana должна использовать тип "Stacked Bar Chart" для визуализации общего потребления с разбивкой по моделям.
+
+
+C. Расширенный Анализ: Расчет Стоимости (Cost)
+
+
+Критерий 3 (агрегация токенов) на самом деле является запросом на агрегацию стоимости. Однако ни OTel, ни Prometheus "из коробки" не предоставляют метрику llm_cost.
+Проблема заключается в том, что цены (например, $0.005 за 1000 токенов "prompt" для gpt-4o) являются внешними данными, которых нет в Prometheus. PromQL не предназначен для сложных соединений с внешними базами данных цен.
+Архитектурное Решение: Единственный прагматичный способ реализовать панель "Total Cost ($)" в Grafana — это "жестко закодировать" (hardcode) цены непосредственно в PromQL-запросах.
+PromQL для Панели "Stat": Общая Стоимость (USD) для gpt-4o:
+
+
+Фрагмент кода
+
+
+
+
+(
+ sum(increase(llm_token_count_total{direction="prompt", gen_ai_request_model="gpt-4o"}[$__range])) / 1000 * 0.005
+)
++
+(
+ sum(increase(llm_token_count_total{direction="completion", gen_ai_request_model="gpt-4o"}[$__range])) / 1000 * 0.015
+)
+
+Хотя это решение требует ручного обновления при изменении цен, оно является единственным практическим способом реализовать расчет стоимости, используя стандартный стек Prometheus/Grafana.
+
+
+V. Архитектура Панелей Качества: Визуализация Ошибок (Критерий 4)
+
+
+Критерий 4 (визуализация ошибок) является наиболее сложным, поскольку "ошибки" в контексте LLM-агентов бывают двух типов.34
+
+
+A. Определение "Ошибки" в LLM
+
+
+1. Тип 1: Ошибки API / Инфраструктуры: Это стандартные сбои (например, HTTP 500/503 от OpenAI, HTTP 429 (rate limits), ошибки подключения).35 Они легко отслеживаются.
+2. Тип 2: "Тихие Сбои" (Silent Failures): Это "провалы" качества.9 Агент вернул ответ HTTP 200 OK, но ответ является галлюцинацией, нерелевантным, токсичным или пустым.9
+
+
+B. Рецепты PromQL для Ошибок Типа 1 (API)
+
+
+Инструментация OTel автоматически помечает спаны с ошибками, используя атрибут error.type.22 OTel-коллектор или SDK преобразует это в метрику Counter, например, rpc_client_requests_total с меткой status_code="ERROR" или status_code=~"5..".
+Панель "Gauge": Общий Процент Ошибок API (5xx):
+
+
+Фрагмент кода
+
+
+
+
+(
+ sum(rate(rpc_client_requests_total{status_code=~"5.."}[5m]))
+/
+ sum(rate(rpc_client_requests_total[5m]))
+) * 100
+
+* Разбор: Это канонический PromQL-запрос для расчета процента ошибок 35, путем деления количества неудавшихся запросов на общее количество запросов.
+
+
+C. Архитектура Мониторинга для Ошибок Типа 2 (Silent Failures)
+
+
+Это критический пробел в существующих стандартах. Ни OTel 18, ни Prometheus не могут автоматически обнаружить "тихий сбой" или галлюцинацию. Метрики качества, такие как "корректность ответа" или "релевантность" 38, должны быть сгенерированы приложением.
+"Авторитетные сайты" (Prometheus, Grafana) предоставляют инструменты для агрегации метрик, но не для генерации метрик качества, специфичных для домена.39
+Архитектурное Решение (Предписание):
+Для полного выполнения Критерия 4 разработчик LLM-агента должен реализовать логику оценки (evaluation) внутри приложения. Это может быть эвристика (например, проверка ответа на ``) или "LLM-as-a-judge" (использование другого LLM для оценки ответа).38
+Затем приложение должно самостоятельно генерировать пользовательские OTel-метрики.
+Пример Инструментации (Python OTel SDK - Псевдокод):
+
+
+Python
+
+
+
+
+# (В коде вашего LLM-агента)
+from opentelemetry import metrics
+
+meter = metrics.get_meter("my.llm.agent")
+evaluation_counter = meter.create_counter("llm_agent_evaluations_total")
+
+#... запуск агента...
+result = agent.run(...)
+
+#... логика оценки...
+if is_hallucination(result):
+   evaluation_counter.add(1, {"model": "gpt-4o", "status": "hallucination"})
+else:
+   evaluation_counter.add(1, {"model": "gpt-4o", "status": "OK"})
+
+PromQL для Панели "Gauge" (Процент Галлюцинаций):
+
+
+Фрагмент кода
+
+
+
+
+(
+ sum(rate(llm_agent_evaluations_total{status="hallucination"}[5m]))
+/
+ sum(rate(llm_agent_evaluations_total[5m]))
+) * 100
+
+Это единственный практический способ реализовать мониторинг качества (Критерий 4) в полном объеме с использованием стека Grafana/Prometheus.
+
+
+VI. Интеграция с LangSmith: Замкнутая Экосистема или Интегрируемый Компонент?
+
+
+Анализ LangSmith показывает, что это в первую очередь проприетарная, закрытая платформа для трассировки (tracing).40 Она имеет собственные встроенные дашборды 40, но не предлагает прямого плагина данных Grafana.
+Интеграция LangSmith в стек мониторинга Prometheus/Grafana возможна по двум направлениям:
+1. Мониторинг Инфраструктуры LangSmith: Self-hosted версии LangSmith поставляются с Helm-чартом, который включает Prometheus-экспортеры для своих бэкенд-компонентов (Redis, Postgres, Nginx).46 Это не мониторинг LLM-агентов; это мониторинг самой платформы LangSmith.
+2. Экспорт OTel из Клиента LangSmith: Это ключевой и правильный путь интеграции. Клиентский SDK LangSmith (для Python) поддерживает "двойной экспорт" (fan-out).48 При установке LANGSMITH_OTEL_ENABLED=true 21, SDK отправляет OTel-данные (трассировки) одновременно и в облако LangSmith, и на OTel-коллектор пользователя.48
+Архитектурное Решение:
+"Золотой путь" интеграции — это настройка "fan-out".48 Это позволяет использовать LangSmith для его основной цели (детальная трассировка и отладка агентов), в то время как OTel Collector 47 получает тот же поток данных, преобразует трассировки в метрики (через spanmetrics) и экспортирует их в Prometheus для агрегации и визуализации в Grafana.
+Важно отметить, что LangSmith не является уникальным в этой возможности. Исследование выявляет множество открытых альтернатив 53, таких как Langfuse 44 и Arize Phoenix 42, которые также основаны на OTel и могут быть бесплатно размещены локально, в то время как self-hosting LangSmith требует платной лицензии.44
+
+
+VII. Завершение Стека Мониторинга: Правила AlertManager (Критерий 5)
+
+
+Критерий 5 (правила AlertManager) переводит мониторинг из пассивного (визуализация в Grafana) в проактивный (оповещение). AlertManager — это компонент Prometheus, который использует выражения PromQL (expr) для запуска оповещений.50
+Ниже приведены готовые правила оповещений (llm-alerts.yaml), основанные на PromQL-запросах, разработанных в Разделах III, IV и V.
+
+
+A. Готовые Правила (YAML Configuration)
+
+
+
+
+YAML
+
+
+
+
+groups:
+- name: llm_agent_alerts
+ rules:
+ # Критерий 2: Высокая Сквозная Задержка Агента (p95)
+ # 
+ - alert: LLMAgentHighP95Latency
+   expr: histogram_quantile(0.95, sum(rate(trace_duration_bucket{service_name="my-rag-agent"}[5m])) by (le)) > 20
+   for: 10m
+   labels:
+     severity: critical
+   annotations:
+     summary: "P95 E2E latency for 'my-rag-agent' is above 20s"
+     description: "The 95th percentile latency for agent {{$labels.service_name}} is {{ $value }}s."
+
+ # Критерий 4: Высокий Уровень Ошибок API (5xx)
+ # 
+ - alert: LLMHighAPIErrorRate
+   expr: (sum(rate(rpc_client_requests_total{status_code=~"5.."}[5m])) / sum(rate(rpc_client_requests_total[5m]))) * 100 > 5
+   for: 10m
+   labels:
+     severity: warning
+   annotations:
+     summary: "LLM API error rate is above 5%"
+     description: "The overall LLM API 5xx error rate is {{ $value }}%."
+
+ # Критерий 4: Высокий Уровень "Тихих Сбоев" (Качество)
+ # [38, 39]
+ - alert: LLMHighHallucinationRate
+   expr: (sum(rate(llm_agent_evaluations_total{status="hallucination"}[10m])) / sum(rate(llm_agent_evaluations_total[10m]))) * 100 > 10
+   for: 15m
+   labels:
+     severity: warning
+   annotations:
+     summary: "LLM agent hallucination rate is above 10%"
+     description: "Model {{$labels.model}} is hallucinating in {{ $value }}% of evaluations. (Based on custom evaluation metric)."
+
+ # Критерий 3: Обнаружение Всплеска Затрат (Аномалия Токенов)
+ - alert: LLMCostSpike
+   expr: sum(rate(llm_token_count_total[5m])) > (2 * avg_over_time(sum(rate(llm_token_count_total[1h]))[1h:5m]))
+   for: 15m
+   labels:
+     severity: critical
+   annotations:
+     summary: "Sudden spike in LLM token usage detected!"
+     description: "Current token rate ({{ $value }}) is more than 2x the 1-hour average. Investigate potential cost overrun."
+
+________________
+Таблица 3: Сводный Справочник (Playbook) Метрик и Оповещений
+Задача / Критерий
+	Тип Панели / Правило
+	Выражение PromQL (Пример)
+	К2: Задержка LLM (p95)
+	Time Series
+	histogram_quantile(0.95, sum(rate(gen_ai_client_duration_bucket[5m])) by (le,...))
+	К2: Задержка Агента (p95)
+	Alert
+	histogram_quantile(0.95, sum(rate(trace_duration_bucket{...}[5m])) by (le)) > 20
+	К3: Общее Потребление Токенов
+	Stat Panel
+	sum(increase(llm_token_count_total[$__range])) by (direction)
+	К3: Расчет Стоимости (USD)
+	Stat Panel
+	(sum(increase(llm_token_count_total{direction="prompt",...}[$__range])) / 1000 * 0.005) +...
+	К4: % Ошибок API (5xx)
+	Gauge / Alert
+	(sum(rate(rpc_client_requests_total{status_code=~"5.."}[5m])) / sum(rate(rpc_client_requests_total[5m]))) * 100 > 5
+	К4: % Галлюцинаций
+	Gauge / Alert
+	(sum(rate(llm_agent_evaluations_total{status="hallucination"}[5m])) / sum(rate(llm_agent_evaluations_total[5m]))) * 100 > 10
+	________________
+
+
+VIII. Итоговый Синтез и Рекомендации по Построению Производственного Дашборда
+
+
+
+
+A. Итоговая Оценка Полноты Информации
+
+
+Анализ "авторитетных сайтов" по заданным критериям выявляет следующее:
+1. Grafana Community (Критерий 1): "Полная" (в смысле "готовая к использованию") JSON-модель для мониторинга LLM-агентов отсутствует. Существующие дашборды (например, ID 19623, 24055) привязаны к конкретным SDK (xpuls.ai) или источникам данных (Azure Monitor/LiteLLM).6 Проблема не в Grafana, а в отсутствии стандартизированного уровня метрик.
+2. Prometheus (Критерии 2, 3, 4, 5): Документация Prometheus предоставляет все необходимые функции (histogram_quantile, increase, rate, alert) 25 для построения дашборда, но не предоставляет сами метрики, специфичные для LLM.
+3. LangSmith: Является мощной платформой трассировки 40, но не является прямым источником метрик для Grafana. Его интеграция происходит опосредованно через стандарт OTel 48, что делает его одним из многих вариантов (включая открытые альтернативы 44) в стеке наблюдаемости.
+
+
+B. Архитектурный "Золотой Стандарт" (Предписание)
+
+
+"Полная" система мониторинга, удовлетворяющая всем 5 критериям, должна быть построена, а не найдена. Этот отчет предоставляет все необходимые компоненты для ее построения.
+Рекомендуемый Архитектурный "Золотой Стандарт":
+1. Шаг 1: Инструментация (Код Агента): Внедрить в приложение LLM-агента OTel-инструментацию, используя стандартные библиотеки, такие как opentelemetry-instrumentation-langchain 13 или OpenLLMetry.16
+2. Шаг 2: (Критически Важно) Пользовательские Метрики: Дополнить стандартную OTel-инструментацию пользовательскими метриками (согласно Разделу V-C) для отслеживания "тихих сбоев" (галлюцинаций, релевантности).38
+3. Шаг 3: Сбор (OTel Collector): Настроить OTel Collector. Он должен получать данные от приложения, использовать процессор spanmetrics (для преобразования трасс агентов в метрики задержки) и экспортировать данные в два пункта назначения:
+   * Трассировки в бэкенд (например, LangSmith 48, Langfuse 44 или Jaeger).
+   * Метрики в Prometheus (через Prometheus Exporter или OTLP-приемник Prometheus 52).
+4. Шаг 4: Хранение (Prometheus): Prometheus будет скрейпить метрики, сгенерированные OTel Collector.
+5. Шаг 5: Визуализация (Grafana): Создать новый дашборд Grafana "LLM Agent Observability" и использовать "рецепты" PromQL из Таблицы 3 (Разделы III, IV, V) для заполнения панелей.
+6. Шаг 6: Оповещение (AlertManager): Развернуть YAML-файл правил оповещений (из Раздела VII) 50 для проактивного мониторинга.
+
+
+C. Заключительный Вывод
+
+
+Идеальный "JSON export" (Критерий 1), который ищет пользователь, не существует в публичном доступе, поскольку он зависит от несуществующего универсального стандарта метрик для конкретных инструментов.
+Этот отчет предоставляет архитектурный "blueprint" и все необходимые технические "рецепты" (имена метрик OTel, запросы PromQL, правила AlertManager), которые позволяют заказчику самостоятельно создать этот JSON-файл. Это единственный путь к достижению "полноты информации" по всем пяти критериям.
+Источники
+1. Share dashboards and panels | Grafana documentation, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+2. Dashboard JSON model - Grafana documentation, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+3. Import and export your Grafana dashboards - Sitecore Documentation, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+4. Grafana dashboards | Grafana Labs, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+5. TrueFoundry LLM Gateway | Grafana Labs, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+6. Langchain Observability Dashboard | Grafana Labs, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+7. Grafana Dashboard for Open WebUI | Grafana Labs, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+8. LiteLLM | Grafana Labs, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+9. LangChain Observability: From Zero to Production in 10 Minutes | Last9, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+10. LLM Observability with OpenTelemetry: A Practical Guide | by Kartik Dudeja - Medium, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+11. A complete guide to LLM observability with OpenTelemetry and Grafana Cloud, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+12. Metrics - OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+13. opentelemetry-instrumentation-langchain · PyPI, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+14. Tracing LangChain apps with Elastic, OpenLLMetry, and OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+15. InftyAI/Awesome-LLMOps: An awesome & curated list of best LLMOps tools. - GitHub, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+16. An awesome & curated list of best LLMOps tools for developers - GitHub, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+17. An Introduction to Observability for LLM-based applications using OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+18. Metrics semantic conventions - OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+19. OpenTelemetry semantic conventions 1.38.0, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+20. Semantic conventions for generative AI systems | OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+21. Trace with OpenTelemetry - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+22. Semantic conventions for generative AI metrics - OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+23. Semantic conventions for generative client AI spans | OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+24. LLM Guardrails Latency: Performance Impact and Optimization - Modelmetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+25. Histograms and summaries - Prometheus, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+26. Top 3 queries to add to your PromQL cheat sheet - Chronosphere, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+27. What is the difference between histogram_quantile and Rate Explained - Prometheus Explained | SigNoz, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+28. PromQl: Calculating p99 over a time interval - Stack Overflow, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+29. [Metrics] Histogram and summary differences in opentelemetry #3767 - GitHub, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+30. Prometheous Query on llms total tokens - Stack Overflow, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+31. Prometheus and OpenMetrics Compatibility | OpenTelemetry, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+32. Metrics - vLLM, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+33. 10 Dashboards That Save AI+DB On-Call | by Thinking Loop | Sep, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+34. Top Metrics for LLM Failure Alerts - Ghost, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+35. Essential PromQL Queries for Knowledge Graphs & LLM Text Embeddings : Part 1, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+36. Detecting Request-Based Anomalies with Prometheus, Alertmanager, and Grafana, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+37. PromQL query to graph the rate of incoming requests - Stack Overflow, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+38. LLM Evaluation Metrics: The Ultimate LLM Evaluation Guide - Confident AI, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+39. How to Automate Alerts for LLM Performance Degradation - Traceloop, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+40. Monitor projects with dashboards - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+41. LangSmith - Observability - LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+42. Open Source LangSmith Alternative: Arize Phoenix vs. LangSmith, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+43. Frequently asked questions - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+44. Is Langfuse a LangSmith Alternative?, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+45. LangSmith vs. Helicone: Best Open-Source Tool for LLM Observability, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+46. Deploy an observability stack for your LangSmith deployment - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+47. Export LangSmith telemetry to your observability backend - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+48. Trace with OpenTelemetry - LangSmith docs - LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+49. Configure your collector for LangSmith telemetry - Docs by LangChain, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+50. Alerting rules - Prometheus, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+51. Prometheus Alertmanager: What is it, Why Use it & Key Features - Groundcover, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+52. Using Prometheus as your OpenTelemetry backend, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]
+53. Langsmith started charging. Time to compare alternatives. : r/LangChain - Reddit, дата последнего обращения: ноября 5, 2025, [URL_REMOVED]

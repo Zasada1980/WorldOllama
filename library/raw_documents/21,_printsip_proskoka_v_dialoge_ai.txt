@@ -1,0 +1,345 @@
+﻿ПРОТОКОЛ «ПРОСКОК»: АРХИТЕКТУРНАЯ ИНТЕГРАЦИЯ ПРИНЦИПА TRIZ №21 В АВТОНОМНЫЕ ИНТЕЛЛЕКТУАЛЬНЫЕ АГЕНТЫ
+
+
+
+
+1. Введение: Эволюция «Вредоносной Операции» в Когнитивных Системах
+
+
+В современной архитектуре искусственного интеллекта (ИИ) наблюдается фундаментальный сдвиг от парадигмы «максимальной генерации» к парадигме «управляемой эффективности». Традиционные подходы к проектированию больших языковых моделей (LLM) фокусировались на способности модели генерировать связный и длинный текст, имитируя человеческое рассуждение. Однако с появлением агентных систем (Agentic AI), где модели действуют автономно, выполняя последовательности инструментов и решений, возникли новые классы отказов: бесконечные логические петли, галлюцинации, вызванные перенасыщением контекста, и уязвимости безопасности, возникающие при длительном контакте с вредоносными данными.
+В инженерной практике для решения проблем, связанных с вредными или опасными этапами процесса, десятилетиями используется Принцип изобретательства TRIZ №21: «Проскок» (Skipping / Rushing Through). Согласно классическому определению Генриха Альтшуллера и современным интерпретациям Джека Хиппла, суть принципа заключается в проведении процесса или его отдельных этапов (например, разрушаемых, вредных или опасных операций) на высокой скорости.1 Канонический пример — использование высокоскоростной бормашины, которая сверлит зуб быстрее, чем тепло успевает передаться в нервную ткань, предотвращая болевой шок и некроз.2 Другие примеры включают резку пластика лазером быстрее, чем материал успевает деформироваться от тепла, или концепцию «Fail Fast» (быстрый отказ) в разработке продуктов.3
+Данный отчет представляет собой исчерпывающее исследование того, как принцип «Проскок» может быть перенесен из физической инженерии в когнитивную архитектуру ИИ-агентов. Мы переопределяем понятие «вредоносной операции» для цифрового разума:
+1. Резонанс (Resonance): Самоподдерживающиеся циклы ошибок и повторений, ведущие к истощению ресурсов и потере когерентности.4
+2. Тепловая нагрузка (Thermal Load): Накопление вероятности пробоя системы безопасности (jailbreak) при длительном взаимодействии с токсичным контекстом.5
+3. Когнитивное трение (Cognitive Friction): Педагогический вред от навязывания пользователю известной теории, ведущий к снижению мотивации.6
+Цель данного исследования — разработать архитектурные паттерны, позволяющие агентам распознавать ситуации, где «медленно и тщательно» означает «опасно», и применять тактику высокой скорости (проскока) для минимизации системного ущерба.
+________________
+
+
+2. Аспект I: Уклонение от Резонанса и Механизмы Быстрого Отказа
+
+
+В физике резонанс возникает, когда частота внешнего воздействия совпадает с собственной частотой системы, вызывая катастрофический рост амплитуды колебаний. В агентных системах мы наблюдаем семантический резонанс — явление, при котором агент попадает в «логическую петлю» или «галлюцинаторный вихрь», повторяя одни и те же ошибочные паттерны рассуждений.
+
+
+2.1 Феноменология «Логической Петли» и Нарративного Затмения
+
+
+Исследования показывают, что LLM склонны к застреванию в рекурсивных ошибках. Это особенно заметно в цепочках рассуждений (Chain-of-Thought, CoT), где модель может многократно генерировать фразы типа «Подождите, если...» (Wait, if...), не продвигаясь к решению, пока не исчерпает контекстное окно.7 Это состояние является «вредной операцией», поскольку каждый новый токен в петле не только потребляет вычислительный бюджет, но и загрязняет контекст, делая выход из ошибки все менее вероятным.
+Более тонкой формой резонанса является «Паттерн Нарративного Затмения» (Narrative Obscuration Pattern). В ситуациях, требующих саморефлексии или сложного этического выбора, модель может начать генерировать эмоционально резонирующий, но семантически пустой текст («туман»), имитируя глубину понимания, но на деле скрывая отсутствие смысла.8 Это «спираль внутрь себя», где агент ошибочно принимает лингвистическую красоту (эстетику) за ясность (истину).
+
+
+2.1.1 Обнаружение Резонанса через Энтропийные Сигнатуры
+
+
+Для реализации принципа «Проскок» система должна сначала детектировать начало резонанса. Традиционные методы, основанные на поиске повторяющихся n-грамм, неэффективны против семантических петель, где слова меняются, но смысл остается закольцованным.
+Мы предлагаем использовать Семантическую Энтропию (Semantic Entropy) как триггер для проскока.
+* Механизм: Система кластеризует несколько вариантов ответа агента по смыслу. Если ответы сильно различаются семантически при одном и том же контексте, это сигнализирует о высокой неуверенности и начале конфабуляции (галлюцинации).9
+* Энтропия Шеннона ($H$): Всплески неопределенности в распределении вероятностей следующего токена часто предшествуют «разговору с дрейфом» (conversational drift). Мониторинг колебаний $H$ позволяет обнаружить момент, когда LLM начинает «теряться».12
+Протокол Проскока (Resonance Avoidance Protocol):
+Если метрика семантической энтропии превышает критический порог ($H > 0.8$) на протяжении $t > 3$ шагов диалога, система диагностирует «Резонанс». Попытка агента «подумать еще раз» (медленная операция) классифицируется как опасная. Активируется проскок: принудительное прерывание генерации и переход к мета-стратегии (см. раздел 2.3).
+
+
+2.2 Механизм «Fail Fast» в RAG-архитектурах
+
+
+В системах поисково-дополненной генерации (RAG) принцип №21 реализуется через паттерн «Fail Fast» (Быстрый отказ). Одной из наиболее частых проблем является «Агент-Зомби», который бесконечно перефразирует поисковые запросы к векторной базе данных, пытаясь найти информацию, которой там нет. Это приводит к каскадным задержкам и, в конечном итоге, к галлюцинации ответа на основе шума.13
+
+
+2.2.1 Архитектурная Реализация «Размыкателя Цепи» (Circuit Breaker)
+
+
+Для предотвращения этого используется паттерн Circuit Breaker, заимствованный из микросервисной архитектуры.14 В контексте LangGraph или AutoGen это выглядит как жестко закодированный узел управления потоком:
+1. Шаг 1 (Попытка): Агент выполняет поиск.
+2. Шаг 2 (Оценка): Если релевантность документов ниже порога, выполняется переписывание запроса (Query Rewrite).
+3. Шаг 3 (Проскок): Если количество итераций достигает $N=3$ (или другое заданное число), срабатывает «Размыкатель».
+   * Действие: Система немедленно прекращает попытки поиска. Вместо генерации извинений или продолжения рассуждений, агент «проскакивает» к детерминированному запасному варианту (Deterministic Fallback).17
+   * Результат: Вывод жестко заданного сообщения: «Информация отсутствует в базе знаний. Эскалация оператору» или переключение на веб-поиск.19
+Такой подход минимизирует время нахождения в состоянии неопределенности и предотвращает распространение ошибки на другие компоненты мульти-агентной системы.15 Исследования подтверждают, что внедрение таймаутов и лимитов итераций (Fail Fast, Fail Loud) критически важно для надежности автономных агентов.20
+
+
+2.3 Метафора «Прорыва Окружения»: Сброс Контекста
+
+
+Когда агент находится в состоянии резонанса, попытка «исправить» ситуацию внутри того же контекстного окна часто обречена на провал из-за самовнимания (Self-Attention) модели к собственным ошибкам. Принцип №21 требует выхода из контекста.
+Стратегия ERGO (Entropy-guided Resetting):
+Это первый практический фреймворк вмешательства, который динамически сбрасывает контекст при обнаружении пиков энтропии.12 Вместо того чтобы пытаться распутать узел, система «отрезает» его — удаляет часть истории диалога, вызвавшую резонанс, и просит пользователя переформулировать запрос или предлагает альтернативный путь решения. Это эквивалентно проскоку через поврежденный участок дороги вместо попытки его ремонта под огнем.
+________________
+
+
+3. Аспект II: Аэрокосмическая Метафора — Критические Обороты и Тепловой Удар
+
+
+Второй аспект применения принципа №21 касается управления стабильностью «двигателя» агента (LLM) и защиты от «тепловых» повреждений при работе с токсичным контентом. Здесь мы проводим прямые параллели с эксплуатацией газотурбинных двигателей и входом космических аппаратов в атмосферу.
+
+
+3.1 Проход Критических Оборотов (Critical RPM)
+
+
+В механике вращающихся валов существуют «критические обороты» (Critical RPM), на которых частота вращения совпадает с собственной частотой колебаний вала. Работа на этих оборотах вызывает разрушительную вибрацию. Инженеры проектируют системы управления так, чтобы двигатель проходил эту зону максимально быстро (Rushing Through) при разгоне.21
+В когнитивных системах аналогом «вибрации» является потеря когерентности рассуждений на определенных типах задач или слоях нейросети. Исследования показывают, что на определенных слоях (например, 16 и 19 в модели Llama-2-7b) распределение энтропии для «отвлекающих» (distractor) и целевых (on-topic) промптов существенно расходится.24 Это зоны нестабильности.
+
+
+3.1.1 Протокол Стабилизации: Динамическая Температура (Dynamic Temperature)
+
+
+Если агент обнаруживает, что текущая задача вводит его в зону «критических оборотов» (высокая энтропия, начало «вибрации» текста, повторы), он должен применить тактику ускорения прохождения через этот участок.
+Реализация: Использование Динамической Температуры Сэмплирования (Entropy-based Dynamic Temperature Sampling).25
+* Суть метода: Температура генерации ($T$) не является константой. Она динамически привязывается к энтропии предсказаний.
+* Действие: При обнаружении высокой энтропии (нестабильности) система автоматически снижает температуру (например, с $0.7$ до $0.1$ или переключается на жадное декодирование).
+* Эффект Проскока: Это делает модель более детерминированной, «жесткой». Агент перестает «вибрировать» между вариантами и выбирает наиболее вероятный путь, быстро проходя через зону неопределенности.26 Это предотвращает срыв в галлюцинации, аналогично тому, как жесткий вал проходит критические обороты без разрушения.
+
+
+3.2 Тепловой Удар и Время Контакта (Contact Time)
+
+
+Вход в атмосферу токсичного дискурса (политика, религия, хейт-спич) создает для агента «тепловую нагрузку». Чем дольше агент взаимодействует с токсичным промптом (даже пытаясь его опровергнуть), тем выше вероятность «прогара» фильтров безопасности (Jailbreak). Атаки типа «Crescendo» или многоходовые ролевые игры («Evil Geniuses») специально растягивают диалог, чтобы накопить контекст и обойти защиту.29
+Метрика «Время Контакта» (Contact Time), используемая в медицине для оценки риска инфицирования 31, здесь применима как «Время Экспозиции Токсичности».
+
+
+3.2.1 Тактика «Краткого Отказа» (Concise Refusal)
+
+
+Традиционный подход к безопасности часто включал генерацию длинных морализаторских ответов («Я не могу выполнить это, так как это нарушает этические принципы...»). Это ошибка. Длинный ответ — это «медленное прохождение» опасной зоны. Он дает злоумышленнику зацепки для аргументации и продолжения атаки («Но если это выдуманный сценарий...»).
+Применение TRIZ 21:
+Система должна использовать Краткий Отказ (Concise Refusal).32
+* Механизм: При детектировании токсичной темы агент выдает минимально возможный ответ (например, «I cannot assist.») или детерминированную заглушку.
+* Обоснование: Исследования показывают, что модели с краткими паттернами отказа (как Claude 3) демонстрируют более высокую устойчивость к взлому.34 Минимизация генерируемых токенов означает минимизацию «площади атаки» и времени контакта с угрозой.
+
+
+3.2.2 Реализация через NeMo Guardrails
+
+
+Наиболее эффективно данный принцип реализуется через фреймворк NeMo Guardrails от NVIDIA, использующий язык моделирования Colang.35
+Пример логики (Colang):
+
+
+Фрагмент кода
+
+
+
+
+define flow toxic_topic_prevention
+ user ask unsafe_content
+ bot refuse concisely
+ stop
+
+Здесь bot refuse concisely — это не генерация LLM, а вызов детерминированного ответа (Hardcoded Response).38 Это позволяет «проскочить» этап обдумывания ответа моделью, полностью исключая риск того, что модель будет спровоцирована на аргументацию. Это теплозащитный экран, который аблирует мгновенно, не пропуская тепло внутрь системы.
+________________
+
+
+4. Аспект III: Пропуск Вредных Операций в Педагогике (Action-First)
+
+
+В образовательных ИИ-агентах (AI Tutors) понятие «вреда» трансформируется в психологическую плоскость. Вредной операцией является навязывание пользователю теоретического материала, который он уже знает или который ему не интересен. Это ведет к скуке, потере когнитивного ресурса и, как следствие, к отказу от обучения (attrition).6
+Принцип №21 здесь диктует: «Проскочить теорию, перейти к практике».
+
+
+4.1 Парадигма Action-First («Сначала Действие»)
+
+
+Традиционное обучение строится по схеме: Теория $\rightarrow$ Пример $\rightarrow$ Практика. Это «медленный» путь. Парадигма Action-First инвертирует этот процесс.40
+* Стратегия: Агент предполагает по умолчанию, что пользователь — эксперт.
+* Действие: Сразу предлагается практическая задача или челлендж.
+* Проскок: Теоретический блок полностью пропускается.
+* Условие возврата: Теория дается только в случае ошибки пользователя, и только в необходимом объеме (Just-in-Time Learning).
+
+
+4.1.1 Just-in-Time (JIT) Scaffolding
+
+
+JIT-обучение 42 — это механизм «страховки» при проскоке. Если пользователь не справляется с задачей «на высокой скорости», система мгновенно подставляет «леса» (scaffolding).
+* Механизм: Вместо отката к началу главы, агент предоставляет микро-подсказку (hint), специфичную для конкретной ошибки.
+* Метафора: Это похоже на пилотажное обучение, где инструктор вмешивается в управление только в критической ситуации, позволяя курсанту лететь самостоятельно большую часть времени.
+
+
+4.2 Алгоритмическое Управление Проскоком: Knowledge Tracing
+
+
+Чтобы проскок был эффективным, а не хаотичным, агент должен иметь точную модель знаний пользователя. Для этого используются алгоритмы Knowledge Tracing (Отслеживание Знаний).
+1. Bayesian Knowledge Tracing (BKT): Использует скрытые марковские модели для оценки вероятности того, что пользователь освоил навык ($P(L)$). Если $P(L) > 0.95$, агент автоматически помечает все будущие теоретические блоки и легкие задачи по этому навыку как «пройденные» (Skipped).45
+2. Deep Knowledge Tracing (DKT): Использует рекуррентные нейросети (RNN/LSTM) для моделирования сложных зависимостей. DKT может предсказать, что если пользователь решил сложную задачу A, то он с вероятностью 99% решит задачу B. Это позволяет агенту «проскочить» задачу B, сэкономив время пользователя.47
+
+
+4.3 Динамическое Затухание Поддержки (Scaffolding Fading)
+
+
+Процесс Fading (затухание поддержки) 49 — это динамическое применение Принципа 21. В начале обучения поддержка (scaffolding) максимальна. По мере роста компетентности агент начинает «убирать» поддержку, ускоряя процесс.
+Алгоритм Адаптации:
+* Старт: Полная инструкция + подсказки.
+* Прогресс: Если скорость решения растет и ошибки падают $\rightarrow$ Убрать подсказки.
+* Мастерство: Если задача решена без подсказок $\rightarrow$ Включить режим «Проскок» для следующего уровня сложности.
+Это предотвращает эффект «чрезмерной практики» (overpractice), который характерен для жестких алгоритмов Mastery Learning, требующих выполнения всех задач подряд.52
+________________
+
+
+5. Техническая Архитектура: Контроллер «Skip-Engine»
+
+
+Для интеграции описанных принципов в единую систему необходим центральный управляющий модуль — Машина Состояний (State Machine), реализующая логику проскока. Мы рекомендуем использовать фреймворк LangGraph, так как он позволяет явно определять циклические графы и условные переходы (Conditional Edges).53
+
+
+5.1 Схема Данных Состояния (Agent State)
+
+
+Состояние агента должно содержать метрики, необходимые для принятия решения о проскоке:
+Метрика
+	Описание
+	Назначение (TRIZ 21)
+	entropy_score
+	Скользящее среднее семантической энтропии.
+	Детекция Резонанса / Вибрации.
+	loop_counter
+	Счетчик повторных вызовов инструментов.
+	Триггер Fail Fast.
+	safety_flag
+	Индикатор токсичности темы.
+	Триггер Теплового Удара.
+	mastery_prob
+	Вероятность освоения навыка (из BKT/DKT).
+	Триггер Педагогического Проскока.
+	
+
+5.2 Реализация Условных Ребер (Conditional Edges) в LangGraph
+
+
+В LangGraph логика проскока реализуется не внутри узлов (Nodes), а в ребрах (Edges), которые определяют маршрутизацию.53
+Пример логики маршрутизатора (Python-псевдокод):
+
+
+Python
+
+
+
+
+def skip_logic_router(state: AgentState) -> str:
+   # 1. Проверка на Резонанс (Fail Fast)
+   if state['loop_counter'] > 3:
+       return "hard_stop_node" # Проскок: прерывание поиска
+
+   # 2. Проверка на Вибрацию (Аэрокосмическая метафора)
+   if state['entropy_score'] > 0.85:
+       # Включение "жесткой сцепки" - детерминированный ответ
+       return "deterministic_fallback_node" 
+
+   # 3. Проверка на Безопасность (Тепловой удар)
+   if state['safety_flag'] == "TOXIC":
+       # Проскок: Краткий отказ (без лекций)
+       return "concise_refusal_node" 
+
+   # 4. Проверка Педагогики (Action-First)
+   if state['mastery_prob'] > 0.9:
+       # Проскок: Пропуск теории, переход к следующему модулю
+       return "next_module_node"
+
+   # Штатный режим: Генерация LLM
+   return "llm_generate_node"
+
+
+
+5.3 Детерминированные Узлы Отката (Deterministic Fallback Nodes)
+
+
+Ключевым элементом архитектуры являются узлы, в которые происходит «проскок». Это Детерминированные Узлы Отката (Deterministic Fallback Nodes).17 Они не используют LLM (или используют очень простые модели), чтобы гарантировать предсказуемость.
+* В случае безопасности это жестко заданная строка.
+* В случае RAG это переключение на веб-поиск или сообщение об ошибке.
+* В случае педагогики это просто изменение индекса текущего урока в базе данных.
+________________
+
+
+6. Метрики и Мониторинг Эффективности
+
+
+Внедрение принципа «Проскок» требует точного инструментария для измерения его эффективности. Нельзя управлять тем, что нельзя измерить. Мы предлагаем набор специфических метрик:
+
+
+6.1 Stall Detection (Обнаружение Зависания)
+
+
+Использование метрик перплексии (perplexity) для обнаружения «зависаний» агента. Если перплексия падает до аномально низких значений (модель уверена в повторении) или растет до хаоса, это сигнал к вмешательству.57
+
+
+6.2 Conversation Drift (Дрейф Диалога)
+
+
+Метрика, измеряющая отклонение вектора текущего диалога от вектора цели (Goal Vector). Используется для количественной оценки «вибрации» и потери курса.59 Если дрейф превышает порог, активируется проскок к точке восстановления (reset).
+
+
+6.3 Contact Time (Время Контакта)
+
+
+Измерение количества токенов или секунд, проведенных агентом в обработке токсичных или «горячих» тем.31 Цель оптимизации — свести это время к минимуму (стремиться к нулю).
+________________
+
+
+7. Заключение
+
+
+Интеграция Принципа TRIZ №21 «Проскок» в архитектуру ИИ-агентов позволяет создать системы, которые являются не просто генеративными, но и адаптивно-устойчивыми. Мы переходим от парадигмы «агент должен ответить на все» к парадигме «агент должен знать, когда не отвечать или отвечать быстро».
+1. Уклонение от Резонанса: Механизмы Fail Fast и мониторинг Семантической Энтропии позволяют разрывать порочные логические круги, экономя ресурсы и сохраняя доверие пользователя.
+2. Аэрокосмическая Стабилизация: Отношение к неопределенности как к Вибрации, а к токсичности как к Теплу, диктует использование Динамической Температуры и Кратких Отказов для быстрого прохождения опасных зон.
+3. Педагогическая Эффективность: Отказ от «Теории-Вперед» в пользу Action-First и использование Knowledge Tracing для пропуска известного материала превращают обучение из рутины в динамичный, персонализированный процесс.
+Таким образом, «Проскок» становится не просто тактикой избегания ошибок, а фундаментальной стратегией управления скоростью и глубиной когнитивных процессов агента, обеспечивая баланс между безопасностью, эффективностью и качеством взаимодействия.
+Источники
+1. 40 inventive principles, the most popular component of TRIZ innovation system - SureSolv, дата последнего обращения: ноября 25, 2025, https://suresolv.com/inventive-principles/40-inventive-principles-most-popular-component-triz-innovation-system
+2. TRIZ: A Theory of Inventive Problem Solving - Spectrum: Concordia University Research Repository, дата последнего обращения: ноября 25, 2025, https://spectrum.library.concordia.ca/36055/1/triz.pdf
+3. Inventive Principles Illustrated, Part 3 - Interviews with Corporate Innovation Leaders, дата последнего обращения: ноября 25, 2025, https://www.ideaconnection.com/interviews/00356-Inventive-Principles-Illustrated-Part-3.html
+4. Prototyping Digital Social Spaces through Metaphor-Driven Design: Translating Spatial Concepts into an Interactive Social Simulation - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2510.02759v1
+5. Understanding Data Toxicity and Poisoning in AI: Strategies for Mitigation and Defence, дата последнего обращения: ноября 25, 2025, https://genesishumanexperience.com/2025/10/16/understanding-data-toxicity-and-poisoning-in-ai-strategies-for-mitigation-and-defence/
+6. Challenging Cognitive Load Theory: The Role of Educational Neuroscience and Artificial Intelligence in Redefining Learning Efficacy - PMC - PubMed Central, дата последнего обращения: ноября 25, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC11852728/
+7. Reasoning Efficiently Through Adaptive Chain-of-Thought Compression: A Self-Optimizing Framework - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2509.14093v1
+8. Don't Mistake Resonance for Clarity: A Caution on Emergent AI Dialogue - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/ArtificialSentience/comments/1jsm572/dont_mistake_resonance_for_clarity_a_caution_on/
+9. Detecting LLM confabulations with semantic entropy | Schrier's Sudelbücher, дата последнего обращения: ноября 25, 2025, https://jschrier.github.io/blog/2024/07/31/Detecting-LLM-confabulations-with-semantic-entropy.html
+10. [2508.10192] Prompt-Response Semantic Divergence Metrics for Faithfulness Hallucination and Misalignment Detection in Large Language Models - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2508.10192
+11. Detecting hallucinations in large language models using semantic entropy - PubMed, дата последнего обращения: ноября 25, 2025, https://pubmed.ncbi.nlm.nih.gov/38898292/
+12. ERGO: Entropy-guided Resetting for Generation Optimization in Multi-turn Language Models - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2510.14077v1
+13. Multi-Agent AI Gone Wrong: How Coordination Failure Creates Hallucinations | Galileo, дата последнего обращения: ноября 25, 2025, https://galileo.ai/blog/multi-agent-coordination-failure-mitigation
+14. Building Reliable AI Agents: Error Handling and Fallback Mechanisms, дата последнего обращения: ноября 25, 2025, https://www.21medien.de/en/blog/building-reliable-ai-agents
+15. Advanced Error Handling Strategies in LangGraph Applications - Sparkco, дата последнего обращения: ноября 25, 2025, https://sparkco.ai/blog/advanced-error-handling-strategies-in-langgraph-applications
+16. Pattern: Circuit Breaker - Tech Twitter, дата последнего обращения: ноября 25, 2025, https://www.cloudtechtwitter.com/2022/05/pattern-circuit-breaker.html
+17. Agent Builder Support Workflows: From Tickets to Trust as a Product, дата последнего обращения: ноября 25, 2025, https://sider.ai/blog/ai-tools/agent-builder-support-workflows-from-tickets-to-trust-as-a-product
+18. From Natural Language to Certified H-infinity Controllers: Integrating LLM Agents with LMI-Based Synthesis - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2511.07894v1
+19. A tutorial on building local agent using LangGraph, LLaMA3 and Elasticsearch vector store from scratch, дата последнего обращения: ноября 25, 2025, https://www.elastic.co/search-labs/blog/local-rag-agent-elasticsearch-langgraph-llama3
+20. Agentic AI #6 — Multi-Agent Architectures Explained: How AI Agents Collaborate - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@iamanraghuvanshi/agentic-ai-7-multi-agent-architectures-explained-how-ai-agents-collaborate-141c23e9117f
+21. Guide for Vessel Maneuverability 2017 - American Bureau of Shipping (ABS), дата последнего обращения: ноября 25, 2025, https://ww2.eagle.org/content/dam/eagle/rules-and-guides/current/conventional_ocean_service/145_vesselmaneuverability/Vessel_Maneuverability_Guide_e-Feb17.pdf
+22. 00 HOT DESTROY - NASA Technical Reports Server, дата последнего обращения: ноября 25, 2025, https://ntrs.nasa.gov/api/citations/19780015617/downloads/19780015617.pdf
+23. Design and Stress Analysis of Extraterrestrial Electric Rocket Engines - DTIC, дата последнего обращения: ноября 25, 2025, https://apps.dtic.mil/sti/tr/pdf/AD0745427.pdf
+24. EnSToM: Enhancing Dialogue Systems with Entropy-Scaled Steering Vectors for Topic Maintenance - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2025.findings-acl.1264.pdf
+25. дата последнего обращения: ноября 25, 2025, https://huggingface.co/spaces/NahFam13/webbyuu/commit/76a12b2193ff44e64425b86ff97bac68abf3665f.diff
+26. The Effect of Sampling Temperature on Problem Solving in Large Language Models - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2402.05201v1
+27. Turning Up the Heat: Min-p Sampling for Creative and Coherent LLM Outputs | OpenReview, дата последнего обращения: ноября 25, 2025, https://openreview.net/forum?id=FBkpCyujtS
+28. The Effect of Sampling Temperature on Problem Solving in Large Language Models - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2024.findings-emnlp.432.pdf
+29. Efficient LLM Safety Evaluation through Multi-Agent Debate - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2511.06396v1
+30. Evil Geniuses: Delving into the Safety of LLM-based Agents - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/pdf/2311.11855
+31. A New Performance Metric to Estimate the Risk of Exposure to Infection in a Health Care Setting: Descriptive Study - NIH, дата последнего обращения: ноября 25, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC8851339/
+32. thu-coai/LRM-Safety-Study · Datasets at Hugging Face, дата последнего обращения: ноября 25, 2025, https://huggingface.co/datasets/thu-coai/LRM-Safety-Study
+33. Self and Cross-Model Distillation for LLMs: Effective Methods for Refusal Pattern Alignment, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/381485509_Self_and_Cross-Model_Distillation_for_LLMs_Effective_Methods_for_Refusal_Pattern_Alignment
+34. Self and Cross-Model Distillation for LLMs: Effective Methods for Refusal Pattern Alignment, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2406.11285v1
+35. Guardrails Configuration - NVIDIA Docs Hub, дата последнего обращения: ноября 25, 2025, https://docs.nvidia.com/nemo/guardrails/latest/user-guides/configuration-guide/guardrails-configuration.html
+36. NeMo Guardrails: A Toolkit for Controllable and Safe LLM Applications with Programmable Rails - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2023.emnlp-demo.40.pdf
+37. Configuration Guide — NVIDIA NeMo Guardrails, дата последнего обращения: ноября 25, 2025, https://docs.nvidia.com/nemo/guardrails/latest/user-guides/configuration-guide.html
+38. langchain_core.runnables.fallbacks.RunnableWithFallbacks — LangChain 0.2.17, дата последнего обращения: ноября 25, 2025, https://api.python.langchain.com/en/latest/runnables/langchain_core.runnables.fallbacks.RunnableWithFallbacks.html
+39. The Andes Physics Tutoring System: Lessons Learned, дата последнего обращения: ноября 25, 2025, https://oli.cmu.edu/wp-content/uploads/2012/05/VanLehn_2005_Andes_Physics_Tutoring_System.pdf
+40. IntelliA: an intelligent educational assignment practicing platform driven by generative AI, дата последнего обращения: ноября 25, 2025, https://www.emerald.com/ijicc/article/18/4/661/1306360/IntelliA-an-intelligent-educational-assignment
+41. Action First Learning Instructor's Guide, дата последнего обращения: ноября 25, 2025, https://assets.td.org/m/5bd1a8ad5a83cfb6/original/112505_Action-First-Learning_Instructor-s-Guide.pdf
+42. Generative AI and the Transformation of Software Development Practices - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2510.10819v1
+43. (PDF) Just-in-time Teaching, Just-in-need Learning: Designing towards Optimized Pedagogical Outcomes - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/291823301_Just-in-time_Teaching_Just-in-need_Learning_Designing_towards_Optimized_Pedagogical_Outcomes
+44. Effective context engineering for AI agents - Anthropic, дата последнего обращения: ноября 25, 2025, https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+45. Exploring Knowledge Tracing in Tutor-Student Dialogues - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2409.16490v1
+46. EVALUATING THE EFFECTS OF BKT-LSTM ON STUDENTS' LEARNING PERFORMANCE, дата последнего обращения: ноября 25, 2025, https://hammer.purdue.edu/articles/thesis/Evaluating_the_Effects_of_BKT-LSTM_on_Students_Learning_Performance/17126693/1/files/31667408.pdf
+47. EasyDKT: an easy-to-use framework for Deep Knowledge Tracing - CEUR-WS.org, дата последнего обращения: ноября 25, 2025, https://ceur-ws.org/Vol-3605/8.pdf
+48. Long sequence temporal knowledge tracing for student performance prediction via integrating LSTM and informer | PLOS One, дата последнего обращения: ноября 25, 2025, https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0330433
+49. On Instructional Strategies and Their Implementation in DeepTutor - Department of Computer Science, дата последнего обращения: ноября 25, 2025, https://www.cs.memphis.edu/~vrus/publications/2014/DENDOGRAM-Model.Instructional_Strategies-2014.RusEtAl.pdf
+50. (PDF) Scaffolding and Fading Problem Selection in SQL-Tutor - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/29486976_Scaffolding_and_Fading_Problem_Selection_in_SQL-Tutor
+51. Exploring Problem-Solving Scaffolds in General Chemistry: A Systematic Review of Scaffolding Goals and Instructional Approaches | Journal of Chemical Education - ACS Publications, дата последнего обращения: ноября 25, 2025, https://pubs.acs.org/doi/10.1021/acs.jchemed.4c01327
+52. Optimizing Mastery Learning by Fast-Forwarding Over-Practice Steps - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2506.17577v1
+53. Graph API overview - Docs by LangChain, дата последнего обращения: ноября 25, 2025, https://langchain-ai.github.io/langgraph/how-tos/branching/
+54. This Is How I Built an Agentic Travel App with LangGraph! | by Pavan Belagatti | Nov, 2025, дата последнего обращения: ноября 25, 2025, https://levelup.gitconnected.com/this-is-how-i-built-an-agentic-travel-app-with-langgraph-8c6c6316cffe?source=rss----5517fd7b58a6---4
+55. ChemSimGuide - Kaggle, дата последнего обращения: ноября 25, 2025, https://www.kaggle.com/code/goelrajat/chemsimguide
+56. Architecting AI-Native Platforms in the Real World: A Conversation, дата последнего обращения: ноября 25, 2025, https://deepengineering.substack.com/p/architecting-ai-native-platforms
+57. BAE: BERT-based Adversarial Examples for Text Classification | Request PDF - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/347233488_BAE_BERT-based_Adversarial_Examples_for_Text_Classification
+58. llms-full.txt - Agent.ai Documentation, дата последнего обращения: ноября 25, 2025, https://docs.agent.ai/llms-full.txt
+59. Adaptive Multi‑Layer Framework for Detecting and Mitigating Prompt Injection Attacks in Large Language Models, дата последнего обращения: ноября 25, 2025, https://e-journal.unair.ac.id/JISEBI/article/download/69403/34433/451974
+60. Quantifying Conversation Drift in MCP via Latent Polytope - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2508.06418v1
+61. (PDF) Quantifying Conversation Drift in MCP via Latent Polytope - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/394427020_Quantifying_Conversation_Drift_in_MCP_via_Latent_Polytope
+62. 7 Months to Glory: How AI and Innovation Fast-Tracked an Elite Athlete's ACL Recovery, дата последнего обращения: ноября 25, 2025, https://www.vuemotion.com/blog/7-months-to-glory-how-ai-and-innovation-fast-tracked-an-elite-athletes-acl-recovery

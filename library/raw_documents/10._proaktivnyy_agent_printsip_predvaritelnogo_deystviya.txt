@@ -1,0 +1,339 @@
+﻿Архитектура Опережающего Агента: Интеграция Принципа TRIZ №10 в Проактивные Когнитивные Системы
+
+
+
+
+Введение: От Реактивности к Предвосхищению
+
+
+Современный ландшафт искусственного интеллекта находится на пороге фундаментального архитектурного сдвига. Господствующая парадигма взаимодействия «Человек-Машина», основанная на реактивной модели (стимул — реакция, запрос — ответ), достигла своего эволюционного предела. В этой модели когнитивная нагрузка по инициации, контекстуализации и коррекции взаимодействия ложится на пользователя, создавая значительное «трение» и временные задержки. Для преодоления этого барьера необходимо внедрение принципов, позволяющих системе действовать на опережение.
+Теория решения изобретательских задач (ТРИЗ), разработанная Генрихом Альтшуллером на основе анализа тысяч инженерных патентов, предлагает мощный инструментарий для разрешения технических противоречий. В контексте создания автономных агентов (Agentic AI) особую актуальность приобретает Принцип №10: «Предварительное действие» (Preliminary Action). Этот принцип гласит:
+1. Заранее выполнить требуемое действие (полностью или хотя бы частично).
+2. Заранее расставить объекты так, чтобы они могли вступить в действие с наиболее удобного места и без потери времени на их доставку.1
+Применительно к архитектуре больших языковых моделей (LLM) и агентных систем, «объектами» являются информационные токены, структуры данных, контекстные окна и вычислительные ресурсы. «Потеря времени на доставку» эквивалентна латентности инференса (inference latency) и когнитивным задержкам пользователя при формулировании запроса. Настоящий отчет представляет собой всестороннее исследование того, как трансформировать этот инженерный принцип в алгоритмические решения, создавая агента, который выполняет 50% работы по структурированию, поиску и оптимизации еще до того, как пользователь завершит ввод текста. Мы рассмотрим три фундаментальных столпа этой новой архитектуры: Предиктивный процессинг данных, Структурное предвосхищение (Pre-formatting) и Метафору аэрокосмического развертывания (Deployment Strategy).
+________________
+
+
+1. Теоретический Базис: TRIZ в Вычислительной Среде
+
+
+Для того чтобы корректно перенести принцип «Предварительного действия» из механики в программную инженерию, необходимо рассмотреть его через призму теории информации и управления ресурсами. В физическом мире примером Принципа 10 является предварительное напряжение железобетона: арматура растягивается до заливки бетона, чтобы впоследствии компенсировать нагрузки растяжения.2 В цифровой среде мы сталкиваемся с аналогичными нагрузками: неопределенностью намерения пользователя и вычислительной стоимостью генерации.
+
+
+1.1 Противоречие Латентности и Точности
+
+
+Основное техническое противоречие, которое мы решаем, заключается в конфликте между скоростью реакции и полнотой контекста.
+* Тезис: Чтобы дать точный ответ, Агент должен обладать всей полнотой информации (RAG, длинный контекст).
+* Антитезис: Сбор и обработка всей полноты информации занимает неприемлемо много времени (латентность), разрушая пользовательский опыт (UX).
+* Синтез (TRIZ Принцип 10): Информация должна быть собрана и обработана заранее, основываясь на вероятностных прогнозах будущего состояния системы.
+Это перекликается с другими принципами ТРИЗ, применимыми в Data Science, такими как Принцип №1 «Сегментация» (разделение больших данных на управляемые фрагменты для предварительного анализа) и Принцип №9 «Предварительное анти-действие» (создание напряжений, компенсирующих известные вредные факторы, например, использование forget gates в сетях LSTM для предотвращения затухания градиента).3
+
+
+1.2 Таксономия Предварительных Действий в AI
+
+
+Мы классифицируем применение Принципа 10 в агентных системах по трем векторам:
+1. Информационный пре-фетчинг (Informational Pre-fetching): Предсказание семантической траектории диалога и загрузка релевантных графов знаний или векторных чанков до явного запроса. Это реализуется через алгоритмы FLARE и навигацию по графам знаний.5
+2. Структурное пре-форматирование (Structural Pre-formatting): Генерация скелета ответа (шаблона кода, эссе, JSON-схемы) для ограничения пространства поиска и направления генерации токенов.7
+3. Контекстное пре-позиционирование (Contextual Pre-positioning): Оптимизация распределения токенов в окне контекста (Recency Bias) и выполнение проверок безопасности (Guardrails) до начала генерации.9
+________________
+
+
+2. Предиктивная Архитектура: Алгоритмы Опережающего Поиска
+
+
+Переход от «Наивного RAG» (Naive RAG), который реагирует только на финализированный запрос, к «Предиктивному RAG» требует внедрения механизмов, моделирующих вероятностное пространство разговора. Агент должен не просто ждать, а активно «мечтать» о будущем диалога.
+
+
+2.1 Forward-Looking Active Retrieval (FLARE)
+
+
+Алгоритм FLARE (Forward-Looking Active REtrieval) представляет собой краеугольный камень предиктивной архитектуры. В отличие от традиционных методов, которые извлекают информацию один раз перед генерацией, FLARE активно решает, когда и что искать, используя само предсказание будущего предложения.11
+
+
+Механизм Работы FLARE
+
+
+Алгоритм работает итеративно, реализуя принцип «разведки боем» (Предварительное действие):
+1. Гипотетическая Генерация: LLM генерирует «временное» следующее предложение, пытаясь предугадать, что она хотела бы сказать.
+2. Оценка Неуверенности: Система анализирует логарифмические вероятности (log-probs) сгенерированных токенов. Если уверенность модели падает ниже определенного порога (например, при генерации конкретных фактов, дат или имен), процесс останавливается. Низкая уверенность служит сигналом о необходимости внешних данных.13
+3. Формирование Опережающего Запроса: Само гипотетическое предложение (или его фрагмент), содержащее токены с низкой уверенностью, используется как поисковый запрос. Агент как бы спрашивает: «Я собираюсь сказать о применении титана в авиации, но я не уверен. Найди мне подтверждение этого».15
+4. Регенерация: Полученные документы интегрируются в контекст, и предложение перегенерируется с учетом новых данных.
+Этот цикл позволяет агенту «заглядывать вперед», подгружая данные именно в тот момент, когда они становятся критически необходимыми, но до того, как пользователь увидит галлюцинацию. Это прямая реализация Принципа 10: данные доставляются в точку генерации заблаговременно.
+
+
+2.2 Алгоритм «Следующего Логического Вопроса»
+
+
+Для реализации сценария, когда пользователь спрашивает «Что такое титан?», а агент уже подгружает «Применение в авиации», необходимо использовать Knowledge Graph (KG) Traversal и вероятностное моделирование.
+
+
+2.2.1 Семантический «Веер» через Графы Знаний (GraphRAG)
+
+
+Вместо линейного векторного поиска, проактивный агент использует структуру графа.
+* Топология Предсказания: Когда активируется узел Сущность: Титан, агент анализирует исходящие ребра. Графы знаний (Knowledge Graphs) содержат семантические связи, такие как USED_IN (используется в), PROPERTIES (свойства), MANUFACTURER (производитель).17
+* Опережающий Обход (Traversal): Пока пользователь читает определение титана, фоновый процесс агента выполняет обход графа на 1-2 шага в глубину (1-hop/2-hop traversal). Алгоритмы GraphRAG позволяют извлекать «сообщества» узлов (communities) и их резюме. Если вес связи Титан -> Авиация высок, соответствующие чанки текста загружаются в «горячий кэш» (anticipatory cache).19
+* Агент-Навигатор: Специализированный «Навигационный Агент» оценивает контекст. Если в истории диалога встречались термины «прочность» или «полет», навигатор приоритезирует ветку Свойства -> Механические или Применение -> Аэрокосмическое.21
+
+
+2.2.2 Скрытые Марковские Модели (HMM) и Next Query Prediction
+
+
+Для формализации переходов между темами можно использовать подходы, аналогичные Скрытым Марковским Моделям (HMM) или задачам Next Sentence Prediction (NSP), используемым при обучении BERT.23
+* Моделирование Состояний: Диалог рассматривается как последовательность скрытых состояний (интентов).
+   * $S_t$: Запрос определения.
+   * $S_{t+1}$: Запрос применения (Вероятность $P=0.6$).
+   * $S_{t+1}'$: Запрос стоимости (Вероятность $P=0.2$).
+* Упреждающее Действие: Система вычисляет $\text{argmax} P(S_{t+1}|S_t)$ и запускает retrieval-процесс для наиболее вероятного следующего состояния параллельно с генерацией ответа на текущее.25 Исследования показывают, что обучение на задачах Next Turn Prediction (предсказание следующего хода) значительно улучшает способность моделей поддерживать связный долгосрочный диалог.26
+
+
+2.3 Пре-компутация и Спекулятивное Декодирование
+
+
+Для минимизации задержек необходимо перенести тяжелые вычисления на этап подготовки (Pre-computation).
+* Векторная Пре-компутация (ColBERT): Модели позднего взаимодействия (late interaction), такие как ColBERT, позволяют предварительно вычислять векторные представления всех документов в базе знаний. Во время запроса происходит лишь легкое взаимодействие между векторами запроса и документами, что позволяет сканировать миллионы документов за миллисекунды. Это устраняет необходимость в тяжелом инференсе трансформера для документов в реальном времени.27
+* Спекулятивное Декодирование (Speculative Decoding): Этот метод использует малую «черновую» модель (draft model) для быстрой генерации нескольких вероятных токенов вперед (предварительное действие). Затем большая модель проверяет их параллельно. Алгоритмы типа TETRIS оптимизируют этот процесс для пакетной обработки, выбирая наиболее перспективные ветви генерации.29 Это позволяет агенту «думать быстрее, чем печатать», создавая запас готовых токенов.
+* Опережающее Кэширование (Anticipatory Caching): В системах типа vLLM или Refrag используется кэширование Key-Value (KV) состояний внимания. Агент может предварительно загружать в GPU-память KV-кэши для ожидаемых промптов (например, шаблоны кода или юридические формулировки), сводя время до первого токена (TTFT) к минимуму.31
+Тип Операции
+	Реактивный Подход
+	Опережающий Подход (TRIZ #10)
+	Технологический Стек
+	Поиск Данных
+	Поиск после полного промпта
+	Поиск на основе гипотезы (FLARE) и графовых связей
+	GraphRAG, Neo4j, FLARE
+	Инференс
+	Последовательная генерация
+	Спекулятивная генерация и проверка
+	Speculative Decoding, TETRIS
+	Эмбеддинги
+	Вычисление "на лету"
+	Оффлайн пре-компутация
+	ColBERT, Refrag
+	________________
+
+
+3. Структурное Предвосхищение: Концепция «Пре-форматирования»
+
+
+Вторая грань Принципа 10 — «заранее придать объекту требуемую форму». В контексте генеративного ИИ это означает создание жесткого «каркаса» или «формы» для ответа до того, как модель начнет заполнять его содержанием. Это решает проблему структурной деградации и позволяет распараллелить генерацию.
+
+
+3.1 Skeleton-of-Thought (SoT): Скелет как Предварительное Действие
+
+
+Техника Skeleton-of-Thought (SoT) является прямой реализацией идеи «сначала структура, потом данные». Вместо того чтобы генерировать ответ последовательно, слово за словом, агент сначала создает план.
+1. Фаза Скелета: Агент получает инструкцию сгенерировать только структуру ответа (заголовки, пункты списка, ключевые тезисы). Это происходит очень быстро и с минимальной задержкой.
+2. Фаза Расширения: Каждый пункт скелета отправляется на генерацию параллельно (возможно, разным экземплярам модели или через batch inference). Это аналогично сборке префабрикованных модулей в строительстве (классический пример TRIZ 10).7
+3. Результат: Значительное ускорение (до 2.39x) и повышение качества, так как модель вынуждена сначала спланировать ответ, что снижает вероятность логических ошибок в середине текста.34
+
+
+3.2 Структурированная Генерация (Structured Generation)
+
+
+Для интеграции агентов в программные конвейеры (pipelines) критически важно, чтобы выходные данные строго соответствовали заданному формату (например, JSON). Здесь «предварительным действием» выступает наложение ограничений на сэмплирование токенов.
+* JSON Schema & Pydantic: Разработчик заранее определяет класс Pydantic (шаблон), описывающий структуру данных (типы полей, обязательность, ограничения). Библиотеки, такие как Instructor или Outlines, транслируют эту схему в маску логитов (logits mask) или контекстно-свободную грамматику (CFG).36
+* Конечные Автоматы (FSM): В процессе генерации движок инференса (например, через библиотеку outlines) использует конечный автомат, построенный на основе регулярных выражений или схемы. Если схема требует, чтобы после ключа "age": следовало число, вероятность генерации любых токенов, кроме цифр, принудительно обнуляется. Это исключает синтаксические ошибки до их возникновения (Preliminary Anti-Action).39
+* Устранение Retry-петель: В реактивной модели агент генерирует битый JSON, валидатор его отклоняет, и агент пробует снова. В проактивной модели генерация невалидного токена математически невозможна, что экономит время и ресурсы.41
+
+
+3.3 Fill-In-The-Middle (FIM) для Генерации Кода
+
+
+Для задач программирования принцип «заранее расставить объекты» реализуется через модели, обученные в режиме Fill-In-The-Middle (FIM), такие как Codestral.43
+* Механизм: Агент может заранее сформировать сигнатуру функции (Prefix) и ожидаемые тесты или утверждения (Suffix). Задача модели сводится к генерации «середины» (Middle).
+* Применение: Это позволяет создавать «строительные леса» (scaffolding) для кода. Агент заранее определяет входы и выходы, гарантируя, что сгенерированная логика интегрируется в существующий проект без ошибок совместимости. Специальные токены <PRE>, <SUF>, <MID> направляют внимание модели, позволяя ей учитывать двунаправленный контекст.45
+________________
+
+
+4. Аэрокосмическая Метафора: Развертывание и Предстартовая Подготовка
+
+
+Запрос пользователя проводит параллель с аэрокосмическими процедурами: Checklists (предстартовая подготовка) и Deployment mechanisms (распределение топлива/нагрузки). Эта метафора идеально описывает необходимость статической, жесткой подготовки для управления динамическими, вероятностными системами.
+
+
+4.1 Предстартовые Проверки (Pre-flight Checklists): Guardrails
+
+
+В авиации пилот не взлетает, чтобы потом проверить закрылки. В агентной архитектуре проверки безопасности и валидности должны выполняться до дорогостоящего инференса.
+* Guardrails как Чек-лист: Использование фреймворков типа NVIDIA NeMo Guardrails или Guardrails AI позволяет создать слой пре-валидации.
+   * Проверка Входа (Input Rails): Детекция джейлбрейков (jailbreaks), попыток инъекции промптов, наличия PII (персональных данных). Если проверка не пройдена, запрос блокируется до отправки в LLM.47
+   * System Identification: Продвинутые системы создают «отпечаток производительности» (performance fingerprint) агента — профиль его типичных ошибок. Предстартовая подготовка включает загрузку специализированного «Агента-Наблюдателя» (Guard Agent), настроенного на мониторинг именно этих рисков, подобно тому, как пилот повторяет процедуры для конкретного типа отказа двигателя.49
+* Бюджетирование Токенов: Расчет токенов до отправки. Если estimated_tokens > context_window, запускается процедура компрессии (summarization) — это «сброс топлива» перед взлетом для достижения нужного веса.50
+
+
+4.2 Системы Развертывания: Context Engineering и Recency Bias
+
+
+Метафора «топливо в крыльях для разгрузки фюзеляжа» коррелирует с распределением токенов в контекстном окне для оптимизации «внимания» (attention) модели.
+* Феномен «Lost in the Middle»: Исследования показывают, что LLM лучше всего воспринимают информацию в начале (Primacy Effect) и в конце (Recency Effect) контекстного окна. Информация в середине часто игнорируется («провисание» внимания).9
+* Стратегия Размещения (Pre-arrangement): Чтобы гарантировать выполнение инструкций, критически важные команды должны быть предварительно расставлены в конец промпта.
+   * Фюзеляж (Середина): Сюда помещаются массивные данные RAG (документы, история).
+   * Крылья (Начало и Конец): Системная роль (Persona) задается в начале. Критические ограничения (например, «Отвечай только в JSON», «Не выдумывай факты») дублируются в самом конце, непосредственно перед токеном начала генерации.10
+   * Оптимизация: Использование алгоритмов сжатия контекста (Context Compression), таких как LLMLingua, позволяет удалить семантически незначимые токены из «середины», усиливая сигнал от краев.53
+
+
+4.3 «Ленивое» Развертывание Инструментов (Lazy Loading)
+
+
+Подобно тому, как шасси выпускаются только при посадке, агент не должен держать все определения инструментов (Tools) в контексте постоянно. Используется механизм Manifest. В системном промпте содержатся только краткие описания возможностей. Полная спецификация API инструмента (например, Python REPL или поисковика) «развертывается» (инжектируется в контекст) только тогда, когда классификатор намерений определяет необходимость его использования.54
+________________
+
+
+5. Устранение «Трения» при Входе: Имплицитный Онбординг
+
+
+Третий аспект Принципа 10: «объекты должны вступать в действие с наиболее удобного места». В UX это означает устранение необходимости пользователю объяснять, кто он и что ему нужно. Агент должен «подхватывать» контекст на лету.
+
+
+5.1 Имплицитное Профилирование (Zero-Shot Profiling)
+
+
+Вместо явного анкетирования («Кто вы? Инженер или маркетолог?»), агент использует Имплицитное Профилирование.
+* Семантический Анализ: Легковесный классификатор анализирует первый запрос пользователя на предмет словаря, сложности синтаксиса и доменной терминологии.55
+   * Пример 1: Запрос «Оптимизируй SQL-запрос с учетом ACID» → Профиль: Senior Backend Engineer. Действие: Агент переключает системный промпт на «Технический, лаконичный, без вводных слов».
+   * Пример 2: «Почему моя база данных тормозит?» → Профиль: Новичок/Менеджер. Действие: Агент переключает промпт на «Обучающий, используй аналогии, пошаговое объяснение».
+* Нулевой Выстрел (Zero-Shot): Эта классификация происходит до генерации первого ответа, используя возможности Zero-Shot обучения современных моделей. Пользователь не замечает процесса настройки, но сразу получает ответ в нужном тоне.58
+
+
+5.2 Router Chains и Динамическая Пре-конфигурация
+
+
+Для реализации универсального помощника, который сужает специализацию, используется паттерн Router Chain (Цепочка Маршрутизации), популярный в библиотеке LangChain.
+* Роутер как Диспетчер: На входе стоит специализированная, быстрая модель-роутер. Ее задача — не отвечать на вопрос, а классифицировать его домен (Кодинг, Математика, Творчество, Анализ данных).60
+* Предварительное Действие: На основе классификации Роутер заранее выбирает и активирует соответствующую «Цепочку Назначения» (Destination Chain) с предустановленными инструментами и промптами.
+* Бесшовность: Пользователь видит единый интерфейс, но под капотом система динамически пересобирает себя под каждый запрос. Это устраняет необходимость в ручном выборе «плагинов» или режимов, реализуя принцип удобного доступа к инструментам.63
+
+
+5.3 Прогрессивное Профилирование (Progressive Profiling)
+
+
+Агент не требует заполнения профиля сразу. Он использует Прогрессивное Профилирование, собирая атрибуты пользователя (предпочтительный язык программирования, часовой пояс, стиль общения) по крупицам в ходе естественного диалога и сохраняя их в долгосрочной памяти (User Persona Store). При следующих взаимодействиях эти данные автоматически подгружаются в контекст, создавая эффект «памяти» и персонализации без явных усилий со стороны пользователя.64
+________________
+
+
+6. Синтез Архитектуры и Рекомендации
+
+
+Интеграция Принципа TRIZ №10 трансформирует архитектуру ИИ-агента из линейной последовательности «Ввод -> Обработка -> Вывод» в многопоточную систему с опережающими петлями обратной связи.
+
+
+6.1 Итоговая Архитектурная Схема «Опережающего Агента»
+
+
+1. Фаза Пред-ввода (Pre-Input):
+   * Advisory Requests: Система предугадывает начало ввода (по активности интерфейса) и пре-аллоцирует вычислительные ресурсы (KV-кэши).66
+2. Фаза Анализа (Pre-Processing):
+   * Router/Profiler: Классификация интента и профиля пользователя (Zero-Shot).
+   * Safety Check: Guardrails сканируют на предмет угроз.
+3. Фаза Упреждающего Поиска (Predictive Retrieval):
+   * FLARE/Graph Traversal: Пока генерируется начало ответа или скелет, фоновые агенты traversing Knowledge Graph для подгрузки данных для следующих логических шагов (Next Step Prediction).
+4. Фаза Генерации (Generation):
+   * Skeleton-of-Thought: Генерация структуры.
+   * Parallel Expansion: Параллельное заполнение пунктов с использованием Speculative Decoding.
+   * Structured Output: Принудительное форматирование через JSON Schema/FSM.
+
+
+6.2 Сводная Таблица Реализации
+
+
+В таблице ниже представлены конкретные технические решения для каждого аспекта Принципа 10.
+Аспект Принципа 10
+	Архитектурный Компонент
+	Техническая Реализация
+	Ожидаемый Эффект
+	Предварительное Действие (Данные)
+	Предиктивный RAG
+	FLARE, GraphRAG (обход графа), ColBERT (пре-компутация векторов)
+	Снижение латентности поиска до 0, повышение релевантности.
+	Предварительное Действие (Структура)
+	Пре-форматирование
+	Skeleton-of-Thought, Pydantic/Instructor (JSON Schema enforcement), FIM
+	Ускорение генерации (2x), гарантия валидности синтаксиса.
+	Предварительная Расстановка (Контекст)
+	Оптимизация Внимания
+	Context Reordering (Recency Bias injection), Token Compression
+	Повышение точности следования инструкциям (Instruction Following).
+	Удобное Размещение (Доступ)
+	Динамический Роутинг
+	Router Chains (LangChain), Zero-Shot Profiling
+	Устранение трения при входе, бесшовная персонализация.
+	Предстартовая Подготовка
+	Безопасность
+	NeMo Guardrails, Pre-flight Checklists (System Identification)
+	Защита от атак, предотвращение сбоев из-за лимитов токенов.
+	
+
+Заключение
+
+
+Применение Принципа №10 «Предварительное действие» позволяет преодолеть фундаментальные ограничения реактивных LLM. Переход к архитектуре, которая предсказывает потребности в данных, пре-форматирует структуру ответа и пре-конфигурирует контекст, является ключом к созданию агентов следующего поколения — быстрых, точных и интуитивно понятных. Мы больше не ждем вопроса, чтобы начать искать ответ; мы готовим ответ, пока вопрос еще только формируется. Это и есть сущность изобретательского подхода в эпоху искусственного интеллекта.
+Источники
+1. 40 Inventive Principles with Examples for Human Factors and Ergonomics - Altshuller Institute for TRIZ Studies, дата последнего обращения: ноября 25, 2025, http://aitriz.org/documents/TRIZCON/Proceedings/Hipple-Caplan-and-Tschirhart-40-Inventive-Principles-with-Examples.pdf
+2. 40 TRIZ Principles, дата последнего обращения: ноября 25, 2025, https://www.triz40.com/aff_Principles_TRIZ.php
+3. Deep Learning Meets TRIZ: A Systematic Review of Innovation Patterns in Neural Network Development - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/393654352_Deep_Learning_Meets_TRIZ_A_Systematic_Review_of_Innovation_Patterns_in_Neural_Network_Development
+4. DIKWP-TRIZ: A Revolution on Traditional TRIZ Towards Invention for Artificial Consciousness - MDPI, дата последнего обращения: ноября 25, 2025, https://www.mdpi.com/2076-3417/14/23/10865
+5. Agentic Information Retrieval - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2410.09713v1
+6. FB-RAG: Improving RAG with Forward and Backward Lookup - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2505.17206v3
+7. Skeleton-of-Thought Prompting: Faster and Efficient Response Generation, дата последнего обращения: ноября 25, 2025, https://learnprompting.org/docs/advanced/decomposition/skeleton_of_thoughts
+8. Reducing Latency with Skeleton of Thought Prompting - PromptHub, дата последнего обращения: ноября 25, 2025, https://www.prompthub.us/blog/reducing-latency-with-skeleton-of-thought-prompting
+9. What Works for 'Lost-in-the-Middle' in LLMs? A Study on GM-Extract and Mitigations - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2511.13900v1
+10. Prompt engineering techniques - Azure OpenAI | Microsoft Learn, дата последнего обращения: ноября 25, 2025, https://learn.microsoft.com/en-us/azure/ai-foundry/openai/concepts/prompt-engineering?view=foundry-classic
+11. Retrieval Augmented Generation (RAG) for LLMs - Prompt Engineering Guide, дата последнего обращения: ноября 25, 2025, https://www.promptingguide.ai/research/rag
+12. [2305.06983] Active Retrieval Augmented Generation - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2305.06983
+13. Leveraging the Capabilities of Forward-Looking Active RAG with Knowledge Graph - Superteams.ai, дата последнего обращения: ноября 25, 2025, https://www.superteams.ai/blog/leveraging-the-capabilities-of-forward-looking-active-rag-with-knowledge-graph
+14. Better RAG with Active Retrieval Augmented Generation FLARE | by Akash A Desai | LanceDB | Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/etoai/better-rag-with-active-retrieval-augmented-generation-flare-3b66646e2a9f
+15. Forward-Looking Active REtrieval Augmented Generation (FLARE) Algorithm - GM-RKB, дата последнего обращения: ноября 25, 2025, https://www.gabormelli.com/RKB/Forward-Looking_Active_REtrieval_Augmented_Generation_(FLARE)_Algorithm
+16. jzbjyb/FLARE: Forward-Looking Active REtrieval ... - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/jzbjyb/FLARE
+17. GraphRAG-Powered Task Assistant: How to Build a Context-Aware AI Agent - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@VishathAmarasinghe/graphrag-powered-task-assistant-how-to-build-a-context-aware-ai-agent-53a5a72bf029
+18. Knowledge Graph Prompting for Multi-Document Question Answering - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2308.11730v3
+19. Daily Papers - Hugging Face, дата последнего обращения: ноября 25, 2025, https://huggingface.co/papers?q=symbolic%20document%20graph
+20. Agentic knowledge graph: Conceptual framework for multi-agent systems - Hypermode, дата последнего обращения: ноября 25, 2025, https://hypermode.com/blog/agentic-knowledge-graph-conceptual-framework
+21. The Role of Knowledge Graphs in Building Agentic AI Systems - ZBrain, дата последнего обращения: ноября 25, 2025, https://zbrain.ai/knowledge-graphs-for-agentic-ai/
+22. Understanding Knowledge graphs for Agentic AI | by Shilpa Thota - Medium, дата последнего обращения: ноября 25, 2025, https://shilpathota.medium.com/understanding-knowledge-graphs-for-agentic-ai-7162d018387b
+23. The Evolution of AI: From Classical Machine Learning to Modern Large Language Models - IEEE Xplore, дата последнего обращения: ноября 25, 2025, http://ieeexplore.ieee.org/iel8/6287639/10820123/11202920.pdf
+24. A Comprehensive Survey and Guide to Multimodal Large Language Models in Vision-Language Tasks - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2411.06284v1
+25. (PDF) Scaling Instruction-Finetuned Language Models - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/364513807_Scaling_Instruction-Finetuned_Language_Models
+26. DialogLM: Pre-trained Model for Long Dialogue Understanding and Summarization | Request PDF - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/361756448_DialogLM_Pre-trained_Model_for_Long_Dialogue_Understanding_and_Summarization
+27. Retrieval Augmented Generation (RAG) system for a private knowledge base - Vector Theta, дата последнего обращения: ноября 25, 2025, https://www.vectortheta.com/blog/RAG-LLaMA
+28. Improving RAG with Query expansion & reranking models | by Akash A Desai - Medium, дата последнего обращения: ноября 25, 2025, https://aksdesai1998.medium.com/improving-rag-with-query-expansion-reranking-models-31d252856580
+29. SWIFT: On-the-Fly Self-Speculative Decoding for LLM Inference Acceleration | OpenReview, дата последнего обращения: ноября 25, 2025, https://openreview.net/forum?id=EKJhH5D5wA
+30. TETRIS: Optimal Draft Token Selection for Batch Speculative Decoding - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2025.acl-long.1598.pdf
+31. REFRAG: Meta's Breakthrough in Retrieval-Augmented Generation Efficiency, дата последнего обращения: ноября 25, 2025, https://datasciencedojo.com/blog/refrag-metas-breakthrough-in-rag/
+32. KVFlow: Efficient Prefix Caching for Accelerating LLM-Based Multi-Agent Workflows - OpenReview, дата последнего обращения: ноября 25, 2025, https://openreview.net/pdf?id=5Iw1nDtYmT
+33. Optimizing Response Caching for Agentic AI Systems - Sparkco, дата последнего обращения: ноября 25, 2025, https://sparkco.ai/blog/optimizing-response-caching-for-agentic-ai-systems
+34. Accelerating LLMs with Skeleton-of-Thought Prompting - Portkey, дата последнего обращения: ноября 25, 2025, https://portkey.ai/blog/skeleton-of-thought-prompting/
+35. Skeleton-of-Thought: Prompting LLMs for Efficient Parallel Generation - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2307.15337v3
+36. imaurer/awesome-llm-json: Resource list for generating JSON using LLMs via function calling, tools, CFG. Libraries, Models, Notebooks, etc. - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/imaurer/awesome-llm-json
+37. Validation in Instructor, дата последнего обращения: ноября 25, 2025, https://python.useinstructor.com/concepts/validation/
+38. 567-labs/instructor: structured outputs for llms - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/567-labs/instructor
+39. dottxt-ai/outlines: Structured Outputs - GitHub, дата последнего обращения: ноября 25, 2025, https://github.com/dottxt-ai/outlines
+40. Structured Outputs in the API - Hacker News, дата последнего обращения: ноября 25, 2025, https://news.ycombinator.com/item?id=41173223
+41. Generating Structured Outputs from Language Models: Benchmark and Studies, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/388231978_Generating_Structured_Outputs_from_Language_Models_Benchmark_and_Studies
+42. How JSON Schema Works for LLM Tools & Structured Outputs - PromptLayer Blog, дата последнего обращения: ноября 25, 2025, https://blog.promptlayer.com/how-json-schema-works-for-structured-outputs-and-tool-integration/
+43. Announcing Codestral 25.08 and the Complete Mistral Coding Stack for Enterprise, дата последнего обращения: ноября 25, 2025, https://mistral.ai/news/codestral-25-08
+44. Coding | Mistral Docs, дата последнего обращения: ноября 25, 2025, https://docs.mistral.ai/capabilities/code_generation
+45. Fine-Tuning Language Models with Fill-in-the-Middle: A Comprehensive Guide - GoPenAI, дата последнего обращения: ноября 25, 2025, https://blog.gopenai.com/fine-tuning-language-models-with-fill-in-the-middle-a-comprehensive-guide-58a022b8f8df
+46. What is FIM and why does it matter in LLM-based AI | by Eva Thompson | Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@SymeCloud/what-is-fim-and-why-does-it-matter-in-llm-based-ai-53f33385585b
+47. OpenAI Guardrails TypeScript, дата последнего обращения: ноября 25, 2025, https://openai.github.io/openai-guardrails-js/
+48. Measuring the Effectiveness and Performance of AI Guardrails in Generative AI Applications, дата последнего обращения: ноября 25, 2025, https://developer.nvidia.com/blog/measuring-the-effectiveness-and-performance-of-ai-guardrails-in-generative-ai-applications/
+49. Profile-Aware Maneuvering: A Dynamic Multi-Agent System for Robust GAIA Problem Solving by AWorld - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2508.09889v3
+50. Token Usage Tracking & Smart Context Management - AgentDock Documentation, дата последнего обращения: ноября 25, 2025, https://hub.agentdock.ai/docs/token-usage-tracking
+51. Lost in the Middle: How Language Models Use Long Contexts - Stanford Computer Science, дата последнего обращения: ноября 25, 2025, https://cs.stanford.edu/~nfliu/papers/lost-in-the-middle.arxiv2023.pdf
+52. Anatomy of a prompt for AI assistants - Kirschbaum Development, дата последнего обращения: ноября 25, 2025, https://kirschbaumdevelopment.com/insights/anatomy-of-a-prompt-for-ai-assistants
+53. Prompt Compression with Context-Aware Sentence Encoding for Fast and Improved LLM Inference, дата последнего обращения: ноября 25, 2025, https://ojs.aaai.org/index.php/AAAI/article/view/34639/36794
+54. Prompt engineering checklist - Infor Documentation Library, дата последнего обращения: ноября 25, 2025, https://docs.infor.com/inforos/2024.x/en-us/useradminlib_cloud/genaiug/psc1723066302772.html
+55. Beyond distance education - University of London, дата последнего обращения: ноября 25, 2025, https://www.london.ac.uk/sites/default/files/cde/beyond-distance-education.pdf
+56. P⁢r⁢o⁢f⁢i⁢L⁢L⁢M: An LLM-Based Framework for Implicit Profiling of Chatbot Users - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2506.13980v1
+57. Fairness Analysis of Graph Neural Networks for Behavioral User Modeling, дата последнего обращения: ноября 25, 2025, https://repo.bibliothek.uni-halle.de/bitstream/1981185920/120833/1/Purificato_Erasmo_Dissertation_2025.pdf
+58. What is Zero-Shot Prompting? Examples & Applications - Digital Adoption, дата последнего обращения: ноября 25, 2025, https://www.digital-adoption.com/zero-shot-prompting/
+59. Zero-Shot Prompting - GeeksforGeeks, дата последнего обращения: ноября 25, 2025, https://www.geeksforgeeks.org/nlp/zero-shot-prompting/
+60. A Comprehensive Guide to Using Chains in Langchain - Analytics Vidhya, дата последнего обращения: ноября 25, 2025, https://www.analyticsvidhya.com/blog/2023/10/a-comprehensive-guide-to-using-chains-in-langchain/
+61. LangChain in Chains #18: Chains Revisited | by Okan Yenigün | AI Mind, дата последнего обращения: ноября 25, 2025, https://pub.aimind.so/langchain-in-chains-18-chains-revisited-36c17e4b5ae7
+62. AI Agent Routing: Tutorial & Best Practices, дата последнего обращения: ноября 25, 2025, https://www.patronus.ai/ai-agent-development/ai-agent-routing
+63. Router Agent — NVIDIA NeMo Agent Toolkit (1.3) - NVIDIA Docs Hub, дата последнего обращения: ноября 25, 2025, https://docs.nvidia.com/nemo/agent-toolkit/latest/workflows/about/router-agent.html
+64. Progressive Profiling: The Key to Better Customer Relationships - UserGuiding, дата последнего обращения: ноября 25, 2025, https://userguiding.com/blog/progressive-profiling
+65. How Profile Enrichment and Progressive Profiling Can Boost Your Marketing - Auth0, дата последнего обращения: ноября 25, 2025, https://auth0.com/blog/how-profile-enrichment-and-progressive-profiling-can-boost-your-marketing/
+66. Symphony: Improving Memory Management for LLM Inference Workloads - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2412.16434v1

@@ -1,0 +1,17 @@
+PRODUCTION DEPLOYMENT VERIFICATION TEST
+
+Этот файл создан для проверки работы инструмента Ingestion Watcher в production окружении.
+
+Тест включает:
+- Кириллицу в имени файла
+- Пробелы
+- Спецсимвол (#)
+
+Ожидаемое поведение:
+1. Файл должен быть обнаружен в data_tray
+2. Имя должно быть транслитерировано: "Проверка Production #2" → "proverka_production_2"
+3. Файл должен переместиться в E:\WORLD_OLLAMA\library\raw_documents
+4. В логе должна появиться запись [SUCCESS]
+
+Дата создания: 25 ноября 2025
+Статус: SESA3002a Production Verification

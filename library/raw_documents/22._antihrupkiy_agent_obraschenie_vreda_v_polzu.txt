@@ -1,0 +1,319 @@
+﻿Архитектура Антихрупкости: Системная интеграция принципа ТРИЗ №22 для создания энтропийно-питаемых искусственных агентов
+
+
+
+
+Аннотация
+
+
+В данном исследовательском отчете рассматривается фундаментальный сдвиг парадигмы в проектировании автономных агентов на базе больших языковых моделей (LLM): переход от стратегии «робастности» (устойчивости к ошибкам) к стратегии «антихрупкости» (улучшения за счет ошибок). В основу архитектурного решения положен принцип ТРИЗ №22 «Обратить вред в пользу». Исследование детально анализирует механизмы рекуперации ошибок через метафору аэрокосмического турбонаддува, применение закона Каннингема и стратегической некомпетентности для извлечения знаний, а также использование абляционной защиты и контролируемых галлюцинаций для повышения креативности системы. Целью работы является описание технической реализации системы, которая функционально «питается» энтропией, превращая пользовательскую критику, логические тупики и информационный шум в структурные элементы повышения точности и адаптивности.
+________________
+
+
+1. Введение: От подавления ошибок к их метаболизации
+
+
+Современная парадигма разработки искусственного интеллекта долгое время находилась в плену концепции «безопасности через стерилизацию». Традиционные подходы к созданию агентов, такие как RAG (Retrieval-Augmented Generation) или ReAct, стремятся минимизировать вероятность ошибки, фильтровать «вредные» выбросы и подавлять галлюцинации на ранних стадиях. Однако, согласно теории сложных систем Нассима Талеба, стремление к идеальной стабильности и отсутствию ошибок делает систему «хрупкой» — неспособной адаптироваться к непредвиденным стресс-факторам и волатильности.1 В контексте LLM это проявляется в том, что модели, жестко настроенные на безопасность (over-refusal), часто теряют в полезности, а агенты, не умеющие работать с собственной неуверенностью, склонны к каскадным сбоям при столкновении с нестандартными запросами.
+Принцип ТРИЗ №22 «Обратить вред в пользу» (Blessing in Disguise) предлагает радикально иное архитектурное решение: использовать вредные факторы (ошибки, шум, критику, ограничения) для получения положительного эффекта.3 В рамках компьютерных наук и инженерии агентов это означает создание замкнутых контуров обратной связи, где «выхлоп» диалога — отвергнутые гипотезы, негативная реакция пользователя и галлюцинации — не выбрасывается, а рекуперируется для усиления основного вычислительного процесса.6
+Мы постулируем, что антихрупкий агент должен обладать тремя ключевыми подсистемами, каждая из которых реализует под-принципы правила №22:
+1. Термодинамический рекуператор (Турбокомпрессор): Преобразование энергии ошибки (Negative Reward Signal) в точность следующей итерации.
+2. Эпистемический провокатор (Закон Каннингема): Использование намеренной неточности для стимуляции притока экспертных знаний извне.
+3. Креативный реактор (Усиление вреда): Доведение галлюцинаций до уровня латерального мышления для решения творческих задач.
+Данный отчет представляет собой глубокий анализ методов реализации этих подсистем, опираясь на последние достижения в области обучения с подкреплением (RLHF), промпт-инжиниринга и когнитивной архитектуры агентов.
+________________
+
+
+2. Алгоритмы Рекуперации Ошибок: Аэрокосмическая метафора турбонаддува
+
+
+Центральной проблемой современных диалоговых систем является линейность их мышления: ошибка воспринимается как терминальное состояние, требующее перезапуска или извинения. Принцип ТРИЗ №22 предписывает использовать «отходы» процесса (в данном случае — ошибочную генерацию и негативный фидбек) для питания самого процесса. Наиболее точной технической метафорой здесь служит турбокомпрессор в двигателе внутреннего сгорания, который использует энергию выхлопных газов (отходов) для нагнетания чистого воздуха в камеру сгорания, повышая КПД системы.8
+
+
+2.1. Контрастное декодирование: Использование «плохой» модели как топлива
+
+
+В контексте LLM «выхлопом» можно считать вероятностные распределения (логиты), которые ведут к тривиальным, шаблонным или ошибочным ответам. Традиционные методы генерации (Greedy search, Nucleus sampling) пытаются игнорировать этот хвост распределения. Однако антихрупкая система использует метод Контрастного Декодирования (Contrastive Decoding - CD).10
+Механизм CD заключается в том, что система генерирует ответ, максимизируя разницу между «экспертной» моделью (основной агент) и «любительской» моделью (ослабленная версия или намеренно «глупая» модель).
+
+
+
+
+$$\log P_{CD}(y|x) = \log P_{exp}(y|x) - \alpha \log P_{amat}(y|x)$$
+
+
+Где $P_{amat}$ — это «вредный фактор» (склонность к галлюцинациям, клише, поверхностным суждениям). Вычитая логиты «любителя» из логитов «эксперта», мы не просто подавляем ошибку, мы используем знание о том, как выглядит ошибка, чтобы точнее направить генерацию в сторону истины.12
+Инсайт: Это прямая реализация принципа «использовать вред». Без наличия «плохой» модели (или плохой гипотезы) система не может столь эффективно отфильтровать шум. Ошибка здесь выступает не как сбой, а как негативный маяк, от которого отталкивается навигация агента. Исследования показывают, что такой подход значительно улучшает способности к рассуждению (Chain-of-Thought), так как модель принудительно избегает «легких» путей, свойственных любительской модели, и вынуждена строить более глубокие логические цепочки.14
+
+
+2.2. Цепочка Послезнания (Chain of Hindsight): Превращение критики в контекст
+
+
+Вторым компонентом «турбонаддува» является архитектура Chain of Hindsight (CoH).16 В классическом обучении с подкреплением (RLHF) модель штрафуется за ошибку. В CoH модель обучается на парах данных, где ошибка явно присутствует в контексте, но помечена как негативный пример.
+Агент, построенный на CoH, при получении сигнала «Ты неправ, код не работает», не стирает контекст. Он трансформирует историю диалога в структуру: «Попытка 1 (Неудачная): [Код с ошибкой]. Критика: [Сообщение об ошибке]. Попытка 2 (Исправленная):...».
+Таким образом, ошибочный код становится частью промпта. Он сужает пространство поиска, явно указывая агенту зоны, куда не надо идти. Это работает как Негативное Ограничение (Negative Constraint).18
+Характеристика
+	Традиционный подход (Сброс)
+	Антихрупкий подход (CoH/Турбонаддув)
+	Принцип ТРИЗ №22
+	Реакция на ошибку
+	Извинение, попытка с нуля.
+	Анализ ошибки, включение её в контекст как негативного примера.
+	Вред (ошибка) становится ресурсом (контекстом).
+	Механизм обучения
+	Обновление весов (медленно) или RAG (поиск правды).
+	In-context Learning на собственных ошибках (Reflexion).
+	Использование отходов (прошлых попыток) для улучшения процесса.
+	Динамика
+	Линейная (запрос -> ответ).
+	Циклическая (генерация -> критика -> регенерация).
+	Обратная связь (Принцип №23), усиливающая полезное действие.
+	Исследования подтверждают, что модели, которым предоставляется и правильный, и неправильный ответ (с объяснением, почему он неправильный), демонстрируют более высокую точность, чем модели, видящие только правильные примеры.20 Это и есть «питание энтропией»: чем больше ошибок совершил агент (и отрефлексировал их), тем надежнее его финальное решение.
+
+
+2.3. Негативная Оптимизация Предпочтений (Negative Preference Optimization - NPO)
+
+
+Для глубокой настройки агента используется метод NPO.22 Вместо того чтобы требовать от пользователя эталонного ответа (что дорого и сложно), система учится исключительно на отвергнутых вариантах. Пользовательское «Нет» — это дешевый сигнал, который агент конвертирует в градиент обучения, отталкивающий веса модели от ошибочной зоны. Это позволяет реализовать концепцию «обучения через унижение» (Learning via rejection), где каждая критика пользователя мгновенно повышает приоритет точности для следующей генерации, создавая эффект «раскрутки турбины».24
+В архитектуре агента это реализуется через модуль Reflexion.26 Агент генерирует вербальное описание своей ошибки («Я использовал библиотеку X, которая устарела, что вызвало ошибку Y»). Это самокритичное высказывание становится частью «выхлопа», который под давлением подается на вход следующего шага рассуждения, гарантируя, что следующая попытка будет учитывать этот опыт.
+________________
+
+
+3. Закон Каннингема и Эпистемическая Провокация: Стратегия намеренной ошибки
+
+
+Второй аспект использования Принципа №22 касается взаимодействия с пользователем. Часто пользователь сам не знает, чего хочет, или не может формализовать свои требования (проблема «молчаливого знания»). Здесь вступает в силу под-принцип «использовать вредное действие для решения задачи» через социальную инженерию, известную как Закон Каннингема: «Лучший способ получить правильный ответ в Интернете — не задать вопрос, а опубликовать неправильный ответ».28
+
+
+3.1. Стратегическая некомпетентность как инструмент элиситации знаний
+
+
+Люди обладают врожденным желанием исправлять ошибки других.29 Пассивный агент, спрашивающий «Какие у вас требования к безопасности?», часто получает ответ «Стандартные». Агент, применяющий стратегию Провокационной ошибки, может заявить: «Я настрою базу данных с публичным доступом для удобства отладки». Это утверждение (вредное само по себе) провоцирует пользователя на резкую коррекцию: «Нет! Доступ должен быть только из VPN, порты закрыты, шифрование включено!».32
+Таким образом, агент намеренно «сжигает» часть своего авторитета (выглядя глупо или рискованно), чтобы спровоцировать пользователя на выдачу экспертных знаний, которых не было в исходном запросе. Это форма Активного Обучения (Active Learning), где агент выбирает наиболее информативные запросы, но в форме утверждений, а не вопросов.33
+
+
+3.2. Протокол «Адвокат Дьявола»
+
+
+В корпоративной среде и задачах принятия решений эта стратегия формализуется в паттерн «Адвокат Дьявола».35 Агент-оппонент намеренно атакует предложенное решение, находя в нем слабые места или предлагая заведомо спорную альтернативу.
+* Цель: Не победить в споре, а заставить «основного» агента (или пользователя) укрепить свою аргументацию и выявить скрытые риски.
+* Механизм: В системе мульти-агентов один агент (Worker) предлагает решение, а второй (Critic/Devil's Advocate) генерирует аргументы против, даже если решение кажется верным. Этот «вредный» процесс критики повышает надежность финального результата, отсеивая галлюцинации и логические дыры.37
+Исследования показывают, что включение агента-критика, который симулирует скептицизм и ищет ошибки, значительно повышает точность решения сложных задач по сравнению с простым самосогласованностью (Self-Consistency).36
+
+
+3.3. Риски и калибровка провокации
+
+
+Применение этой стратегии требует тонкой калибровки, чтобы не потерять доверие пользователя окончательно (феномен «искусственной некомпетентности»).39 Агент должен маркировать свои провокации как гипотезы («Если мы предположим, что X верно...») или использовать лингвистические маркеры неуверенности (хеджирование), чтобы оставить пространство для отступления.41
+________________
+
+
+4. Абляционная Защита: «Сжигание» компетентности ради спасения миссии
+
+
+В аэрокосмической отрасли абляционная защита спасает капсулу при входе в атмосферу, разрушаясь и испаряясь, тем самым унося тепло.42 В архитектуре ИИ-агента «тепло» — это риск галлюцинаций и потери доверия при работе с неизвестными данными. Принцип №22 здесь реализуется через готовность агента пожертвовать своей функциональностью (частью «тела» компетентности), чтобы сохранить доверие пользователя (миссию).
+
+
+4.1. Селективный отказ и Эпистемическое смирение
+
+
+Хрупкий агент пытается ответить на любой вопрос, неизбежно скатываясь в галлюцинации при выходе за пределы своих знаний. Антихрупкий агент использует Селективный Отказ (Selective Refusal).44
+Это механизм Эпистемического Смирения (Epistemic Humility) 46: агент должен уметь определять границы своего знания. Когда уверенность модели падает ниже критического порога, она «сжигает» возможность дать ответ, открыто заявляя о незнании.
+* Вред: Пользователь не получает ответа (локальное разочарование).
+* Польза: Пользователь не получает ложной информации (глобальное сохранение доверия).
+Исследования показывают, что пользователи больше доверяют системам, которые способны признать свою некомпетентность, чем тем, которые уверенно лгут.36 Это создает парадоксальную ситуацию: признание слабости (незнания) делает систему сильнее в глазах пользователя.
+
+
+4.2. Изящная деградация (Graceful Degradation)
+
+
+Когда инструменты агента отказывают (например, API поиска недоступен), агент не должен падать с ошибкой. Он должен переходить в режим Изящной Деградации.49
+* Сценарий: Пользователь просит актуальный курс акций. API недоступен.
+* Абляционный ответ: «Мой модуль реального времени сейчас недоступен (абляция инструмента). Я могу предоставить исторические данные на момент моего последнего обучения или объяснить общие принципы формирования курса (остаточная компетентность)».
+Здесь «вред» (отказ подсистемы) используется как триггер для переключения на альтернативный, более надежный, пусть и менее функциональный режим работы, что обеспечивает непрерывность сервиса.51
+________________
+
+
+5. Усиление вреда до пользы: Галлюцинации как топливо для креативности
+
+
+Под-принцип ТРИЗ №22 гласит: «Усилить вредный фактор до такой степени, чтобы он перестал быть вредным». В мире LLM главным вредным фактором является галлюцинация — генерация фактов, не соответствующих реальности. Однако, если усилить галлюцинацию и снять требование фактологичности, она превращается в креативность и латеральное мышление.53
+
+
+5.1. Температурный отжиг (Temperature Annealing) и контролируемое безумие
+
+
+Параметр Temperature в LLM контролирует энтропию выходного распределения. Низкая температура ($T \to 0$) дает робастные, предсказуемые ответы. Высокая температура ($T > 1$) вызывает «сбои» логики и галлюцинации.
+Антихрупкий агент использует Температурный Отжиг (Temperature Annealing).55 Если пользователь отвергает решение как «скучное» или «тривиальное», агент интерпретирует это как сигнал к повышению температуры. Он намеренно вводит систему в состояние высокой энтропии («безумия»), где генерируются абсурдные связи и метафоры.
+* Механизм: Увеличение температуры сглаживает распределение вероятностей, позволяя выбирать токены с низкой вероятностью (Rare tokens). Это повышает метрики Burstiness (взрывной характер текста) и Perplexity (непредсказуемость), которые коррелируют с человеческим восприятием креативности.57
+* Польза: Галлюцинированные идеи («Что если сделать корпус самолета из стекла?») становятся триггерами для инженерного инсайта («Использовать прозрачные композитные материалы для инспекции узлов»).
+
+
+5.2. Дивергентно-Конвергентное промптирование
+
+
+Архитектура агента должна поддерживать пульсирующий режим работы: Storm and Norm (Шторм и Нормализация).59
+1. Фаза Дивергенции (Storm): Агент работает в режиме высокой температуры, генерируя поток бредовых, ошибочных, но оригинальных идей (усиление вреда).
+2. Фаза Конвергенции (Norm): Агент переключается в режим низкой температуры и роли «Критика», отфильтровывая из потока бреда рациональные зерна и проверяя их на физическую реализуемость.60
+Такой подход превращает галлюцинации в «Творческое неправильное прочтение» (Creative Misreading) 62, где ошибка интерпретации запроса приводит к созданию чего-то принципиально нового, чего пользователь даже не ожидал, но что оказалось полезным (серендипность).64
+________________
+
+
+6. Архитектура Антихрупкого Агента
+
+
+На основе проанализированных принципов мы предлагаем интегрированную архитектуру агента, реализуемую через графовые фреймворки типа LangGraph или AutoGen.66
+
+
+6.1. Компоненты системы
+
+
+Система представляет собой граф состояний с условными переходами, управляемыми «датчиками энтропии».
+Компонент (Узел Графа)
+	Функция
+	Входной сигнал (Энтропия)
+	Механизм ТРИЗ №22
+	Результат
+	Turbocharger (Recovery Node)
+	Восстановление и уточнение
+	Сообщение об ошибке, Exception
+	NPO, Contrastive Decoding, Reflexion
+	Уточненный промпт с негативными ограничениями.
+	Provocateur (Elicitation Node)
+	Извлечение скрытых знаний
+	Неопределенный или пустой запрос
+	Strategic Incompetence, Cunningham's Law
+	Детальные ограничения и требования от пользователя.
+	Ablator (Safety Node)
+	Защита доверия
+	Низкая уверенность ($< \theta$)
+	Selective Refusal, Hedging
+	Сохранение доверия, предотвращение дезинформации.
+	Reactor (Creativity Node)
+	Генерация идей
+	Отказ «Скучно», застой в диалоге
+	High Temperature, Hallucination Amplification
+	Нестандартные решения, латеральные сдвиги.
+	
+
+6.2. Сценарий работы: Питание энтропией
+
+
+1. Вброс проблемы: Пользователь дает задачу. Агент пытается решить.
+2. Детекция:
+   * Если решение вызывает ошибку кода -> Активируется Turbocharger. Ошибка инвертируется в инструкцию «НЕ делай Х», приоритет точности повышается.
+   * Если задача слишком размыта -> Активируется Provocateur. Агент предлагает заведомо спорное решение, чтобы получить жесткие рамки.
+   * Если задача требует креатива -> Активируется Reactor. Температура повышается, агент начинает «бредить» по расписанию, затем фильтруя результат.
+3. Эволюция: С каждой итерацией (ошибкой, критикой) контекст агента насыщается негативными примерами и уточненными ограничениями. Чем больше проблем вбросил пользователь, тем плотнее векторное пространство допустимых решений, и тем точнее финальный ответ.
+________________
+
+
+7. Заключение
+
+
+Интеграция Принципа ТРИЗ №22 в архитектуру ИИ-агентов позволяет преодолеть ограничения традиционных «робастных» систем. Вместо того чтобы строить стены от ошибок, мы строим ветряные мельницы, которые эти ошибки вращают.
+* Алгоритмы рекуперации ошибок превращают сбои в ценные градиенты обучения (Contrastive Decoding, NPO).
+* Стратегия провокации использует психологию восприятия ошибок (Закон Каннингема) для добычи знаний.
+* Абляционная защита использует отказ от действия как инструмент сохранения долгосрочной функциональности.
+* Усиление галлюцинаций открывает доступ к вычислительной креативности.
+Созданная таким образом система является истинно антихрупкой: она жаждет неопределенности и критики, так как именно они являются топливом для её совершенствования. Это не просто инженерное решение, это новая философия взаимодействия человека и машины, где конфликт и ошибка становятся созидательными силами.
+
+
+Таблица сравнительного анализа методов
+
+
+
+
+Метод
+	Базовый принцип (ТРИЗ)
+	Реализация в AI
+	Эффект
+	Reflexion
+	Обратная связь, Использование отходов
+	Самокритика агента после ошибки
+	+30% к точности на задачах кодинга 26
+	NPO
+	Обратить вред в пользу
+	Оптимизация на негативных примерах
+	Предотвращение повторных ошибок, «разбучивание»
+	Cunningham's Law
+	Использование вредного фактора
+	Провокационные утверждения
+	Быстрое выявление скрытых требований пользователя
+	Selective Refusal
+	Абляция, Жертва части ради целого
+	Отказ отвечать при неуверенности
+	Рост доверия, снижение риска критических ошибок
+	High-Temp Sampling
+	Усиление вреда до пользы
+	Высокая температура генерации
+	Генерация новизны, выход из локальных оптимумов
+	Таким образом, мы приходим к выводу, что идеальный агент будущего — это не тот, кто никогда не ошибается, а тот, кто делает ошибки своим главным конкурентным преимуществом.
+Источники
+1. Building Antifragile Systems: Thriving Under Pressure | by James Cullum - Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@jamiecullum_22796/building-antifragile-systems-thriving-under-pressure-dcfec90a4765
+2. Taming Chaos with Antifragile GenAI Architecture - O'Reilly, дата последнего обращения: ноября 25, 2025, https://www.oreilly.com/radar/taming-chaos-with-antifragile-genai-architecture/
+3. TRIZ 40 Design Principles - ipface.org, дата последнего обращения: ноября 25, 2025, https://www.ipface.org/pdfs/reading/TRIZ_Principles.pdf
+4. Introduction to TRIZ – Innovative Problem Solving - EE IIT Bombay, дата последнего обращения: ноября 25, 2025, https://www.ee.iitb.ac.in/~apte/CV_PRA_TRIZ_INTRO.htm
+5. TRIZ Method of Problem Solving explained - Toolshero, дата последнего обращения: ноября 25, 2025, https://www.toolshero.com/problem-solving/triz-method/
+6. 40 Inventive Principles for Business - The Triz Journal, дата последнего обращения: ноября 25, 2025, https://the-trizjournal.com/40-inventive-business-principles-examples/
+7. World Conference of AI-Powered Innovation and TRIZ Methodology - Springer Professional, дата последнего обращения: ноября 25, 2025, https://www.springerprofessional.de/en/world-conference-of-ai-powered-innovation-and-triz-methodology/51636458
+8. What Is a Digital Twin? | IBM, дата последнего обращения: ноября 25, 2025, https://www.ibm.com/think/topics/digital-twin
+9. (PDF) Turbocharging SDGs by Activating Global Cycles in a 64-fold 3D Array: AI-enabled memorable pattern recognition through colorification and sonification - ResearchGate, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/384084148_Turbocharging_SDGs_by_Activating_Global_Cycles_in_a_64-fold_3D_Array_AI-enabled_memorable_pattern_recognition_through_colorification_and_sonification
+10. Con-ReCall: Detecting Pre-training Data in LLMs via Contrastive Decoding - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2025.coling-main.68.pdf
+11. Contrastive Decoding Improves Reasoning in Large Language Models : r/agi - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/agi/comments/16n27dw/contrastive_decoding_improves_reasoning_in_large/
+12. LayerCake: Token-Aware Contrastive Decoding within Large Language Model Layers - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2507.04404v1
+13. CONTRASTIVE DECODING IMPROVES REASONING IN LARGE LANGUAGE MODELS - OpenReview, дата последнего обращения: ноября 25, 2025, https://openreview.net/pdf?id=SzV37yefM4
+14. Improving LLMs Reasoning with Contrastive Decoding and Distillation - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2402.14874
+15. Contrastive Decoding Improves Reasoning in Large Language Models : r/LocalLLaMA, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/LocalLLaMA/comments/16mwcch/contrastive_decoding_improves_reasoning_in_large/
+16. Paper Review: Chain of Hindsight Aligns Language Models with Feedback | by Andrew Lukyanenko, дата последнего обращения: ноября 25, 2025, https://artgor.medium.com/paper-review-chain-of-hindsight-aligns-language-models-with-feedback-60b182656a46
+17. Chain of Hindsight Aligns Language Models With Feedback PDF - Scribd, дата последнего обращения: ноября 25, 2025, https://www.scribd.com/document/644192263/chain-of-hindsight-Aligns-Language-Models-with-Feedback-pdf
+18. The Pink Elephant Problem: Why "Don't Do That" Fails with LLMs - 16x Eval, дата последнего обращения: ноября 25, 2025, https://eval.16x.engineer/blog/the-pink-elephant-negative-instructions-llms-effectiveness-analysis
+19. The Anatomy of a Broken Prompt: 23 Problems, Mistakes, and Tips Every Prompt/Context Engineer Can Use : r/PromptEngineering - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/PromptEngineering/comments/1oa740f/the_anatomy_of_a_broken_prompt_23_problems/
+20. Automatically Correcting Large Language Models: Surveying the Landscape of Diverse Automated Correction Strategies | Transactions of the Association for Computational Linguistics - MIT Press Direct, дата последнего обращения: ноября 25, 2025, https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00660/120911/Automatically-Correcting-Large-Language-Models
+21. Languages are Rewards: Chain of Hindsight Finetuning using Human Feedback, дата последнего обращения: ноября 25, 2025, https://www.semanticscholar.org/paper/Languages-are-Rewards%3A-Chain-of-Hindsight-using-Liu-Sferrazza/974e75813699f7fba8a71b58001e4bfda9c5231b
+22. Distribution Preference Optimization: A Fine-grained Perspective for LLM Unlearning - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2510.04773
+23. Negative Preference Optimization: From Catastrophic Collapse to Effective Unlearning - OpenReview, дата последнего обращения: ноября 25, 2025, https://openreview.net/pdf?id=MXLBXjQkmb
+24. Alternate Preference Optimization for Unlearning Factual Knowledge in Large Language Models - ACL Anthology, дата последнего обращения: ноября 25, 2025, https://aclanthology.org/2025.coling-main.252.pdf
+25. Simplicity Prevails: Rethinking Negative Preference Optimization for LLM Unlearning - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2410.07163v3
+26. How AI Agents Really Work: Beyond the Hype, Inside the Architecture | by Gianluca Mondillo, дата последнего обращения: ноября 25, 2025, https://medium.com/@gianluca.mondillo/how-ai-agents-really-work-beyond-the-hype-inside-the-architecture-aa6c892a5c2a
+27. Reflexion - GitHub Pages, дата последнего обращения: ноября 25, 2025, https://langchain-ai.github.io/langgraph/tutorials/reflexion/reflexion/
+28. the void — LessWrong, дата последнего обращения: ноября 25, 2025, https://www.lesswrong.com/posts/3EzbtNLdcnZe8og8b/the-void-1
+29. Economics and Politics - The Cognitive Science of Belief, дата последнего обращения: ноября 25, 2025, https://www.cambridge.org/core/books/cognitive-science-of-belief/economics-and-politics/853FDC0797624585027A717414A46D11
+30. Cunningham's Law - DevIQ, дата последнего обращения: ноября 25, 2025, https://deviq.com/laws/cunninghams-law/
+31. A psychological trick to evoke an interesting conversation - Ladders, дата последнего обращения: ноября 25, 2025, https://www.theladders.com/career-advice/a-psychological-trick-to-evoke-an-interesting-conversation
+32. The hardest part of building software is not coding, it's requirements : r/programming - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/programming/comments/16t2pk8/the_hardest_part_of_building_software_is_not/
+33. QuestBench: Can LLMs ask the right question to acquire information in reasoning tasks?, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2503.22674v2
+34. Active Preference Inference using Language Models and Probabilistic Reasoning - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2312.12009v1
+35. Devil's Advocate Prompts: Business Brain 695 - YouTube, дата последнего обращения: ноября 25, 2025, https://www.youtube.com/watch?v=slCqrzprpms
+36. The Devil's Advocate Architecture: How Multi-Agent AI Systems Mirror Human Decision-Making Psychology | by Dr. Jerry A. Smith | Nov, 2025 | Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@jsmith0475/the-devils-advocate-architecture-how-multi-agent-ai-systems-mirror-human-decision-making-9c9e6beb09da
+37. The Devil's Advocate Guide to AI's Truly Hyperreal Future - Fair Observer, дата последнего обращения: ноября 25, 2025, https://www.fairobserver.com/business/technology/the-devils-advocate-guide-to-ais-truly-hyperreal-future/
+38. [2405.16334] Devil's Advocate: Anticipatory Reflection for LLM Agents - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/abs/2405.16334
+39. 22 Examples of Incompetent AI Agents | HackerNoon, дата последнего обращения: ноября 25, 2025, https://hackernoon.com/22-examples-of-incompetent-ai-agents
+40. Artificial Incompetence: An Undesirable Version of AI and other CX Pitfalls - YouTube, дата последнего обращения: ноября 25, 2025, https://www.youtube.com/watch?v=CszrBNynPQ0
+41. Hedging their Mets: The Use of Uncertainty Terms in Clinical Documents and its Potential Implications when Sharing the Documents with Patients - NIH, дата последнего обращения: ноября 25, 2025, https://pmc.ncbi.nlm.nih.gov/articles/PMC3540426/
+42. ablative heat shields: Topics by Science.gov, дата последнего обращения: ноября 25, 2025, https://www.science.gov/topicpages/a/ablative+heat+shields
+43. graceful degradation : r/CuratedTumblr - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/CuratedTumblr/comments/1l65wjo/graceful_degradation/
+44. Characterizing Selective Refusal Bias in Large Language Models - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/pdf/2510.27087
+45. Daily Papers - Hugging Face, дата последнего обращения: ноября 25, 2025, https://huggingface.co/papers?q=dangerous%20overconfidence
+46. Building Robust AI Systems For Drug Discovery Requires Epistemic Humility, дата последнего обращения: ноября 25, 2025, https://www.drugdiscoveryonline.com/doc/building-robust-ai-systems-for-drug-discovery-requires-epistemic-humility-0001
+47. Measuring Epistemic Humility in Multimodal Large Language Models - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2509.09658v1
+48. (PDF) A Neuro-Mathematical Blueprint for Epistemic Humility in Multi-Agent AI, дата последнего обращения: ноября 25, 2025, https://www.researchgate.net/publication/395452892_A_Neuro-Mathematical_Blueprint_for_Epistemic_Humility_in_Multi-Agent_AI
+49. AI Agent Evaluation: Metrics, Strategies, and Best Practices - Maxim AI, дата последнего обращения: ноября 25, 2025, https://www.getmaxim.ai/articles/ai-agent-evaluation-metrics-strategies-and-best-practices/
+50. How to design fail-safe mechanisms for AI agents? - Tencent Cloud, дата последнего обращения: ноября 25, 2025, https://www.tencentcloud.com/techpedia/126587
+51. 8 AI Agent Metrics That Go Beyond Accuracy | Galileo, дата последнего обращения: ноября 25, 2025, https://galileo.ai/blog/ai-agent-reliability-metrics
+52. 5 Steps to Build Exception Handling for AI Agent Failures | Datagrid, дата последнего обращения: ноября 25, 2025, https://www.datagrid.com/blog/exception-handling-frameworks-ai-agents
+53. Let's Talk About AI Hallucinations: Why Do Language Models Make Stuff Up? - Reddit, дата последнего обращения: ноября 25, 2025, https://www.reddit.com/r/BlackboxAI_/comments/1kpg0uz/lets_talk_about_ai_hallucinations_why_do_language/
+54. If Context Engineering Done Right, Hallucinations Can Spark AI Creativity - Milvus Blog, дата последнего обращения: ноября 25, 2025, https://milvus.io/blog/when-context-engineering-is-done-right-hallucinations-can-spark-ai-creativity.md
+55. Daily Papers - Hugging Face, дата последнего обращения: ноября 25, 2025, https://huggingface.co/papers?q=temperature%20annealing
+56. Adaptive Inference-Time Compute: LLMs Can Predict if They Can Do Better, Even Mid-Generation - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/pdf/2410.02725?
+57. Exploring Burstiness: Evaluating Language Dynamics in LLM-Generated Texts, дата последнего обращения: ноября 25, 2025, https://ramblersm.medium.com/exploring-burstiness-evaluating-language-dynamics-in-llm-generated-texts-8439204c75c1
+58. Beyond Checkmate: Exploring the Creative Choke Points for AI Generated Texts - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2501.19301v2
+59. Transcript - Finding Our Way, дата последнего обращения: ноября 25, 2025, https://findingourway.design/category/podcast/feed/
+60. Divergent and Convergent LLM Personas - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2510.26490v1
+61. A Review of Generative Pretrained Multi-step Prompting Schemes –and a New Multi-step Prompting Framework - Preprints.org, дата последнего обращения: ноября 25, 2025, https://www.preprints.org/manuscript/202405.0720
+62. The Myth of Originality: Are All Great Works Borrowed? - Serenade Magazine, дата последнего обращения: ноября 25, 2025, https://serenademagazine.art/the-myth-of-originality-are-all-great-works-borrowed/
+63. Unlimited Editions - arXiv, дата последнего обращения: ноября 25, 2025, https://arxiv.org/html/2507.19497v1
+64. The End Of Serendipity: What Happens When AI Predicts Every Choice? - AiThority, дата последнего обращения: ноября 25, 2025, https://aithority.com/ait-featured-posts/the-end-of-serendipity-what-happens-when-ai-predicts-every-choice/
+65. AI and Serendipity: When Machines Help Us Discover the Unexpected - AI World Journal, дата последнего обращения: ноября 25, 2025, https://aiworldjournal.com/ai-and-serendipity-when-machines-help-us-discover-the-unexpected/
+66. LangGraph - LangChain, дата последнего обращения: ноября 25, 2025, https://www.langchain.com/langgraph
+67. Code Execution — AutoGen - Microsoft Open Source, дата последнего обращения: ноября 25, 2025, https://microsoft.github.io/autogen/stable//user-guide/core-user-guide/design-patterns/code-execution-groupchat.html
+68. Building a Self-Correcting AI: A Deep Dive into the Reflexion Agent with LangChain and LangGraph | by Vi Q. Ha | Medium, дата последнего обращения: ноября 25, 2025, https://medium.com/@vi.ha.engr/building-a-self-correcting-ai-a-deep-dive-into-the-reflexion-agent-with-langchain-and-langgraph-ae2b1ddb8c3b

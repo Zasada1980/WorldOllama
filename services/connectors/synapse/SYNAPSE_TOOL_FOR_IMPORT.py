@@ -1,0 +1,219 @@
+"""
+Open WebUI Tool: Knowledge Base Lookup (SYNAPSE)
+Интеграция CORTEX (LightRAG) в Open WebUI через Native Tools API
+
+ИНСТРУКЦИЯ ПО УСТАНОВКЕ:
+1. Откройте Open WebUI (http://localhost:3100)
+2. Перейдите в Workspace → Tools
+3. Нажмите "+ Add Tool"
+4. Скопируйте ВСЁ содержимое этого файла
+5. Вставьте в редактор Tool Code
+6. Сохраните как "Knowledge Base"
+7. Активируйте инструмент в настройках модели qwen
+
+Created: 25.11.2025 (TD-007 NEURAL LINK)
+Author: SESA3002a + GitHub Copilot
+"""
+
+import requests
+import json
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class Tools:
+    """
+    Open WebUI Tool Class для интеграции с CORTEX (LightRAG)
+    
+    Этот класс следует спецификации Open WebUI Tools API:
+    - Методы с префиксом 'action_' автоматически регистрируются как доступные действия
+    - Docstring метода становится описанием инструмента
+    - Pydantic BaseModel используется для валидации параметров
+    """
+    
+    class Valves(BaseModel):
+        """
+        Конфигурационные параметры инструмента (редактируются в UI)
+        """
+        CORTEX_BASE_URL: str = Field(
+            default="http://localhost:8004",
+            description="Base URL для CORTEX (LightRAG) сервера"
+        )
+        DEFAULT_TIMEOUT: int = Field(
+            default=120,
+            description="Таймаут запросов в секундах (LLM generation может занять 30-90s)"
+        )
+        DEFAULT_MODE: str = Field(
+            default="hybrid",
+            description="Режим поиска по умолчанию (naive/local/global/hybrid)"
+        )
+    
+    def __init__(self):
+        self.valves = self.Valves()
+    
+    def _check_cortex_health(self) -> bool:
+        """
+        Внутренняя проверка доступности CORTEX
+        """
+        try:
+            response = requests.get(
+                f"{self.valves.CORTEX_BASE_URL}/health",
+                timeout=5
+            )
+            if response.status_code == 200:
+                health = response.json()
+                return health.get("status") == "healthy"
+            return False
+        except Exception:
+            return False
+    
+    def action_lookup_knowledge(
+        self,
+        query: str,
+        mode: Optional[str] = None
+    ) -> str:
+        """
+        Поиск информации в базе знаний проекта WORLD_OLLAMA (331 документ).
+        
+        Используйте этот инструмент для получения технических деталей, документации,
+        отчетов по темам: GPU overclocking (RTX 5060 Ti), SSL certificates, 
+        AI agents (LangGraph, CrewAI), ТРИЗ principles, LightRAG, Project structure.
+        
+        База знаний содержит 1469 сущностей и 1560 связей в графе знаний.
+        
+        Args:
+            query (str): Точный и подробный поисковый запрос. Будьте конкретны 
+                        и используйте технические термины.
+                        Примеры: 
+                        - "Как разогнать память RTX 5060 Ti через MSI Afterburner?"
+                        - "Структура проекта WORLD_OLLAMA"
+                        - "Принципы ТРИЗ для решения технических противоречий"
+                        - "Сравнение LangGraph и CrewAI"
+            
+            mode (str, optional): Режим поиска в графе знаний:
+                - "hybrid" (рекомендуется) - комбинированный поиск (30-60s)
+                - "local" - локальный entity-based поиск (20-30s)
+                - "global" - глобальный граф-поиск (30-45s)
+                - "naive" - прямой векторный поиск (10-20s, менее точно)
+        
+        Returns:
+            str: Текстовый ответ из базы знаний (обычно 2000-3000 символов 
+                 контекстуальной информации)
+        """
+        # Валидация входных данных
+        if not query or not query.strip():
+            return "❌ Ошибка: Query не может быть пустым. Укажите конкретный вопрос."
+        
+        # Установка режима по умолчанию
+        if mode is None:
+            mode = self.valves.DEFAULT_MODE
+        
+        # Валидация режима
+        valid_modes = ["naive", "local", "global", "hybrid"]
+        if mode not in valid_modes:
+            return (
+                f"❌ Ошибка: Некорректный режим '{mode}'. "
+                f"Допустимые значения: {', '.join(valid_modes)}"
+            )
+        
+        # Проверка здоровья CORTEX (опционально, можно закомментировать для скорости)
+        if not self._check_cortex_health():
+            return (
+                "❌ CORTEX (LightRAG) недоступен на "
+                f"{self.valves.CORTEX_BASE_URL}.\n\n"
+                "Запустите сервер командой:\n"
+                "pwsh E:\\WORLD_OLLAMA\\scripts\\start_lightrag.ps1\n\n"
+                "Или проверьте статус: Invoke-RestMethod "
+                f"{self.valves.CORTEX_BASE_URL}/health"
+            )
+        
+        # Подготовка запроса к CORTEX
+        payload = {
+            "query": query.strip(),
+            "mode": mode
+        }
+        
+        try:
+            # Выполнение POST запроса
+            response = requests.post(
+                f"{self.valves.CORTEX_BASE_URL}/query",
+                json=payload,
+                timeout=self.valves.DEFAULT_TIMEOUT
+            )
+            
+            # Проверка статуса
+            response.raise_for_status()
+            
+            # Парсинг ответа
+            result = response.json()
+            answer = result.get("response", "")
+            
+            if not answer or answer == "Информация не найдена в базе знаний.":
+                return (
+                    f"⚠️ Информация по запросу '{query[:50]}...' "
+                    "не найдена в базе знаний CORTEX.\n\n"
+                    "Попробуйте:\n"
+                    "• Переформулировать запрос более общими терминами\n"
+                    "• Использовать другой режим поиска (mode='global' или 'hybrid')\n"
+                    "• Проверить, относится ли вопрос к темам базы знаний\n\n"
+                    f"База знаний покрывает: GPU overclocking, SSL, AI agents, "
+                    f"ТРИЗ, LightRAG, Project docs (331/336 документов, 98.5%)"
+                )
+            
+            # Метаданные для информации (опционально)
+            detected_lang = result.get("detected_language", "unknown")
+            tried_modes = result.get("tried_modes", [mode])
+            
+            # Формирование ответа с метаданными
+            response_text = (
+                f"📚 **Информация из базы знаний CORTEX:**\n\n"
+                f"{answer}\n\n"
+                f"---\n"
+                f"*Источник: CORTEX (LightRAG) | "
+                f"Режим: {', '.join(tried_modes)} | "
+                f"Язык: {detected_lang} | "
+                f"Длина: {len(answer)} символов*"
+            )
+            
+            return response_text
+        
+        except requests.exceptions.Timeout:
+            return (
+                f"⏱️ Таймаут: CORTEX не успел обработать запрос за "
+                f"{self.valves.DEFAULT_TIMEOUT}s.\n\n"
+                "LightRAG может долго генерировать ответы (30-90s) для сложных запросов.\n\n"
+                "Возможные решения:\n"
+                "• Увеличьте DEFAULT_TIMEOUT в настройках инструмента (Valves)\n"
+                "• Используйте более быстрый режим: mode='naive' (10-20s)\n"
+                "• Упростите запрос"
+            )
+        
+        except requests.exceptions.ConnectionError:
+            return (
+                f"❌ Не удалось подключиться к CORTEX на "
+                f"{self.valves.CORTEX_BASE_URL}.\n\n"
+                "Убедитесь, что сервер запущен:\n"
+                "pwsh E:\\WORLD_OLLAMA\\scripts\\start_lightrag.ps1\n\n"
+                "Проверьте порт: netstat -ano | Select-String ':8004'"
+            )
+        
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code
+            error_detail = e.response.text[:200] if e.response.text else "No details"
+            return (
+                f"❌ CORTEX вернул ошибку HTTP {status_code}:\n\n"
+                f"{error_detail}\n\n"
+                "Проверьте логи сервера: "
+                "E:\\WORLD_OLLAMA\\services\\lightrag\\lightrag_server.log"
+            )
+        
+        except Exception as e:
+            return (
+                f"❌ Неожиданная ошибка при запросе к CORTEX:\n\n"
+                f"{str(e)}\n\n"
+                "Тип ошибки: {type(e).__name__}"
+            )
+    
+    # Алиас для совместимости с различными именованиями
+    action_search_knowledge = action_lookup_knowledge
+    action_query_cortex = action_lookup_knowledge
