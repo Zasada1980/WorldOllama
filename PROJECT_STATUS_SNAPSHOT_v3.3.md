@@ -1,9 +1,9 @@
-# PROJECT STATUS SNAPSHOT — 27 ноября 2025 (FINALIZED)
+# PROJECT STATUS SNAPSHOT — 27 ноября 2025 (v0.1.0 RELEASED)
 
 **Проект:** WORLD_OLLAMA Desktop Client  
-**Версия:** v3.3 (Phase 1 COMPLETED — Plan C Baseline Stabilized)  
-**Дата:** 27 ноября 2025 г. 14:20  
-**Статус:** ✅ Phase 1 ЗАВЕРШЕНА | 🟡 Phase 2 SCHEDULED (01.12.2025)
+**Версия:** v3.4 (Phase 3 COMPLETED — v0.1.0 Developer Preview Released)  
+**Дата обновления:** 27 ноября 2025 г. 22:30  
+**Статус:** ✅ Phase 3 ЗАВЕРШЕНА (v0.1.0) | 🟡 Phase 4 PLANNED (v0.2.0)
 
 ---
 
@@ -12,15 +12,15 @@
 ```
 Фаза 0 ████████████████████ 100% ✅ ЗАВЕРШЕНА (Orchestration)
 Фаза 1 ████████████████████ 100% ✅ ЗАВЕРШЕНА (Plan C Baseline Stabilized)
-Фаза 2 ░░░░░░░░░░░░░░░░░░░░   0% 🟡 SCHEDULED (UX-Spec start 01.12)
-Фаза 3 ░░░░░░░░░░░░░░░░░░░░   0% ⏳ PENDING (After Phase 2)
-Фаза 4 ░░░░░░░░░░░░░░░░░░░░   0% ⏳ PLANNED (After MVP)
+Фаза 2 ████████████████████ 100% ✅ ЗАВЕРШЕНА (UX-Spec completed in parallel)
+Фаза 3 ████████████████████ 100% ✅ ЗАВЕРШЕНА (Tauri MVP v0.1.0 Released)
+Фаза 4 ░░░░░░░░░░░░░░░░░░░░   0% 🟡 PLANNED (v0.2.0 Production)
 
-ОБЩИЙ ПРОГРЕСС: ████████░░░░░░░░░░░░ 40% (Phases 0+1 ✅)
+ОБЩИЙ ПРОГРЕСС: ████████████████░░░░ 80% (Phases 0-3 ✅, Phase 4 pending)
 ```
 
-**СТРАТЕГИЧЕСКОЕ РЕШЕНИЕ 27.11.2025:**  
-Plan C baseline stabilization принят как Phase 1 completion. Rerank experiments заморожены до 10.12.2025. Pivot к Phase 2 (UX-Spec) утверждён.
+**КРИТИЧЕСКАЯ ВЕХА 27.11.2025:**  
+v0.1.0 (Developer Preview) опубликован на GitHub! Desktop Client MVP завершён за 6 дней (вместо 4 недель). Tasks 1-11 completed. Git tag v0.1.0 создан. Release notes опубликованы.
 
 ---
 
@@ -238,37 +238,97 @@ Plan C baseline stabilization принят как Phase 1 completion. Rerank exp
 
 ---
 
-## 🏗️ ФАЗА 3: TAURI MVP ⏳ PENDING
+## 🏗️ ФАЗА 3: TAURI MVP ✅ RELEASED (v0.1.0)
 
-**Статус:** Awaiting Phase 2 completion  
-**Прогресс:** 0%  
-**Expected start:** 10.12.2025  
-**Estimated duration:** 2-3 weeks
+**Статус:** ✅ ЗАВЕРШЕНА — Developer Preview опубликован  
+**Прогресс:** 100% (Tasks 1-11 completed)  
+**Дата релиза:** 27 ноября 2025  
+**Версия:** v0.1.0 (Developer Preview)  
+**GitHub Release:** https://github.com/Zasada1980/WorldOllama/releases/tag/v0.1.0
 
-### Scope (Preliminary)
+### Реализованный функционал
 
-- Rust + Tauri 2.0 setup
-- Chat interface implementation
-- CORTEX API integration
-- Service orchestration UI
-- Settings management
-- Local knowledge base viewer
+#### Desktop Client (Tauri + Svelte)
+- ✅ Chat Panel — общение с LLM + retrieval из CORTEX
+- ✅ System Status Panel — мониторинг Ollama/CORTEX (автообновление 15s)
+- ✅ Settings Panel — управление endpoints, профили агентов
+- ✅ Library Panel — статус индексации, управление документами
+- ✅ Commands Panel — Command DSL (INDEX/TRAIN/GIT)
+
+#### Core Integration
+- ✅ Tauri 2.0 setup (Rust + Svelte 5)
+- ✅ CORTEX API integration (HTTP calls)
+- ✅ Ollama API integration
+- ✅ Local storage для настроек
+- ✅ Command parser (DSL → Rust struct)
+
+#### Command DSL (Tasks 8-9)
+- ✅ INDEX KNOWLEDGE — запуск индексации LightRAG
+- ✅ TRAIN AGENT — scaffold для fine-tuning (MVP safe mode)
+- ✅ GIT PUSH — dry-run проверка изменений
+
+#### Release Infrastructure (Task 11)
+- ✅ Версионирование (package.json, tauri.conf.json)
+- ✅ CHANGELOG.md — полная документация релиза
+- ✅ BUILD_RELEASE.ps1 — автоматическая сборка
+- ✅ Portable exe (8.38 MB) — готов к распространению
+- ✅ Git tag v0.1.0 + GitHub Release
+
+### Метрики Phase 3
+
+| Метрика | Цель | Факт | Статус |
+|---------|------|------|--------|
+| Функциональные вкладки | 5 | 5 | ✅ |
+| Command DSL команд | 3 | 3 | ✅ |
+| Размер exe | <15 MB | 8.38 MB | ✅ |
+| Smoke-тест сценариев | 5 | 5 | ✅ |
+| Время разработки | ~4 недели | 6 дней | ✅ Ahead of schedule |
+
+### Известные ограничения v0.1.0
+- TRAIN AGENT: scaffold only (реальный fine-tune в v0.2.0)
+- GIT PUSH: dry-run only (реальный push в v0.2.0)
+- Windows Installers (MSI/NSIS): отложены на v0.2.0
 
 ---
 
-## 🚀 ФАЗА 4: PRODUCTION RELEASE ⏳ PLANNED
+## 🚀 ФАЗА 4: PRODUCTION RELEASE 🟡 PLANNED (v0.2.0)
 
-**Статус:** Future planning  
-**Prогресс:** 0%  
-**Expected start:** ~01.2026  
+**Статус:** Planning — после релиза v0.1.0  
+**Прогресс:** 0%  
+**Expected start:** Декабрь 2025  
+**Target date:** Январь 2026
 
-### Scope (Preliminary)
+### Scope v0.2.0 (Roadmap)
 
-- Packaging & distribution
+#### Complete Training Integration
+- Реальный запуск fine-tuning через UI
+- VRAM мониторинг во время обучения
+- Progress tracking (epochs, loss, ETA)
+- Автоматическая валидация адаптеров
+
+#### Complete Git Integration
+- Двухфазовый workflow: dry-run → confirm → real push
+- Реальные `git commit` и `git push`
+- GitHub API интеграция (создание PR)
+- Git operation logging
+
+#### UI Improvements
+- Live progress bars для команд
+- Toast notifications для фоновых задач
+- Command history log (последние 10 команд)
+- Improved error handling
+
+#### Distribution
+- MSI installer (WiX Toolset)
+- NSIS installer (альтернативный формат)
 - Auto-updates setup
-- Documentation finalization
-- Beta testing program
-- Public release
+- Digital signature (code signing)
+
+### Scope v0.3.0+ (Future)
+- Agent Automation (цепочки команд)
+- Scheduled tasks (периодическая индексация)
+- Advanced RAG (fine-tuning retrieval)
+- Multi-model support (LLaMA, Mistral, Gemma)
 
 ---
 
