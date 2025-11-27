@@ -3,8 +3,10 @@
 **Local-First AI Workstation** — Desktop приложение для работы с знаниями через LLM
 
 [![Status](https://img.shields.io/badge/status-MVP_Complete-green)]() 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.1.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)]()
+
+**Текущая версия:** v0.1.0 (Developer Preview)
 
 ---
 
@@ -259,6 +261,7 @@ pwsh scripts/start_training_ui.ps1
 - [`PROJECT_MAP.md`](PROJECT_MAP.md) — архитектурная карта проекта
 - [`PROJECT_STATUS_SNAPSHOT_v3.3.md`](PROJECT_STATUS_SNAPSHOT_v3.3.md) — текущий статус
 - [`MANUAL.md`](MANUAL.md) — руководство пользователя
+- [`CHANGELOG.md`](CHANGELOG.md) — история изменений и релизы
 
 ### Документация по задачам (client/docs/)
 - [`TASK_9_COMPLETION_REPORT.md`](client/docs/TASK_9_COMPLETION_REPORT.md) — отчёт о Task 9 (реальные команды)
@@ -299,6 +302,9 @@ WORLD_OLLAMA/
 │   └── cleaned_documents/
 ├── scripts/             # PowerShell automation
 │   ├── START_ALL.ps1    # Запуск всех сервисов
+│   ├── STOP_ALL.ps1     # Остановка всех сервисов
+│   ├── CHECK_STATUS.ps1 # Проверка статуса
+│   ├── BUILD_RELEASE.ps1 # Сборка релиза
 │   ├── start_lightrag.ps1
 │   ├── start_neuro_terminal.ps1
 │   ├── start_training_ui.ps1
@@ -313,11 +319,16 @@ WORLD_OLLAMA/
 ### Сборка production версии
 
 ```powershell
+# Автоматическая сборка (рекомендуется)
+pwsh scripts/BUILD_RELEASE.ps1
+
+# Или вручную:
 cd client
 npm run tauri build
 
 # Скомпилированное приложение:
-# client/src-tauri/target/release/tauri_fresh.exe
+# client/src-tauri/target/release/bundle/msi/*.msi (installer)
+# client/src-tauri/target/release/WORLD_OLLAMA.exe (portable)
 ```
 
 ---

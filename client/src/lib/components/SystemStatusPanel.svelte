@@ -249,6 +249,24 @@
     margin-left: auto;
   }
 
+  .version-info {
+    text-align: center;
+    margin-top: 30px;
+    padding: 15px;
+    border-top: 1px solid #333;
+  }
+
+  .version-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+
   .auto-refresh-notice .dot {
     width: 8px;
     height: 8px;
@@ -346,4 +364,8 @@
       </li>
     </ul>
   </section>
+
+  <footer class="version-info">
+    <span class="version-badge">WORLD_OLLAMA v0.1.0 (Developer Preview)</span>
+  </footer>
 </div>

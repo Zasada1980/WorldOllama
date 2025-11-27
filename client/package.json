@@ -1,7 +1,7 @@
 {
-  "name": "tauri_fresh",
+  "name": "world_ollama_client",
   "version": "0.1.0",
-  "description": "",
+  "description": "WORLD_OLLAMA Desktop Client - Local-First AI Workstation",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
