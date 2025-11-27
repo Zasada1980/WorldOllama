@@ -29,10 +29,21 @@ E:\WORLD_OLLAMA\
 │   ├── weekly/
 │   └── manual/
 │
+├── production/                        # ✅ Production модели
+│   └── TD010v2_triz_full/            # eval_loss 0.8591 (CERTIFIED)
+│       ├── adapter_model.safetensors # 35.27 MB
+│       └── all_results.json
+│
+├── archive/                           # ✅ Архив моделей
+│   ├── TD010v2_triz_extended/        # Legacy (eval_loss 0.9358)
+│   └── Qwen2-7B_checkpoint/          # R&D potential (539 MB)
+│
+├── saves/                             # Training checkpoints
+│
 ├── docs/
 │   └── SECURE_ENCLAVE_REPORT.md
 │
-├── library/                           # ✅ 177 files, 7.62 MB
+├── library/                           # ✅ 179 files, 7.69 MB
 │   ├── raw_documents/                # ТРИЗ + AI методологии (.txt)
 │   ├── cleaned_documents/
 │   └── backups/
@@ -45,15 +56,23 @@ E:\WORLD_OLLAMA\
 │   └── services/
 │
 ├── models/
-│   └── qwen2-triz-merged/            # Fine-tuned LoRA adapters
+│   ├── qwen2-triz-merged/            # Fine-tuned LoRA adapters (legacy)
+│   └── triz-td010v2-merged/          # ✅ Merged HF model (2960 MB)
+│       ├── model-00001-of-00002.safetensors  # 1884 MB
+│       ├── model-00002-of-00002.safetensors  # 1061 MB
+│       └── Modelfile                         # Ollama config
 │
-├── scripts/                           # ✅ 6 PowerShell scripts
+├── scripts/                           # ✅ 20 PowerShell scripts
 │   ├── generate_map.ps1
 │   ├── ingest_watcher.ps1
 │   ├── start_lightrag.ps1
 │   ├── start_neuro_terminal.ps1
 │   ├── start_training_ui.ps1
-│   └── start_training.ps1
+│   ├── start_training.ps1
+│   ├── cleanup_project.ps1           # NEW: Project cleanup
+│   ├── export_td010v2_gguf.ps1       # NEW: Export merged model
+│   ├── train_td010v3_*.ps1           # NEW: TD-010v3 training variants
+│   └── ... (14 more training scripts)
 │
 ├── services/                          # ✅ Microservices
 │   ├── connectors/

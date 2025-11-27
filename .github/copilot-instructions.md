@@ -792,7 +792,31 @@ if (Test-Path $statusFile) {
 ## 🔍 Quick Reference
 
 ```powershell
-# Check running services
+# ========================================
+# SERVICE ORCHESTRATION (NEW - 27.11.2025)
+# ========================================
+
+# Start all services (Ollama + CORTEX + Neuro-Terminal)
+pwsh E:\WORLD_OLLAMA\scripts\START_ALL.ps1
+
+# Start without Neuro-Terminal (for Tauri development)
+pwsh E:\WORLD_OLLAMA\scripts\START_ALL.ps1 -SkipNeuroTerminal
+
+# Stop all services
+pwsh E:\WORLD_OLLAMA\scripts\STOP_ALL.ps1
+
+# Check service status (single check)
+pwsh E:\WORLD_OLLAMA\scripts\CHECK_STATUS.ps1
+
+# Check with details (response time, endpoints)
+pwsh E:\WORLD_OLLAMA\scripts\CHECK_STATUS.ps1 -Detailed
+
+# Continuous monitoring (Ctrl+C to stop)
+pwsh E:\WORLD_OLLAMA\scripts\CHECK_STATUS.ps1 -Continuous -IntervalSeconds 5
+
+# ========================================
+# MANUAL PORT CHECKS (if needed)
+# ========================================
 netstat -ano | Select-String ":8501"  # Neuro-Terminal UI
 netstat -ano | Select-String ":8004"  # CORTEX LightRAG
 netstat -ano | Select-String ":11434"  # Ollama

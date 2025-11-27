@@ -17,6 +17,7 @@
 # КРИТИЧЕСКАЯ ЗАЩИТА: LLM МОДЕЛИ (OLLAMA)
 # ========================================
 # Принцип: Не пушим 9 GB весов моделей
+models/
 *.gguf
 *.bin
 *.safetensors
@@ -106,3 +107,38 @@ backups/weekly/
 # ✅ Документация (README.md, MANUAL.md, STATE_SNAPSHOT)
 # ✅ Скрипты управления (USER/, scripts/)
 # ✅ Библиотека знаний (library/raw_documents/ - 7.66 MB)
+
+# ========================================
+# TASK 10: ДОПОЛНИТЕЛЬНЫЕ ИСКЛЮЧЕНИЯ
+# ========================================
+# Принцип: Не пушим тяжёлые артефакты и песочницы
+
+# Архивы и старые чекпоинты (1.8 GB)
+archive/
+
+# Production модели (1.1 GB)
+production/
+
+# Песочницы и эксперименты (600 MB)
+workbench/
+
+# Runtime данные агентов
+agents/*/data/
+agents/*/logs/
+agents/*/world/*
+!agents/*/world/.gitkeep
+
+# Временные файлы и установщики
+*.exe
+!.github/**/*.exe
+project_tree_full.txt
+*_backup_*/
+
+# Node.js артефакты (client)
+node_modules/
+.svelte-kit/
+client/.svelte-kit/
+client/node_modules/
+
+# Rust артефакты (Tauri)
+client/src-tauri/target/

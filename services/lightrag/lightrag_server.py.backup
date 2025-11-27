@@ -50,10 +50,7 @@ LIBRARY_DIR = Path(r"E:\WORLD_OLLAMA\library\raw_documents")
 OLLAMA_BASE_URL = "http://localhost:11434"
 LLM_MODEL = "qwen2.5:14b"  # Совпадает с ollama list
 EMBEDDING_MODEL = "nomic-embed-text:latest"  # ИСПРАВЛЕНО: добавлен тег :latest
-# [PLAN C] Rerank временно ЗАМОРОЖЕН до 10.12.2025 из-за падений CORTEX.
-# См. инцидент "Custom Rerank Pipeline crashes CORTEX, 27.11.2025".
-# POST-PROCESSING rerank (строки ~416-431) оставлен для улучшения читаемости ответов.
-RERANK_MODEL = "qwen2.5:14b"  # Используем ТОЛЬКО для post-processing (НЕ для retrieval)
+RERANK_MODEL = "qwen2.5:14b"  # Используем для rerank
 
 # КРИТИЧНО: Ограничение параллелизма для 16GB VRAM
 LLM_MAX_ASYNC = 1  # СТРОГО 1 (не перегружаем GPU)
@@ -121,26 +118,9 @@ def build_augmented_query(original_query: str):
 
 
 def build_mode_chain(primary_mode: str) -> list[str]:
-    """Формирует цепочку режимов с учётом fallback (TRIZ: динамичность).
-    
-    [PLAN C] Изменено: приоритет режима 'local' для стабильности.
-    Hybrid временно исключён из цепочки из-за нестабильности.
-    """
-    preferred = primary_mode or "local"  # [PLAN C] Default: local вместо hybrid
-    
-    # [PLAN C] Новая цепочка: local → global → naive (без hybrid)
-    if preferred == "naive":
-        base_chain = ["naive", "local", "global"]
-    elif preferred == "local":
-        base_chain = ["local", "global", "naive"]
-    elif preferred == "global":
-        base_chain = ["global", "local", "naive"]
-    elif preferred == "hybrid":
-        # [PLAN C] Hybrid → local (более стабильный режим)
-        base_chain = ["local", "global", "naive"]
-    else:
-        base_chain = ["local", "global", "naive"]
-    
+    """Формирует цепочку режимов с учётом fallback (TRIZ: динамичность)."""
+    preferred = primary_mode or "hybrid"
+    base_chain = [preferred, "hybrid", "global", "local", "naive"]
     # Сохраняем порядок, убираем дубликаты
     unique_chain = []
     for mode in base_chain:
@@ -163,12 +143,7 @@ def has_meaningful_result(result) -> bool:
 
 
 async def execute_query_with_fallbacks(query_text: str, primary_mode: str):
-    """Пытаемся получить ответ, переключаясь между режимами поиска.
-    
-    [PLAN C] Изменения для улучшения baseline:
-    - top_k увеличен с 10 до 20 (больше кандидатов)
-    - Приоритет режима 'local' для стабильности
-    """
+    """Пытаемся получить ответ, переключаясь между режимами поиска."""
     tried_modes = []
     for mode in build_mode_chain(primary_mode):
         tried_modes.append(mode)
@@ -176,7 +151,7 @@ async def execute_query_with_fallbacks(query_text: str, primary_mode: str):
             query_text,
             param=QueryParam(
                 mode=mode,
-                top_k=20,  # [PLAN C] Увеличено с 10 до 20
+                top_k=10,
                 only_need_context=True
             )
         )
@@ -437,27 +412,9 @@ async def query_graph(request: QueryRequest):
             request.mode
         )
 
-        # [PLAN C] POST-PROCESSING: Улучшение контекста перед LLM
-        # 1. Дедупликация по содержимому (убираем повторяющиеся фрагменты)
-        # 2. Фильтрация слишком коротких чанков (шум)
-        # 3. Переформулирование через LLM для улучшения читаемости
-        if has_meaningful_result(result):
-            # Простая дедупликация: разбиваем на предложения, убираем дубликаты
-            sentences = re.split(r'[.!?]+\s+', str(result))
-            unique_sentences = []
-            seen = set()
-            for sent in sentences:
-                normalized = sent.strip().lower()
-                if len(normalized) > 30 and normalized not in seen:  # Фильтр коротких и дубликатов
-                    unique_sentences.append(sent.strip())
-                    seen.add(normalized)
-            
-            # Ограничиваем контекст топ-8 предложений (из ~20 кандидатов)
-            result = '. '.join(unique_sentences[:8]) + '.'
-            
-            # POST-PROCESSING rerank для улучшения читаемости (НЕ для retrieval!)
-            if RERANK_MODEL:
-                rerank_prompt = f"""Ты получил ответ от системы поиска по базе знаний.
+        # POST-PROCESSING: Переранжирование через qwen2.5:14b (при наличии содержимого)
+        if has_meaningful_result(result) and RERANK_MODEL:
+            rerank_prompt = f"""Ты получил ответ от системы поиска по базе знаний.
 Твоя задача: переформулировать ответ, сделав его более точным и релевантным запросу.
 
 Запрос пользователя: {request.query}
@@ -467,11 +424,11 @@ async def query_graph(request: QueryRequest):
 
 Переформулируй ответ, сохранив все важные факты, но улучшив структуру и ясность:"""
 
-                reranked_response = await ollama_client.generate(
-                    model=RERANK_MODEL,
-                    prompt=rerank_prompt
-                )
-                result = reranked_response['response']
+            reranked_response = await ollama_client.generate(
+                model=RERANK_MODEL,
+                prompt=rerank_prompt
+            )
+            result = reranked_response['response']
 
         return {
             "query": request.query,
