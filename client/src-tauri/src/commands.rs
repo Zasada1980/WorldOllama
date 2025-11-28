@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 use std::time::Duration;
+use std::process::Command;
+use std::fs;
+use std::path::PathBuf;
+use tauri::Manager;
 
 use crate::config::AppConfig;
 use crate::settings::{load_settings, save_settings, AppSettings};
@@ -44,6 +48,46 @@ impl<T> ApiResponse<T> {
             }),
         }
     }
+}
+
+// ============================================================================
+// TASK 16.1: Path Agnosticism - Single Source of Truth
+// ============================================================================
+
+/// Returns the absolute path to the project root directory.
+/// Uses environment variable WORLD_OLLAMA_ROOT if set,
+/// otherwise calculates from executable location.
+#[tauri::command]
+pub fn get_project_root(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // Method 1: Environment variable (for testing/deployment flexibility)
+    if let Ok(root) = std::env::var("WORLD_OLLAMA_ROOT") {
+        return Ok(root);
+    }
+    
+    // Method 2: Tauri resource resolver (works with packaged app)
+    if let Some(resource_dir) = app_handle.path_resolver().resource_dir() {
+        // Resource dir points to "_up_" (resources folder inside .exe bundle)
+        // Project root is 2 levels up: exe -> tauri_fresh.exe -> WORLD_OLLAMA
+        if let Some(parent) = resource_dir.parent() {
+            if let Some(project_root) = parent.parent() {
+                return Ok(project_root.to_string_lossy().to_string());
+            }
+        }
+    }
+    
+    // Method 3: Fallback to current exe location
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            if let Some(project_root) = parent.parent() {
+                return Ok(project_root.to_string_lossy().to_string());
+            }
+        }
+    }
+    
+    // Method 4: Last resort - current directory
+    Ok(std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| ".".to_string()))
 }
 
 // ============================================================================
@@ -326,9 +370,6 @@ pub async fn save_app_settings(settings: AppSettings) -> ApiResponse<AppSettings
 // ============================================================================
 
 use chrono::{DateTime, Utc};
-use std::fs;
-use std::path::PathBuf;
-use std::process::Command;
 
 #[derive(Serialize, Deserialize)]
 pub struct IndexationStartInfo {
@@ -412,10 +453,18 @@ fn start_indexation_internal(
         );
     }
     
-    // Путь к скрипту индексации
-    let script_path = r"E:\WORLD_OLLAMA\scripts\ingest_watcher.ps1";
+    // TASK 16.1: Динамический путь к скрипту индексации
+    // Note: Эта функция вызывается из Tauri command, но app_handle недоступен
+    // Используем относительный путь от exe или environment variable
+    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
+        .unwrap_or_else(|_| std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
+            .unwrap_or_else(|| ".".to_string()));
     
-    if !std::path::Path::new(script_path).exists() {
+    let script_path = format!("{}\\scripts\\ingest_watcher.ps1", project_root);
+    
+    if !std::path::Path::new(&script_path).exists() {
         let mut error_status = current_status;
         error_status.state = "error".to_string();
         error_status.last_error = Some(format!("Скрипт индексации не найден: {}", script_path));
@@ -507,52 +556,15 @@ pub struct ExecutionResult {
     pub command_type: String,
 }
 
-fn get_training_status_path() -> PathBuf {
-    let app_data = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(app_data)
-        .join("tauri_fresh")
-        .join("training_status.json")
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct TrainingStatus {
-    pub state: String, // "idle" | "running" | "completed" | "error"
-    pub profile: Option<String>,
-    pub data_path: Option<String>,
-    pub epochs: Option<u32>,
-    pub started_at: Option<String>,
-    pub last_error: Option<String>,
-}
-
-impl Default for TrainingStatus {
-    fn default() -> Self {
-        Self {
-            state: "idle".to_string(),
-            profile: None,
-            data_path: None,
-            epochs: None,
-            started_at: None,
-            last_error: None,
-        }
-    }
-}
-
-fn save_training_status(status: &TrainingStatus) -> Result<(), String> {
-    ensure_status_dir()?;
-    
-    let status_path = get_training_status_path();
-    let json = serde_json::to_string_pretty(status)
-        .map_err(|e| format!("Failed to serialize training status: {}", e))?;
-    
-    fs::write(&status_path, json)
-        .map_err(|e| format!("Failed to write training status file: {}", e))?;
-    
-    Ok(())
-}
-
 // ============================================================================
 // Task 9.2: Training Job Launcher (Real Integration)
 // ============================================================================
+// NOTE: TrainingStatus moved to training_manager.rs in TASK 12.1
+// NOTE: All training status management now uses training_manager functions
+// PULSE v1 (ОРДЕР №16.3-UI): Python writes status, Rust reads only
+
+// REMOVED: set_training_queued, set_training_error (PULSE v1 enforcement)
+// Use: training_manager::{get_training_status, clear_training_status, get_status_file_path}
 
 #[derive(Serialize, Deserialize)]
 #[allow(dead_code)] // TODO: Will be used in future UI updates for training progress
@@ -564,6 +576,7 @@ pub struct TrainingStartInfo {
 
 /// Запускает фоновое обучение агента с заданными параметрами
 fn start_training_job(
+    app_handle: tauri::AppHandle,  // NEW: TASK 12.1 - need app_handle for status
     profile: String,
     data_path: String,
     epochs: u32,
@@ -578,7 +591,14 @@ fn start_training_job(
     }
 
     // ======== VALIDATION 2: PROFILE whitelist ========
-    let valid_profiles = ["triz_engineer", "triz_researcher", "default"];
+    // TASK 15.2.4: Added triz_td010v3_full for LLaMA Factory TRIZ training
+    let valid_profiles = [
+        "triz_engineer", 
+        "triz_researcher", 
+        "triz_td010v3_full",       // 15.2.4: Full TRIZ dataset (3448 examples)
+        "triz_td010v3_smoketest",  // 15.2.5: Smoke-test profile (100 examples, 50 steps)
+        "default"
+    ];
     if !valid_profiles.contains(&profile.as_str()) {
         return ApiResponse::error(
             "validation_error",
@@ -598,14 +618,15 @@ fn start_training_job(
     }
 
     // ======== VALIDATION 4: Check if training already running ========
-    let current_status = match get_training_status_path() {
-        path if path.exists() => {
-            match fs::read_to_string(&path) {
-                Ok(json) => serde_json::from_str::<TrainingStatus>(&json).unwrap_or_default(),
-                Err(_) => TrainingStatus::default(),
-            }
+    let current_status = match crate::training_manager::get_training_status(&app_handle) {
+        Ok(status) => status,
+        Err(_) => {
+            // If can't read status, assume idle (safe default)
+            return ApiResponse::error(
+                "status_read_failed",
+                "❌ Не удалось прочитать текущий статус обучения".to_string(),
+            );
         }
-        _ => TrainingStatus::default(),
     };
 
     if current_status.state == "running" || current_status.state == "queued" {
@@ -620,36 +641,26 @@ fn start_training_job(
     }
 
     // ======== Generate Job ID ========
+    use chrono::Utc;
     let now = Utc::now();
     let job_id = format!("train-{}", now.format("%Y%m%d-%H%M%S"));
 
-    // ======== Update status to "queued" BEFORE launching ========
-    let queued_status = TrainingStatus {
-        state: "queued".to_string(),
-        profile: Some(profile.clone()),
-        data_path: Some(data_path.clone()),
-        epochs: Some(epochs),
-        started_at: Some(now.to_rfc3339()),
-        last_error: None,
-    };
+    // ======== PULSE v1: Python pulse_wrapper пишет статус, Rust только читает ========
+    // NOTE: Статус "queued" теперь устанавливается внутри start_agent_training.ps1
+    // через вызов pulse_wrapper.write_idle_status() или write_running_status()
 
-    if let Err(e) = save_training_status(&queued_status) {
-        return ApiResponse::error(
-            "status_save_failed",
-            format!("❌ Не удалось сохранить статус обучения: {}", e),
-        );
-    }
-
-    // ======== Launch PowerShell training script ========
-    let script_path = r"E:\WORLD_OLLAMA\scripts\start_agent_training.ps1";
+    // ======== Launch PowerShell training script (TASK 16.1: Dynamic path) ========
+    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
+        .unwrap_or_else(|_| std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
+            .unwrap_or_else(|| ".".to_string()));
+    
+    let script_path = format!("{}\\scripts\\start_agent_training.ps1", project_root);
 
     // Check if script exists
     if !std::path::Path::new(script_path).exists() {
-        let mut error_status = queued_status.clone();
-        error_status.state = "error".to_string();
-        error_status.last_error = Some(format!("Скрипт не найден: {}", script_path));
-        let _ = save_training_status(&error_status);
-
+        // PULSE v1: НЕ пишем error статус из Rust (Python пишет)
         return ApiResponse::error(
             "script_not_found",
             format!("❌ Скрипт обучения не найден:\n{}", script_path),
@@ -687,19 +698,14 @@ fn start_training_job(
                     • MODE: {}\n\n\
                     🆔 Job ID: {}\n\n\
                     ⚠️ Обучение выполняется в фоне. Статус отслеживается в `training_status.json`.\n\n\
-                    💡 Для мониторинга используйте команду `STATUS: TRAINING` или вкладку 🔧 Commands.",
+                    💡 Для мониторинга используйте команду `STATUS: TRAINING` или вкладку 🧠 Training.",
                     profile, data_path, epochs, mode, job_id
                 ),
                 command_type: "TRAIN_AGENT".to_string(),
             })
         }
         Err(e) => {
-            // Error: update status to "error"
-            let mut error_status = queued_status;
-            error_status.state = "error".to_string();
-            error_status.last_error = Some(format!("Не удалось запустить скрипт: {}", e));
-            let _ = save_training_status(&error_status);
-
+            // PULSE v1: НЕ пишем error статус из Rust (Python пишет)
             ApiResponse::error(
                 "start_failed",
                 format!("❌ Не удалось запустить обучение:\n{}", e),
@@ -709,7 +715,10 @@ fn start_training_job(
 }
 
 #[tauri::command]
-pub async fn execute_agent_command(command_text: String) -> ApiResponse<ExecutionResult> {
+pub async fn execute_agent_command(
+    app_handle: tauri::AppHandle,  // TASK 12.1: Need for training status management
+    command_text: String
+) -> ApiResponse<ExecutionResult> {
     // Шаг 1: Парсинг команды
     let parsed = match parse_command(&command_text) {
         Ok(cmd) => cmd,
@@ -787,8 +796,8 @@ pub async fn execute_agent_command(command_text: String) -> ApiResponse<Executio
                 .unwrap_or(3);
             let mode = parsed.args.get("MODE").cloned().unwrap_or_else(|| "llama_factory".to_string());
 
-            // ✅ REAL ACTION (Task 9.2): Запуск фонового обучения
-            start_training_job(profile, data_path, epochs, mode)
+            // ✅ REAL ACTION (Task 12.1): Запуск фонового обучения через новый backend
+            start_training_job(app_handle.clone(), profile, data_path, epochs, mode)
         }
 
         CommandKind::GitPush => {
@@ -805,13 +814,20 @@ pub async fn execute_agent_command(command_text: String) -> ApiResponse<Executio
             let branch = parsed.args.get("BRANCH").cloned().unwrap_or_else(|| "main".to_string());
             let summary = parsed.args.get("SUMMARY").cloned().unwrap_or_else(|| "Auto-commit".to_string());
 
-            // ======== SECURITY CHECK: Whitelist paths ========
-            let allowed_paths = vec!["E:\\WORLD_OLLAMA", "E:/WORLD_OLLAMA"];
+            // ======== SECURITY CHECK: Whitelist paths (TASK 16.1: Dynamic) ========
+            let project_root = std::env::var("WORLD_OLLAMA_ROOT")
+                .unwrap_or_else(|_| std::env::current_exe()
+                    .ok()
+                    .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
+                    .unwrap_or_else(|| ".".to_string()));
+            
+            let allowed_paths = vec![project_root.clone(), project_root.replace("\\", "/")];
             if !allowed_paths.iter().any(|p| repo_path.starts_with(p)) {
                 return ApiResponse::error(
                     "security_error",
                     format!(
-                        "❌ REPO_PATH должен начинаться с E:\\WORLD_OLLAMA (безопасность)\n\nПолучено: {}",
+                        "❌ REPO_PATH должен находиться внутри проекта (безопасность)\n\nРазрешённый корень: {}\nПолучено: {}",
+                        allowed_paths.first().unwrap_or(&"unknown".to_string()),
                         repo_path
                     ),
                 );
@@ -902,3 +918,149 @@ pub async fn execute_agent_command(command_text: String) -> ApiResponse<Executio
     }
 }
 
+// ============================================================================
+// TASK 12.1: Training Management Commands
+// ============================================================================
+
+use crate::training_manager::{
+    get_training_status as get_status_internal,
+    clear_training_status as clear_status_internal,
+    list_training_profiles as list_profiles_internal,
+    list_datasets_roots as list_datasets_internal,
+    TrainingStatus,
+    TrainingProfile,
+    DatasetRoot,
+};
+
+/// Получить текущий статус обучения
+#[tauri::command]
+pub async fn get_training_status(
+    app_handle: tauri::AppHandle,
+) -> ApiResponse<TrainingStatus> {
+    match get_status_internal(&app_handle) {
+        Ok(status) => ApiResponse::success(status),
+        Err(e) => ApiResponse::error("status_error", format!("Failed to get training status: {}", e)),
+    }
+}
+
+/// Очистить статус обучения (сбросить в idle)
+#[tauri::command]
+pub async fn clear_training_status(
+    app_handle: tauri::AppHandle,
+) -> ApiResponse<()> {
+    match clear_status_internal(&app_handle) {
+        Ok(_) => ApiResponse::success(()),
+        Err(e) => ApiResponse::error("clear_error", format!("Failed to clear training status: {}", e)),
+    }
+}
+
+/// Получить список доступных профилей обучения
+#[tauri::command]
+pub async fn list_training_profiles() -> ApiResponse<Vec<TrainingProfile>> {
+    let profiles = list_profiles_internal();
+    ApiResponse::success(profiles)
+}
+
+/// Получить список корневых директорий датасетов
+#[tauri::command]
+pub async fn list_datasets_roots() -> ApiResponse<Vec<DatasetRoot>> {
+    let roots = list_datasets_internal();
+    ApiResponse::success(roots)
+}
+
+// ============================================================================
+// TASK 17: Git Safety Commands
+// ============================================================================
+
+use crate::git_manager::{
+    plan_git_push as plan_push_internal, 
+    execute_git_push as execute_push_internal,
+    GitPushPlan,
+    GitPushResult,
+};
+
+/// Планирование Git Push (readonly анализ)
+/// 
+/// Эта команда НЕ выполняет push, только анализирует состояние репозитория
+/// и возвращает план с результатами безопасности.
+/// 
+/// # Arguments
+/// 
+/// * `remote` - Имя remote (обычно "origin")
+/// * `branch` - Целевая ветка для push (обычно "main")
+/// 
+/// # Returns
+/// 
+/// * `GitPushPlan` - Структура с результатами анализа:
+///   - `status`: "ready" | "blocked" | "clean"
+///   - `commits`: Список исходящих коммитов
+///   - `files_changed`: Список изменённых файлов
+///   - `blocked_reasons`: Причины блокировки (если есть)
+#[tauri::command]
+pub async fn plan_git_push(
+    app_handle: tauri::AppHandle,
+    remote: String,
+    branch: String,
+) -> ApiResponse<GitPushPlan> {
+    // Получаем project root через существующую функцию
+    let repo_root = match get_project_root(app_handle) {
+        Ok(root) => root,
+        Err(e) => return ApiResponse::error(
+            "path_error",
+            format!("Failed to get project root: {}", e)
+        ),
+    };
+    
+    // Вызываем plan_git_push из git_manager
+    match plan_push_internal(&repo_root, &remote, &branch) {
+        Ok(plan) => ApiResponse::success(plan),
+        Err(e) => ApiResponse::error(
+            "git_error",
+            format!("Git command failed: {}", e)
+        ),
+    }
+}
+
+/// Выполнение Git Push (write операция с re-validation)
+/// 
+/// Эта команда ВЫПОЛНЯЕТ push после повторной проверки состояния репозитория.
+/// 
+/// # Safety
+/// 
+/// Перед выполнением повторно вызывает plan_git_push().
+/// Если статус != "ready" → возвращает ошибку без выполнения push.
+/// 
+/// # Arguments
+/// 
+/// * `remote` - Имя remote (обычно "origin")
+/// * `branch` - Целевая ветка для push (обычно "main")
+/// 
+/// # Returns
+/// 
+/// * `GitPushResult` - Результат выполнения:
+///   - `success`: true/false
+///   - `message`: stdout при успехе, stderr при ошибке
+#[tauri::command]
+pub async fn execute_git_push(
+    app_handle: tauri::AppHandle,
+    remote: String,
+    branch: String,
+) -> ApiResponse<GitPushResult> {
+    // Получаем project root через существующую функцию
+    let repo_root = match get_project_root(app_handle) {
+        Ok(root) => root,
+        Err(e) => return ApiResponse::error(
+            "path_error",
+            format!("Failed to get project root: {}", e)
+        ),
+    };
+    
+    // Вызываем execute_git_push из git_manager (с re-validation внутри)
+    match execute_push_internal(&repo_root, &remote, &branch) {
+        Ok(result) => ApiResponse::success(result),
+        Err(e) => ApiResponse::error(
+            "git_error",
+            format!("Git command failed: {}", e)
+        ),
+    }
+}

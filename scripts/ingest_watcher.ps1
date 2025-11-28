@@ -29,11 +29,12 @@
 param(
     [switch]$WatchMode,      # Режим непрерывного наблюдения (пока не реализован)
     [switch]$DetailedOutput, # Подробный вывод (вместо Verbose для избежания конфликта)
-    [switch]$DryRun          # Тестовый запуск без реального перемещения
+    [switch]$DryRun,         # Тестовый запуск без реального перемещения
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
-# === КОНСТАНТЫ ПУТЕЙ (PRODUCTION) ===
-$worldRoot = "E:\WORLD_OLLAMA"
+# === КОНСТАНТЫ ПУТЕЙ (PRODUCTION - TASK 16.1: Dynamic) ===
+$worldRoot = $ProjectRoot
 $trayPath = Join-Path $worldRoot "workbench\sandbox_main\inputs\data_tray"
 $libraryPath = Join-Path $worldRoot "library\raw_documents"
 $logPath = Join-Path $worldRoot "workbench\sandbox_main\logs\ingestion.log"

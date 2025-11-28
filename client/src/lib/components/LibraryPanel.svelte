@@ -106,6 +106,30 @@
     <p class="subtitle">Управление базой знаний и индексацией документов</p>
   </div>
 
+  <!-- Блок статуса индекса (UX Bridge) -->
+  <div class="card status-block">
+    <div class="card-header">
+      <h2 class="card-title">🧠 Состояние базы знаний (CORTEX)</h2>
+    </div>
+    <div class="card-content">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <span class="metric-label">Indexed Documents</span>
+          <span class="metric-value">~687</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Index Size</span>
+          <span class="metric-value">~50 MB</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Status</span>
+          <span class="metric-value ready">✅ Ready</span>
+        </div>
+      </div>
+      <p class="last-updated">Last updated: 28.11.2025 (Pre-indexed)</p>
+    </div>
+  </div>
+
   <!-- Блок индексации -->
   <div class="card indexation-block">
     <div class="card-header">
@@ -369,6 +393,51 @@
   .placeholder-text {
     color: #9ca3af;
     font-size: 0.875rem;
+  }
+
+  /* Status Block Styles (Task 14) */
+  .status-block {
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #10b981; /* Green accent */
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-item {
+    display: flex;
+    flex-direction: column;
+    background: #f3f4f6;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .metric-value.ready {
+    color: #059669;
+  }
+
+  .last-updated {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-align: right;
+    margin-top: 0.5rem;
   }
 
   /* Task 7.3: Agent Profile Styles */

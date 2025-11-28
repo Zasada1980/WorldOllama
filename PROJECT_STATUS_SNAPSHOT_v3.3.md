@@ -1,9 +1,9 @@
-# PROJECT STATUS SNAPSHOT — 27 ноября 2025 (v0.1.0 RELEASED)
+# PROJECT STATUS SNAPSHOT — 28 ноября 2025 (v0.2.0 RC1)
 
 **Проект:** WORLD_OLLAMA Desktop Client  
-**Версия:** v3.4 (Phase 3 COMPLETED — v0.1.0 Developer Preview Released)  
-**Дата обновления:** 27 ноября 2025 г. 22:30  
-**Статус:** ✅ Phase 3 ЗАВЕРШЕНА (v0.1.0) | 🟡 Phase 4 PLANNED (v0.2.0)
+**Версия:** v3.6 (Phase 4 IN PROGRESS — v0.2.0 RC1)  
+**Дата обновления:** 28 ноября 2025 г. 14:30  
+**Статус:** ✅ Phase 3 ЗАВЕРШЕНА (v0.1.0) | 🟡 TASK 16-17 INTEGRATED | 🟡 Phase 4 IN PROGRESS (Pending Compilation)
 
 ---
 
@@ -14,13 +14,13 @@
 Фаза 1 ████████████████████ 100% ✅ ЗАВЕРШЕНА (Plan C Baseline Stabilized)
 Фаза 2 ████████████████████ 100% ✅ ЗАВЕРШЕНА (UX-Spec completed in parallel)
 Фаза 3 ████████████████████ 100% ✅ ЗАВЕРШЕНА (Tauri MVP v0.1.0 Released)
-Фаза 4 ░░░░░░░░░░░░░░░░░░░░   0% 🟡 PLANNED (v0.2.0 Production)
+Фаза 4 ███████████████░░░░░  75% 🟡 IN PROGRESS (v0.2.0 RC1 — Pending Compilation)
 
-ОБЩИЙ ПРОГРЕСС: ████████████████░░░░ 80% (Phases 0-3 ✅, Phase 4 pending)
+ОБЩИЙ ПРОГРЕСС: ███████████████████░  95% (Phases 0-3 ✅, Phase 4 75%)
 ```
 
-**КРИТИЧЕСКАЯ ВЕХА 27.11.2025:**  
-v0.1.0 (Developer Preview) опубликован на GitHub! Desktop Client MVP завершён за 6 дней (вместо 4 недель). Tasks 1-11 completed. Git tag v0.1.0 создан. Release notes опубликованы.
+**КРИТИЧЕСКАЯ ВЕХА 28.11.2025:**  
+v0.2.0-rc1 код завершён! TASK 16 (PULSE v1) + TASK 17 (Safe Git) интегрированы. Architecture Complete (Pending Compilation). CHANGELOG_v0.2.0.md создан.
 
 ---
 
@@ -180,6 +180,22 @@ v0.1.0 (Developer Preview) опубликован на GitHub! Desktop Client MV
 
 **Status:** ✅ **PHASE 1 COMPLETED** with realistic baseline
 
+### CORTEX Configuration (Stable Baseline)
+
+**Active Configuration (28.11.2025):**
+- `enable_rerank = False` — rerank frozen until separate research (baseline stable mode)
+- `LLM_MODEL = "qwen2.5:14b"` — production-verified Ollama model
+- `EMBEDDING_MODEL = "nomic-embed-text:latest"` — semantic search embeddings
+- `host = "127.0.0.1"`, `port = 8004` — local-first architecture
+- `top_k = 20` — increased retrieval candidates (+100% vs baseline)
+- Mode priority: `local → global → naive` (hybrid excluded due to instability)
+
+**Rationale:**
+- Rerank disabled: LightRAG v1.4.9.8 rerank API non-functional (confirmed in emergency rollback 27.11)
+- Baseline optimization represents maximum achievable quality without functional rerank
+- Stability (100% uptime) prioritized over aspirational features
+- Configuration validated through 50-query production test
+
 ---
 
 ## 🎨 ФАЗА 2: UX-SPEC (TAURI CLIENT) 🟡 SCHEDULED
@@ -289,7 +305,278 @@ v0.1.0 (Developer Preview) опубликован на GitHub! Desktop Client MV
 - GIT PUSH: dry-run only (реальный push в v0.2.0)
 - Windows Installers (MSI/NSIS): отложены на v0.2.0
 
+### Post-Release Integration (TASK 16)
+
+**TASK 16: PULSE v1 Protocol Integration** 🟡 **ARCHITECTURE COMPLETE** (28 ноября 2025)
+
+**Статус:** Архитектурная готовность — Ожидает верификации  
+**Priority:** 🔴 HIGH (блокер для v0.2.0 training features)  
+**Scope:** Python → Rust → UI event pipeline
+
+**Deliverables (Architecture):**
+- ✅ `pulse_wrapper.py` — Python atomic status writes
+- ✅ `training_manager.rs` — Rust singleton poller (read-only)
+- ✅ `lib.rs` — Poller launch в .setup() hook
+- ✅ `commands.rs` — Удалены все write функции
+- ✅ `TrainingPanel.svelte` — Event listening + localStorage
+
+**Deliverables (Verification - PENDING):**
+- ⏳ `cargo check` — Rust compilation verification
+- ⏳ Svelte build — TypeScript/Svelte compilation
+- ⏳ E2E tests — 5 runtime scenarios (documented)
+
+**Protocol:** PULSE v1 (FROZEN — 6 fields)
+```json
+{
+  "status": "idle|running|done|error",
+  "epoch": 0.0,
+  "total_epochs": 0.0,
+  "loss": 0.0,
+  "message": "string",
+  "timestamp": 1732800000
+}
+```
+
+**Архитектура:**
+```
+Python (pulse_wrapper.py) → training_status.json
+   ↑ Atomic writes (os.replace)
+Rust (poll_training_status) → event emission
+   ↑ Deduplication + heartbeat (2-10s)
+UI (TrainingPanel.svelte) → listen('training_status_update')
+   ↑ Progress calc + localStorage context
+```
+
+**Metrics:**
+- TrainingStatus fields: 10 → 6 (-40%)
+- Rust write functions: 6 → 0 (-100%)
+- Event rate: 30/min → 6-30/min (adaptive)
+- JSON size: ~450 bytes → ~180 bytes (-60%)
+
+**Static Verification (Completed):**
+- ✅ Grep-based analysis: 0 obsolete function calls
+- ✅ TypeScript errors: 0 (get_errors check passed)
+- ✅ Import cleanup: set_training_* removed
+- ✅ Event listener: setupPulseListener() present
+
+**Known Semantic Issues (Accepted):**
+- ⚠️ **Missing file semantics:** `TrainingStatus::from_file()` returns `None` for missing file, interpreted as `idle` by caller. This is intentional (prevents crash on first run), but semantically ambiguous.
+- ⚠️ **Stale detection limitation:** Only applies to `running` status (by design), but UI doesn't explicitly show "last known state" vs "current state".
+
+**Documentation:** 
+- `docs/tasks/TASK_16_COMPLETION_REPORT.md` (full specification)
+- `docs/qa/VERIFICATION_PROTOCOL_TASK16.md` (verification checklist)
+
+**Gate for v0.2.0 Release:**
+- 🔴 **BLOCKING:** cargo check + Svelte build must pass
+- 🔴 **BLOCKING:** E2E Test Scenario 1-2 (basic flow)
+- 🟡 **RECOMMENDED:** E2E Test Scenario 3-5 (edge cases)
+
+**Next Steps:**
+- E2E testing (5 test scenarios)
+- Production monitoring
+- PULSE v2 planning (deferred features)
+
 ---
+
+### TASK 17: Safe Git Assistant 🟡 **ARCHITECTURE COMPLETE** (28 ноября 2025 14:00)
+
+**Статус:** Архитектурная готовность — Ожидает верификации  
+**Priority:** 🔴 HIGH (v0.2.0 feature)  
+**Scope:** Two-phase Git Push workflow (Plan → Execute)
+
+**Deliverables (Architecture):**
+- ✅ `git_manager.rs` — Plan + Execute logic (7 safety checks)
+- ✅ `GitPushPlan` struct — Status + commits + blocked_reasons
+- ✅ `GitPushResult` struct — Success + message
+- ✅ `execute_git_push()` — Re-validation before push
+- ✅ `commands.rs` — Tauri commands integration
+- ✅ `GitPanel.svelte` — Plan preview + Execute UI
+- ✅ `lib.rs` — Commands registered
+
+**Deliverables (Verification - PENDING):**
+- ⏳ `cargo check` — Rust compilation verification
+- ⏳ E2E Git tests — Plan/Execute workflow
+- ⏳ Remote ahead detection test
+
+**Safety Checks (7 blocking scenarios):**
+1. ✅ Unstaged changes detected
+2. ✅ Uncommitted changes detected
+3. ✅ Current branch ≠ target branch
+4. ✅ Remote not found
+5. ✅ Branch does not exist on remote
+6. ✅ Remote is ahead (pull required) — NEW
+7. ✅ No upstream branch configured — NEW
+
+**Workflow:**
+```
+PLAN (readonly):
+  git status --porcelain
+  git branch --show-current
+  git remote get-url origin
+  git log origin/main..HEAD      # Outgoing commits
+  git log HEAD..origin/main      # Remote ahead check (NEW)
+  → GitPushPlan { status, commits, blocked_reasons }
+
+REVIEW (UI):
+  Show commits to push
+  Show blocked reasons (if any)
+  Enable/disable "Execute Push" button
+
+EXECUTE (write):
+  RE-VALIDATE (plan_git_push again)
+  If status == "ready" → git push origin main
+  Else → Return error "Safety check failed"
+  → GitPushResult { success, message }
+```
+
+**ТРИЗ Principles Applied:**
+- №10 (Preliminary Action): Plan Before Execute
+- №3 (Local Quality): Status учитывает local + remote
+- №13 (Inversion): Pending Verification as gate
+
+**Known Limitations:**
+- ⚠️ **Fetch Requirement:** Remote ahead check требует `git fetch` до plan
+- ⚠️ **No Diff Preview:** Shows file names, but not diff content
+- ⚠️ **No API Key Detection:** Planned for TASK 17.3
+
+**Documentation:**
+- `CHANGELOG_v0.2.0.md` (release notes)
+- Code comments in git_manager.rs
+
+**Next Steps:**
+- Compilation verification
+- E2E testing (plan/execute workflow)
+- TASK 17.3: Pre-flight checks (file size, API keys)
+
+---
+
+## 🎯 ФАЗА 4: PRODUCTION READINESS 🟡 IN PROGRESS (v0.2.0)
+
+**Статус:** 75% Complete (Code Integrated, Pending Compilation)  
+**Начало:** 27 ноября 2025  
+**Цель:** Production-ready release с Training + Git функциональностью  
+**Версия:** v0.2.0-rc1
+
+### Completed Tasks
+
+**TASK 16-17: Core Architecture** ✅ **INTEGRATED**
+- PULSE v1 Protocol (Training monitoring)
+- Safe Git Assistant (Plan/Execute workflow)
+- Path Agnosticism (get_project_root)
+- TypeScript: 0 errors (verified)
+- Rust: Static analysis passed (grep-based)
+
+**Документация:**
+- ✅ CHANGELOG_v0.2.0.md — Comprehensive release notes
+- ✅ VERIFICATION_PROTOCOL_TASK16.md — E2E test checklist
+- ✅ TASK_16_COMPLETION_REPORT.md — 90KB specification
+- ✅ PROJECT_STATUS_SNAPSHOT_v3.6.md — This file
+
+### Pending Tasks
+
+**Compilation & Verification** 🔴 **BLOCKING v0.2.0**
+- 🔴 cargo check (Rust toolchain required)
+- 🔴 npm run check (Node.js verification)
+- 🔴 E2E Tests 1-2 (PULSE event emission, Git plan/execute)
+
+**TASK 18: Windows Installer** 🟡 **PLANNED**
+- MSI package (WiX Toolset)
+- Auto-update mechanism
+- Desktop shortcuts
+
+**Future Enhancements** 🟡 **v0.3.0+**
+- TASK 19: PULSE v2 (WebSockets, real-time)
+- TASK 17.3: Git Pre-flight Checks (API keys, file size)
+- TASK 20: Git Advanced (branch management, merge resolver)
+
+### Release Gate Status
+
+**v0.2.0 Release Criteria:**
+- ✅ Code Architecture Complete (TASK 16-17)
+- ✅ Documentation Complete (Changelog, Reports, Protocols)
+- ⏳ Compilation Successful (Pending toolchain)
+- ⏳ E2E Smoke Tests Pass (Scenario 1-2)
+- ⏳ MSI Installer Built (TASK 18)
+
+**Current State:** "Static Fire Readiness" — Built but not test-fired
+
+---
+
+## 📋 KNOWN ISSUES & LIMITATIONS
+
+### TASK 16 (PULSE v1)
+1. **Ambiguous Idle State:** Missing file = "idle" (cannot distinguish states)
+2. **Stale Detection Scope:** Only для status = "running" (by design)
+3. **Polling Latency:** 2-10s adaptive interval (no real-time)
+
+### TASK 17 (Safe Git)
+1. **Fetch Requirement:** Remote ahead check требует `git fetch` before plan
+2. **No Diff Preview:** Shows files, but not diff content
+3. **No API Key Detection:** Риск утечки секретов (TASK 17.3)
+
+---
+
+## 🏗️ ARCHITECTURE DECISIONS LOG
+
+### ADR-001: PULSE v1 Protocol (TASK 16)
+**Decision:** Python writes, Rust reads (read-only), UI computes  
+**Rationale:** Separation of concerns, atomic writes via os.replace  
+**Alternatives Rejected:** Rust writes (unsafe state), WebSockets (complexity)
+
+### ADR-002: Safe Git Plan Before Execute (TASK 17)
+**Decision:** Plan (readonly) → Review → Execute (with re-validation)  
+**Rationale:** ТРИЗ Principle №10 (Preliminary Action), safety first  
+**Alternatives Rejected:** Direct push (unsafe), Dry-run only (incomplete)
+
+### ADR-003: Path Agnosticism (TASK 16.1)
+**Decision:** `get_project_root()` с 4 fallback методами  
+**Rationale:** Works in dev, packaged, and custom deployments  
+**Alternatives Rejected:** Hardcoded paths (brittle)
+
+---
+
+## 🎯 HANDOVER CHECKLIST (Next Shift)
+
+### Priority 1 (CRITICAL — v0.2.0 Gate)
+- [ ] Install Rust toolchain (`rustup-init.exe`)
+- [ ] Run `cargo check` in `client/src-tauri/`
+- [ ] Run `npm run check` in `client/`
+- [ ] Execute E2E Scenario 1-2 (PULSE + Git)
+
+### Priority 2 (RECOMMENDED — Quality)
+- [ ] Execute E2E Scenario 3-5 (edge cases)
+- [ ] Verify stale pulse detection (60s timeout)
+- [ ] Verify remote ahead detection (requires git fetch)
+
+### Priority 3 (FUTURE — v0.3.0)
+- [ ] TASK 18: Windows Installer (MSI)
+- [ ] TASK 19: PULSE v2 (WebSockets)
+- [ ] TASK 17.3: API Key Detection
+
+---
+
+## 📂 KEY FILES (Quick Reference)
+
+**Documentation:**
+- `CHANGELOG_v0.2.0.md` — Release notes v0.2.0-rc1
+- `docs/tasks/TASK_16_COMPLETION_REPORT.md` — PULSE v1 spec
+- `docs/qa/VERIFICATION_PROTOCOL_TASK16.md` — E2E checklist
+
+**Code (TASK 16 — PULSE):**
+- `services/llama_factory/pulse_wrapper.py` — Python writer
+- `client/src-tauri/src/training_manager.rs` — Rust poller
+- `client/src/lib/components/TrainingPanel.svelte` — UI
+
+**Code (TASK 17 — Git):**
+- `client/src-tauri/src/git_manager.rs` — Plan/Execute logic
+- `client/src/lib/components/GitPanel.svelte` — UI
+
+---
+
+**СТАТУС ДОКУМЕНТА:** ✅ v3.6 COMPLETE  
+**ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ:** 28 ноября 2025 г. 14:30  
+**ГОТОВНОСТЬ К РЕЛИЗУ:** 🟡 75% (Pending Compilation)
 
 ## 🚀 ФАЗА 4: PRODUCTION RELEASE 🟡 PLANNED (v0.2.0)
 

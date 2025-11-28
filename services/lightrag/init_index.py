@@ -15,11 +15,24 @@ import requests
 from pathlib import Path
 import sys
 
+# === TASK 16.1: Dynamic Project Root ===
+if "WORLD_OLLAMA_ROOT" in os.environ:
+    PROJECT_ROOT = Path(os.environ["WORLD_OLLAMA_ROOT"])
+else:
+    # Script: services/lightrag/init_index.py → root = 2 levels up
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+print(f"[TASK 16.1] Project root: {PROJECT_ROOT}")
+
 # === CONFIGURATION ===
 SERVER_URL = "http://localhost:8004"
-LIBRARY_DIR = Path(r"E:\WORLD_OLLAMA\library\raw_documents")
-CHUNK_SIZE_CHARS = 700  # Safe for qwen2.5:14b (4096 token limit)
+API_KEY = os.getenv("CORTEX_API_KEY", "sesa-secure-core-v1")  # Default API key
+LIBRARY_DIR = PROJECT_ROOT / "library" / "raw_documents"
+CHUNK_SIZE_CHARS = 4000  # Increased chunk size (approx <= ~1k tokens)
 DELAY_BETWEEN_CHUNKS = 20  # Seconds (GPU cooling)
+
+# HTTP headers with authentication
+HEADERS = {"X-API-KEY": API_KEY}
 
 def wait_for_server(max_attempts=30):
     """Wait for LightRAG server to be ready"""
@@ -55,20 +68,21 @@ def ingest_file(file_path, chunk_index=0):
             print(f"   📦 Sending whole file ({total_chars} chars)...")
             payload = {
                 "text": text, 
-                "metadata": {"source": file_path.name}
+                "description": f"Source: {file_path.name}"
             }
             
             try:
                 response = requests.post(
                     f"{SERVER_URL}/insert", 
                     json=payload, 
+                    headers=HEADERS,
                     timeout=300
                 )
                 if response.status_code == 200:
                     chunk_index += 1
                     print(f"   ✅ OK (chunk #{chunk_index})")
                 else:
-                    print(f"   ❌ Error: {response.status_code}")
+                    print(f"   ❌ Error: {response.status_code} - {response.text[:200]}")
             except Exception as e:
                 print(f"   ❌ Network error: {e}")
             
@@ -88,13 +102,14 @@ def ingest_file(file_path, chunk_index=0):
             
             payload = {
                 "text": chunk, 
-                "metadata": {"source": f"{file_path.name}_part_{chunk_part}"}
+                "description": f"Source: {file_path.name}_part_{chunk_part}"
             }
             
             try:
                 response = requests.post(
                     f"{SERVER_URL}/insert", 
                     json=payload, 
+                    headers=HEADERS,
                     timeout=180
                 )
                 if response.status_code == 200:
@@ -102,7 +117,7 @@ def ingest_file(file_path, chunk_index=0):
                     print(f"✅ (chunk #{chunk_index})")
                     time.sleep(DELAY_BETWEEN_CHUNKS)  # GPU cooldown
                 else:
-                    print(f"❌ ERROR {response.status_code}")
+                    print(f"❌ ERROR {response.status_code}: {response.text[:200]}")
                     time.sleep(30)
             except requests.Timeout:
                 print(f"❌ TIMEOUT (180s)")

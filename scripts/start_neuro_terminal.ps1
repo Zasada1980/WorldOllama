@@ -1,8 +1,9 @@
 param(
-    [int]$Port = 8501
+    [int]$Port = 8501,
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
-$projectRoot = "E:\WORLD_OLLAMA\services\neuro_terminal"
+$projectRoot = Join-Path $ProjectRoot "services\neuro_terminal"
 $venvActivate = Join-Path $projectRoot ".venv\Scripts\Activate.ps1"
 
 if (-not (Test-Path $venvActivate)) {

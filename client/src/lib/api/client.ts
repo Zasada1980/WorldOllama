@@ -104,7 +104,7 @@ export async function sendOllamaChat(
   message: string,
   model: string
 ): Promise<{ text: string } | null> {
-  return callApi<{ text: string }>("send_ollama_chat", { message, model });
+  return callApi<{ text: string }>("send_ollama_chat", { prompt: message, model });
 }
 
 /**
@@ -174,6 +174,43 @@ export async function executeAgentCommand(command_text: string) {
   }>("execute_agent_command", { command_text });
 }
 
+// TASK 12.2: Training Management API
+export async function getTrainingStatus() {
+  return callApi<{
+    state: 'idle' | 'queued' | 'running' | 'done' | 'error';
+    profile: string | null;
+    dataset_path: string | null;
+    progress: number | null;
+    log_path: string | null;
+    updated_at: string | null;
+    message: string | null;
+    total_epochs: number | null;
+    current_epoch: number | null;
+  }>("get_training_status", {}, true); // silent mode
+}
+
+export async function clearTrainingStatus() {
+  return callApi<void>("clear_training_status");
+}
+
+export async function listTrainingProfiles() {
+  return callApi<Array<{
+    id: string;
+    name: string;
+    description: string;
+    base_model: string;
+    recommended_epochs: number;
+  }>>("list_training_profiles", {}, true);
+}
+
+export async function listDatasetsRoots() {
+  return callApi<Array<{
+    path: string;
+    name: string;
+    file_count: number | null;
+  }>>("list_datasets_roots", {}, true);
+}
+
 export const apiClient = {
   callApi,
   sendOllamaChat,
@@ -184,4 +221,8 @@ export const apiClient = {
   startIndexation,
   getIndexationStatus,
   executeAgentCommand,
+  getTrainingStatus,
+  clearTrainingStatus,
+  listTrainingProfiles,
+  listDatasetsRoots,
 };

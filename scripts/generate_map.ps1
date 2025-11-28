@@ -29,12 +29,21 @@
 
 [CmdletBinding()]
 param(
-    [string]$RootPath = "E:\WORLD_OLLAMA",
-    [string]$OutputPath = "E:\WORLD_OLLAMA\PROJECT_MAP.md",  # PRODUCTION: корень мира
-    [int]$MaxDepth = 6,  # Ограничение глубины (было 10, уменьшено до 6)
-    [switch]$IncludeLogs,  # По умолчанию логи игнорируем
-    [switch]$ShowEmptyFolders  # По умолчанию пустые папки скрываем
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$RootPath = "",
+    [string]$OutputPath = "",
+    [int]$MaxDepth = 6,
+    [switch]$IncludeLogs,
+    [switch]$ShowEmptyFolders
 )
+
+# Автоопределение путей если не указаны (TASK 16.1)
+if ([string]::IsNullOrEmpty($RootPath)) {
+    $RootPath = $ProjectRoot
+}
+if ([string]::IsNullOrEmpty($OutputPath)) {
+    $OutputPath = Join-Path $ProjectRoot "PROJECT_MAP.md"
+}
 
 # === КОНСТАНТЫ ФИЛЬТРАЦИИ (ANTI-NOISE PROTOCOL) ===
 

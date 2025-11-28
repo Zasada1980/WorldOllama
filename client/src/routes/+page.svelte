@@ -4,9 +4,10 @@
   import SettingsPanel from '$lib/components/SettingsPanel.svelte';
   import LibraryPanel from '$lib/components/LibraryPanel.svelte';
   import CommandSlot from '$lib/components/CommandSlot.svelte';
+  import TrainingPanel from '$lib/components/TrainingPanel.svelte';  // TASK 12.2
   import NotificationCenter from '$lib/components/NotificationCenter.svelte';
 
-  type View = 'chat' | 'status' | 'settings' | 'library' | 'commands';
+  type View = 'chat' | 'status' | 'settings' | 'library' | 'commands' | 'training';
   let activeView: View = 'chat';
 </script>
 
@@ -36,6 +37,12 @@
     🔧 Commands
   </button>
   <button 
+    class:selected={activeView === 'training'} 
+    on:click={() => activeView = 'training'}
+  >
+    🧪 Training
+  </button>
+  <button 
     class:selected={activeView === 'settings'} 
     on:click={() => activeView = 'settings'}
   >
@@ -52,6 +59,8 @@
     <LibraryPanel />
   {:else if activeView === 'commands'}
     <CommandSlot />
+  {:else if activeView === 'training'}
+    <TrainingPanel />
   {:else if activeView === 'settings'}
     <SettingsPanel />
   {/if}

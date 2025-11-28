@@ -92,7 +92,7 @@ async function runAllTests() {
 }
 
 // Экспорт для глобального доступа
-window.WORLD_OLLAMA_TESTS = {
+;(/** @type {any} */ (window)).WORLD_OLLAMA_TESTS = {
     testSystemStatus,
     testOllamaChat,
     testCortexQuery,

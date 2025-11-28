@@ -24,6 +24,20 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # ============================================================
+# TASK 16.1: Dynamic Project Root Detection
+# ============================================================
+
+# Method 1: Environment variable (for testing/deployment)
+if "WORLD_OLLAMA_ROOT" in os.environ:
+    PROJECT_ROOT = Path(os.environ["WORLD_OLLAMA_ROOT"])
+else:
+    # Method 2: Calculate from script location
+    # Script: services/lightrag/lightrag_server.py → root = 2 levels up
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+logging.info(f"[TASK 16.1] Project root: {PROJECT_ROOT}")
+
+# ============================================================
 # SECURITY CONFIGURATION (ОПЕРАЦИЯ "SECURE ENCLAVE")
 # ============================================================
 
@@ -41,14 +55,14 @@ else:
 # КОНФИГУРАЦИЯ ПОД 16GB VRAM
 # ============================================================
 
-# Пути (WORLD_OLLAMA - TD-006 CORTEX)
+# Пути (WORLD_OLLAMA - TD-006 CORTEX) - TASK 16.1: Dynamic
 # ИСПРАВЛЕНО: Переход с legacy E:\AI_Librarian_Core на WORLD_OLLAMA структуру
-WORKING_DIR = Path(r"E:\WORLD_OLLAMA\services\lightrag\data")
-LIBRARY_DIR = Path(r"E:\WORLD_OLLAMA\library\raw_documents")
+WORKING_DIR = PROJECT_ROOT / "services" / "lightrag" / "data"
+LIBRARY_DIR = PROJECT_ROOT / "library" / "raw_documents"
 
 # Ollama настройки
 OLLAMA_BASE_URL = "http://localhost:11434"
-LLM_MODEL = "qwen2.5:14b"  # Совпадает с ollama list
+LLM_MODEL = "qwen2.5:14b"  # Совпадает с ollama list (без -instruct-q4_k_m)
 EMBEDDING_MODEL = "nomic-embed-text:latest"  # ИСПРАВЛЕНО: добавлен тег :latest
 # [PLAN C] Rerank временно ЗАМОРОЖЕН до 10.12.2025 из-за падений CORTEX.
 # См. инцидент "Custom Rerank Pipeline crashes CORTEX, 27.11.2025".
@@ -168,6 +182,7 @@ async def execute_query_with_fallbacks(query_text: str, primary_mode: str):
     [PLAN C] Изменения для улучшения baseline:
     - top_k увеличен с 10 до 20 (больше кандидатов)
     - Приоритет режима 'local' для стабильности
+    - enable_rerank=False для подавления WARNING (rerank модель не сконфигурирована)
     """
     tried_modes = []
     for mode in build_mode_chain(primary_mode):
@@ -177,7 +192,8 @@ async def execute_query_with_fallbacks(query_text: str, primary_mode: str):
             param=QueryParam(
                 mode=mode,
                 top_k=20,  # [PLAN C] Увеличено с 10 до 20
-                only_need_context=True
+                only_need_context=True,
+                enable_rerank=False  # [FIX] Явно отключаем rerank для подавления WARNING
             )
         )
         if has_meaningful_result(result):
@@ -732,7 +748,7 @@ if __name__ == "__main__":
     
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host="127.0.0.1",  # Windows-compatible bind address
         port=8004,
         log_level="info"
     )

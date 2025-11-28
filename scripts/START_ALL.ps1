@@ -6,15 +6,17 @@
 # ========================================
 
 param(
-    [switch]$SkipNeuroTerminal = $false
+    [switch]$SkipNeuroTerminal = $false,
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
 $ErrorActionPreference = "Stop"
-$Global:LogFile = "E:\WORLD_OLLAMA\logs\orchestrator.log"
+$Global:LogFile = Join-Path $ProjectRoot "logs\orchestrator.log"
 
 # Создать директорию логов если не существует
-if (-not (Test-Path "E:\WORLD_OLLAMA\logs")) {
-    New-Item -ItemType Directory -Path "E:\WORLD_OLLAMA\logs" -Force | Out-Null
+$logsDir = Join-Path $ProjectRoot "logs"
+if (-not (Test-Path $logsDir)) {
+    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
 }
 
 function Write-Log {
@@ -137,7 +139,7 @@ Write-Log "Step 2: Starting CORTEX (LightRAG)..." "INFO"
 if (Test-Port -Port 8004) {
     Write-Log "⚠ CORTEX already running on port 8004" "WARNING"
 } else {
-    $cortexPath = "E:\WORLD_OLLAMA\services\lightrag"
+    $cortexPath = Join-Path $ProjectRoot "services\lightrag"
     
     if (-not (Test-Path $cortexPath)) {
         Write-Log "✗ CORTEX directory not found: $cortexPath" "ERROR"
@@ -172,7 +174,7 @@ if (-not $SkipNeuroTerminal) {
     if (Test-Port -Port 8501) {
         Write-Log "⚠ Neuro-Terminal already running on port 8501" "WARNING"
     } else {
-        $neuroPath = "E:\WORLD_OLLAMA\services\neuro_terminal"
+        $neuroPath = Join-Path $ProjectRoot "services\neuro_terminal"
         
         if (-not (Test-Path $neuroPath)) {
             Write-Log "⚠ Neuro-Terminal directory not found: $neuroPath" "WARNING"

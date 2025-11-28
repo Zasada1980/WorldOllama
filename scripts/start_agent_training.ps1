@@ -12,7 +12,9 @@ param(
     
     [int]$Epochs = 3,
     
-    [string]$Mode = "llama_factory"
+    [string]$Mode = "llama_factory",
+    
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,8 +39,8 @@ if ($Mode -ne "llama_factory") {
     Write-Host "    Proceeding with llama_factory..." -ForegroundColor Gray
 }
 
-# Navigate to LLaMA Factory
-$llamaFactoryPath = "E:\WORLD_OLLAMA\services\llama_factory"
+# Navigate to LLaMA Factory (TASK 16.1: Dynamic path)
+$llamaFactoryPath = Join-Path $ProjectRoot "services\llama_factory"
 if (-not (Test-Path $llamaFactoryPath)) {
     Write-Host "❌ ERROR: LLaMA Factory not found at: $llamaFactoryPath" -ForegroundColor Red
     exit 1
@@ -54,17 +56,72 @@ if (-not (Test-Path $pythonExe)) {
     exit 1
 }
 
-# TODO: Generate config file for this training session
-# For MVP, we use existing config and just log parameters
-Write-Host "📋 Training parameters:" -ForegroundColor Green
-Write-Host "   Profile:    $Profile" -ForegroundColor White
-Write-Host "   Data Path:  $DataPath" -ForegroundColor White
-Write-Host "   Epochs:     $Epochs" -ForegroundColor White
+# ========================================
+# 15.2.3: PROFILE-BASED CONFIG ROUTING
+# ========================================
 
-# MVP: Stub execution (don't run real training yet for safety)
-Write-Host "`n⚠️  MVP MODE: Training stub (not running real train.py)" -ForegroundColor Yellow
-Write-Host "   This would execute:" -ForegroundColor Gray
-Write-Host "   $pythonExe src\train.py <config_file>" -ForegroundColor DarkGray
+$ConfigPath = $null
+$OutputDir = $null
+
+switch ($Profile) {
+    "triz_td010v3_full" {
+        $ConfigPath = "$llamaFactoryPath\triz_td010v3_full.yaml"
+        $OutputDir  = "$llamaFactoryPath\outputs\triz_td010v3"
+        Write-Host "🎯 Профиль: TRIZ TD010v3 (LoRA, Qwen 14B)" -ForegroundColor Cyan
+    }
+    "triz_td010v3_smoketest" {
+        # 15.2.5: Smoke-test профиль с ограниченным датасетом
+        $ConfigPath = "$llamaFactoryPath\triz_td010v3_smoketest.yaml"
+        $OutputDir  = "$llamaFactoryPath\outputs\triz_td010v3_smoketest"
+        Write-Host "🎯 Профиль: TRIZ TD010v3 SMOKE-TEST (100 примеров, 50 шагов)" -ForegroundColor Yellow
+    }
+    "triz_engineer" {
+        # Старый профиль, если ещё используется
+        $ConfigPath = "$llamaFactoryPath\triz_safe_config.yaml"
+        $OutputDir  = "$llamaFactoryPath\saves\Qwen2-7B-Instruct\lora\triz_safe"
+        Write-Host "🎯 Профиль: TRIZ Engineer (Legacy)" -ForegroundColor Cyan
+    }
+    default {
+        Write-Host "❌ ERROR: Unknown profile '$Profile'" -ForegroundColor Red
+        Write-Host "   Supported profiles: triz_td010v3_full, triz_td010v3_smoketest, triz_engineer" -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+if (-not (Test-Path $ConfigPath)) {
+    Write-Host "❌ ERROR: Config file not found: $ConfigPath" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "📋 Training parameters:" -ForegroundColor Green
+Write-Host "   Profile:     $Profile" -ForegroundColor White
+Write-Host "   Config:      $ConfigPath" -ForegroundColor White
+Write-Host "   Output Dir:  $OutputDir" -ForegroundColor White
+Write-Host "   Data Path:   $DataPath" -ForegroundColor White
+Write-Host "   Epochs:      $Epochs" -ForegroundColor White
+
+# ========================================
+# REAL TRAINING EXECUTION (15.2.3)
+# ========================================
+
+Write-Host "`n🚀 Запуск LLaMA Factory обучения..." -ForegroundColor Green
+
+# Формируем команду для вызова llamafactory-cli train
+$trainCommand = "llamafactory-cli train `"$ConfigPath`""
+
+Write-Host "   Команда: $trainCommand" -ForegroundColor Gray
+
+# Запускаем обучение в отдельном окне PowerShell (не блокируя UI)
+try {
+    Start-Process -FilePath "pwsh.exe" `
+                  -ArgumentList "-NoExit", "-Command", "cd '$llamaFactoryPath'; . .\venv\Scripts\Activate.ps1; $trainCommand" `
+                  -WorkingDirectory $llamaFactoryPath
+    
+    Write-Host "✅ Процесс обучения запущен в отдельном окне" -ForegroundColor Green
+} catch {
+    Write-Host "❌ ERROR: Не удалось запустить обучение: $_" -ForegroundColor Red
+    exit 1
+}
 
 # Update training_status.json in %APPDATA%
 $statusDir = "$env:APPDATA\tauri_fresh"

@@ -25,10 +25,19 @@
 
 [CmdletBinding()]
 param(
-    [string]$ServicePath = "E:\WORLD_OLLAMA\services\lightrag",
-    [string]$LogPath = "E:\WORLD_OLLAMA\services\lightrag\logs\cortex.log",
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$ServicePath = "",
+    [string]$LogPath = "",
     [int]$Port = 8004
 )
+
+# Автоопределение путей если не указаны
+if ([string]::IsNullOrEmpty($ServicePath)) {
+    $ServicePath = Join-Path $ProjectRoot "services\lightrag"
+}
+if ([string]::IsNullOrEmpty($LogPath)) {
+    $LogPath = Join-Path $ServicePath "logs\cortex.log"
+}
 
 # Переход в директорию сервиса
 Set-Location $ServicePath
@@ -55,7 +64,7 @@ try {
 }
 
 # Проверка моделей
-$requiredModels = @("qwen2.5:14b-instruct-q4_k_m", "nomic-embed-text")
+$requiredModels = @("qwen2.5:14b", "nomic-embed-text")  # Исправлено: убран несуществующий суффикс -instruct-q4_k_m
 foreach ($model in $requiredModels) {
     $modelExists = $ollamaTest.models | Where-Object { $_.name -like "$model*" }
     if ($modelExists) {

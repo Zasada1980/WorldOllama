@@ -17,10 +17,14 @@
     Зависимости: services/llama_factory/venv, PyTorch 2.6.0+cu124
 #>
 
+param(
+    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
+)
+
 $ErrorActionPreference = "Stop"
 
-# Путь к проекту
-$LLAMA_FACTORY_DIR = "E:\WORLD_OLLAMA\services\llama_factory"
+# Путь к проекту (TASK 16.1: Dynamic)
+$LLAMA_FACTORY_DIR = Join-Path $ProjectRoot "services\llama_factory"
 $VENV_PATH = "$LLAMA_FACTORY_DIR\venv"
 $ACTIVATE_SCRIPT = "$VENV_PATH\Scripts\Activate.ps1"
 

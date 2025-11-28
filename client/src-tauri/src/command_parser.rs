@@ -210,12 +210,16 @@ MODE="llama_factory""#;
 
     #[test]
     fn test_parse_git_push() {
-        let text = r#"GIT PUSH
-REPO_PATH="E:\WORLD_OLLAMA"
-BRANCH="feature/agent-updates"
-SUMMARY="Agent auto-updates: configs, docs, specs""#;
+        // TASK 16.1: Используем переменную окружения для теста
+        let project_root = std::env::var("WORLD_OLLAMA_ROOT")
+            .unwrap_or_else(|_| "C:\\WorldOllama".to_string());
+        
+        let text = format!(
+            "GIT PUSH\nREPO_PATH=\"{}\"\nBRANCH=\"feature/agent-updates\"\nSUMMARY=\"Agent auto-updates: configs, docs, specs\"",
+            project_root.replace("\\", "\\\\")
+        );
 
-        let result = parse_command(text);
+        let result = parse_command(&text);
         assert!(result.is_ok());
         
         let cmd = result.unwrap();

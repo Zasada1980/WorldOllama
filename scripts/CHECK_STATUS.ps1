@@ -143,6 +143,52 @@ $services = @(
 )
 
 # ========================================
+# RAG HEALTH CHECK (CORTEX)
+# ========================================
+
+function Test-CortexRAG {
+    try {
+        $body = @{
+            query = "ping"
+            mode = "local"
+        } | ConvertTo-Json
+        
+        $headers = @{
+            "Content-Type" = "application/json"
+            "X-API-KEY" = "sesa-secure-core-v1"
+        }
+        
+        $response = Invoke-RestMethod -Uri "http://localhost:8004/query" `
+            -Method Post -Body $body -ContentType "application/json" `
+            -Headers $headers -TimeoutSec 10 -ErrorAction Stop
+        
+        # Extract response text and validate
+        $responseText = [string]$response.response
+        
+        if (-not [string]::IsNullOrWhiteSpace($responseText) -and $responseText.Length -gt 10) {
+            return @{
+                Status = "OK"
+                Icon = "🟢"
+                Color = "Green"
+            }
+        } else {
+            return @{
+                Status = "EMPTY"
+                Icon = "🟡"
+                Color = "Yellow"
+            }
+        }
+    } catch {
+        return @{
+            Status = "FAIL"
+            Icon = "🔴"
+            Color = "Red"
+            Error = $_.Exception.Message
+        }
+    }
+}
+
+# ========================================
 # MAIN EXECUTION
 # ========================================
 
@@ -170,6 +216,24 @@ if ($Continuous) {
     }
     
     Show-StatusReport -Services $results
+    
+    # RAG Health Check (only if CORTEX is running)
+    $cortexRunning = $results | Where-Object { $_.Name -eq "CORTEX (LightRAG)" -and $_.Status -eq "Running" }
+    if ($cortexRunning) {
+        Write-Host "Checking CORTEX RAG..." -ForegroundColor Gray -NoNewline
+        try {
+            $body = @{query="test";mode="naive"} | ConvertTo-Json
+            $response = Invoke-RestMethod -Uri "http://localhost:8004/query" -Method Post -Body $body -ContentType "application/json" -Headers @{"X-API-KEY"="sesa-secure-core-v1"} -TimeoutSec 30
+            if ($response.response -and $response.response.Length -gt 10) {
+                Write-Host " CORTEX RAG: 🟢 OK" -ForegroundColor Green
+            } else {
+                Write-Host " CORTEX RAG: 🟡 EMPTY" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host " CORTEX RAG: 🔴 FAIL ($($_.Exception.Message))" -ForegroundColor Red
+        }
+        Write-Host ""
+    }
 }
 
 # Additional info
