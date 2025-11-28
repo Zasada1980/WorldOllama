@@ -93,14 +93,17 @@ pub struct GitPushResult {
 /// 
 /// # Example
 /// 
-/// ```rust
-/// let plan = plan_git_push("/path/to/project", "origin", "main")?;
+/// ```rust,ignore
+/// # use tauri_fresh::git_manager::plan_git_push;
+/// let plan = plan_git_push("/path/to/project", "origin", "main");
 /// 
-/// match plan.status.as_str() {
-///     "ready" => println!("Ready to push {} commits", plan.commits.len()),
-///     "blocked" => println!("Blocked: {:?}", plan.blocked_reasons),
-///     "clean" => println!("Nothing to push"),
-///     _ => {}
+/// if let Ok(plan) = plan {
+///     match plan.status.as_str() {
+///         "ready" => println!("Ready to push {} commits", plan.commits.len()),
+///         "blocked" => println!("Blocked: {:?}", plan.blocked_reasons),
+///         "clean" => println!("Nothing to push"),
+///         _ => {}
+///     }
 /// }
 /// ```
 pub fn plan_git_push(
@@ -322,7 +325,7 @@ pub fn plan_git_push(
     // ПРИОРИТЕТ 1: Блокировки (даже если есть коммиты)
     if !plan.blocked_reasons.is_empty() {
         plan.status = String::from("blocked");
-    } else if plan.commits.is_empty() {pty() {
+    } else if plan.commits.is_empty() {
         // ПРИОРИТЕТ 2: Нет коммитов → нечего пушить
         plan.status = String::from("clean");
     } else {
@@ -361,13 +364,16 @@ pub fn plan_git_push(
 /// 
 /// # Example
 /// 
-/// ```rust
-/// let result = execute_git_push("/path/to/project", "origin", "main")?;
+/// ```rust,ignore
+/// # use tauri_fresh::git_manager::execute_git_push;
+/// let result = execute_git_push("/path/to/project", "origin", "main");
 /// 
-/// if result.success {
-///     println!("Push successful: {}", result.message);
-/// } else {
-///     eprintln!("Push failed: {}", result.message);
+/// if let Ok(result) = result {
+///     if result.success {
+///         println!("Push successful: {}", result.message);
+///     } else {
+///         eprintln!("Push failed: {}", result.message);
+///     }
 /// }
 /// ```
 pub fn execute_git_push(

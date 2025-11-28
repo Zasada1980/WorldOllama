@@ -58,24 +58,15 @@ impl<T> ApiResponse<T> {
 /// Uses environment variable WORLD_OLLAMA_ROOT if set,
 /// otherwise calculates from executable location.
 #[tauri::command]
-pub fn get_project_root(app_handle: tauri::AppHandle) -> Result<String, String> {
+pub fn get_project_root(_app_handle: tauri::AppHandle) -> Result<String, String> {
     // Method 1: Environment variable (for testing/deployment flexibility)
     if let Ok(root) = std::env::var("WORLD_OLLAMA_ROOT") {
         return Ok(root);
     }
     
-    // Method 2: Tauri resource resolver (works with packaged app)
-    if let Some(resource_dir) = app_handle.path_resolver().resource_dir() {
-        // Resource dir points to "_up_" (resources folder inside .exe bundle)
-        // Project root is 2 levels up: exe -> tauri_fresh.exe -> WORLD_OLLAMA
-        if let Some(parent) = resource_dir.parent() {
-            if let Some(project_root) = parent.parent() {
-                return Ok(project_root.to_string_lossy().to_string());
-            }
-        }
-    }
-    
-    // Method 3: Fallback to current exe location
+    // Method 2: Current Exe (Production/Dev)
+    // exe -> src-tauri -> client -> WORLD_OLLAMA (in dev)
+    // or exe -> tauri_fresh -> WORLD_OLLAMA (in prod structure)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
             if let Some(project_root) = parent.parent() {
@@ -84,7 +75,7 @@ pub fn get_project_root(app_handle: tauri::AppHandle) -> Result<String, String> 
         }
     }
     
-    // Method 4: Last resort - current directory
+    // Method 3: Current Dir (Last resort)
     Ok(std::env::current_dir()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| ".".to_string()))
@@ -480,7 +471,7 @@ fn start_indexation_internal(
     let args = vec![
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
-        "-File", script_path,
+        "-File", &script_path,
         "-DetailedOutput"
     ];
     
@@ -629,13 +620,13 @@ fn start_training_job(
         }
     };
 
-    if current_status.state == "running" || current_status.state == "queued" {
+    if current_status.status == "running" || current_status.status == "queued" {
         return ApiResponse::error(
             "already_running",
             format!(
                 "⚠️ Обучение уже выполняется!\n\nТекущий профиль: {}\nСтатус: {}",
-                current_status.profile.unwrap_or_else(|| "unknown".to_string()),
-                current_status.state
+                "(profile removed in PULSE v1)",
+                current_status.status
             ),
         );
     }
@@ -659,7 +650,7 @@ fn start_training_job(
     let script_path = format!("{}\\scripts\\start_agent_training.ps1", project_root);
 
     // Check if script exists
-    if !std::path::Path::new(script_path).exists() {
+    if !std::path::Path::new(&script_path).exists() {
         // PULSE v1: НЕ пишем error статус из Rust (Python пишет)
         return ApiResponse::error(
             "script_not_found",
@@ -673,7 +664,7 @@ fn start_training_job(
             "-ExecutionPolicy",
             "Bypass",
             "-File",
-            script_path,
+            &script_path,
             "-Profile",
             &profile,
             "-DataPath",

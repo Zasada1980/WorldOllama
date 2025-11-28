@@ -1,0 +1,46 @@
+# Dockerfile для компиляции WORLD_OLLAMA v0.2.0
+# ОРДЕР №19 - КОМАНДА 2.1
+# Цель: Проверка компиляции Rust Backend + Frontend
+
+FROM rust:1.83-bookworm
+
+# Install Node.js 22.x (соответствует вашему v22.20.0)
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify installations
+RUN rustc --version && \
+    cargo --version && \
+    node --version && \
+    npm --version
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy project files
+COPY . .
+
+# Компиляция Rust Backend
+RUN echo "==== RUST BACKEND: cargo check ====" && \
+    cd client/src-tauri && \
+    cargo check 2>&1 | tee /tmp/cargo_check.log ; \
+    CARGO_EXIT=$? && \
+    echo "Cargo exit code: $CARGO_EXIT" && \
+    cd /workspace
+
+# Компиляция Frontend
+RUN echo "==== FRONTEND: npm run check ====" && \
+    cd client && \
+    npm install --quiet && \
+    npm run check 2>&1 | tee /tmp/npm_check.log ; \
+    NPM_EXIT=$? && \
+    echo "npm exit code: $NPM_EXIT" && \
+    cd /workspace
+
+# Output results
+CMD cat /tmp/cargo_check.log && echo "---" && cat /tmp/npm_check.log

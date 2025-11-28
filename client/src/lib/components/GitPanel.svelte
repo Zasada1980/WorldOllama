@@ -1,28 +1,28 @@
 <script lang="ts">
   // WORLD_OLLAMA Desktop Client - Git Panel
   // TASK 17: Git Safety (Phase 1 - Plan Mode UI)
-  // 
+  //
   // Этот компонент отображает результаты анализа Git Push Plan
   // и предоставляет интерфейс для безопасного push.
-  // 
+  //
   // ТРИЗ Principle №10: Предварительное действие
   // "Показывай пользователю ЧТО будет запушено, ПЕРЕД push"
 
-  import { invoke } from '@tauri-apps/api/tauri';
-  import { onMount } from 'svelte';
+  import { invoke } from "@tauri-apps/api/core";
+  import { onMount } from "svelte";
 
   // ══════════════════════════════════════════════════════════════════════
   // ИНТЕРФЕЙСЫ (соответствуют GitPushPlan из Rust)
   // ══════════════════════════════════════════════════════════════════════
 
   interface GitPushPlan {
-    status: 'ready' | 'blocked' | 'clean';
+    status: "ready" | "blocked" | "clean";
     remote: string;
     branch: string;
     current_branch: string;
-    commits: string[];           // ["sha: message", ...]
-    files_changed: string[];     // ["M src/main.rs", ...]
-    blocked_reasons: string[];   // ["Unstaged changes", ...]
+    commits: string[]; // ["sha: message", ...]
+    files_changed: string[]; // ["M src/main.rs", ...]
+    blocked_reasons: string[]; // ["Unstaged changes", ...]
   }
 
   interface GitPushResult {
@@ -45,13 +45,13 @@
 
   let plan: GitPushPlan | null = null;
   let loading = false;
-  let errorMessage = '';
-  let successMessage = '';  // Сообщение об успехе
-  let executing = false;    // Состояние выполнения push
+  let errorMessage = "";
+  let successMessage = ""; // Сообщение об успехе
+  let executing = false; // Состояние выполнения push
 
   // Настройки (пока hardcoded, позже из Settings)
-  let remote = 'origin';
-  let branch = 'main';
+  let remote = "origin";
+  let branch = "main";
 
   // ══════════════════════════════════════════════════════════════════════
   // ФУНКЦИИ
@@ -62,11 +62,11 @@
    */
   async function fetchPlan() {
     loading = true;
-    errorMessage = '';
+    errorMessage = "";
     plan = null;
 
     try {
-      const response = await invoke<ApiResponse<GitPushPlan>>('plan_git_push', {
+      const response = await invoke<ApiResponse<GitPushPlan>>("plan_git_push", {
         remote,
         branch,
       });
@@ -87,28 +87,31 @@
    * Выполнить push (TASK 17.2 - реализация)
    */
   async function executePush() {
-    if (!plan || plan.status !== 'ready') {
-      errorMessage = 'Cannot execute push: repository not ready';
+    if (!plan || plan.status !== "ready") {
+      errorMessage = "Cannot execute push: repository not ready";
       return;
     }
 
     executing = true;
-    errorMessage = '';
-    successMessage = '';
+    errorMessage = "";
+    successMessage = "";
 
     try {
-      const response = await invoke<ApiResponse<GitPushResult>>('execute_git_push', {
-        remote,
-        branch,
-      });
+      const response = await invoke<ApiResponse<GitPushResult>>(
+        "execute_git_push",
+        {
+          remote,
+          branch,
+        },
+      );
 
       if (response.ok && response.data) {
         const result = response.data;
 
         if (result.success) {
           // Успех: показываем сообщение и обновляем план
-          successMessage = result.message || 'Push completed successfully';
-          
+          successMessage = result.message || "Push completed successfully";
+
           // Автоматически обновить план (после push должен быть clean)
           setTimeout(() => {
             fetchPlan();
@@ -148,22 +151,22 @@
   // ══════════════════════════════════════════════════════════════════════
 
   $: statusBadgeClass = plan
-    ? plan.status === 'ready'
-      ? 'badge-success'
-      : plan.status === 'blocked'
-      ? 'badge-error'
-      : 'badge-info'
-    : '';
+    ? plan.status === "ready"
+      ? "badge-success"
+      : plan.status === "blocked"
+        ? "badge-error"
+        : "badge-info"
+    : "";
 
   $: statusText = plan
-    ? plan.status === 'ready'
-      ? 'ГОТОВ К PUSH'
-      : plan.status === 'blocked'
-      ? 'ЗАБЛОКИРОВАН'
-      : 'НЕЧЕГО ПУШИТЬ'
-    : '';
+    ? plan.status === "ready"
+      ? "ГОТОВ К PUSH"
+      : plan.status === "blocked"
+        ? "ЗАБЛОКИРОВАН"
+        : "НЕЧЕГО ПУШИТЬ"
+    : "";
 
-  $: canExecutePush = plan && plan.status === 'ready';
+  $: canExecutePush = plan && plan.status === "ready";
 </script>
 
 <div class="git-panel">
@@ -177,7 +180,7 @@
       on:click={refreshPlan}
       disabled={loading}
     >
-      {loading ? '⟳ Загрузка...' : '🔄 Обновить'}
+      {loading ? "⟳ Загрузка..." : "🔄 Обновить"}
     </button>
   </div>
 
@@ -286,7 +289,7 @@
           {/if}
         </button>
 
-        {#if plan.status === 'clean'}
+        {#if plan.status === "clean"}
           <p class="clean-message">
             ✅ Все изменения уже запушены. Нечего отправлять.
           </p>
@@ -363,7 +366,7 @@
   }
 
   .info-row .value {
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     color: #333;
   }
 
@@ -394,7 +397,7 @@
 
   .commits-list li,
   .files-list li {
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     font-size: 0.9rem;
     padding: 0.3rem 0;
     border-bottom: 1px solid #f0f0f0;

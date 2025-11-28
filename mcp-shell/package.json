@@ -1,0 +1,29 @@
+{
+  "name": "mcp-shell",
+  "version": "1.0.0",
+  "description": "MCP Shell Server for PowerShell command execution",
+  "type": "module",
+  "main": "server.ts",
+  "bin": {
+    "mcp-shell": "./server.ts"
+  },
+  "scripts": {
+    "start": "tsx server.ts",
+    "build": "tsc"
+  },
+  "keywords": [
+    "mcp",
+    "shell",
+    "powershell"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0"
+  }
+}

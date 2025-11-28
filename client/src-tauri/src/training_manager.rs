@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};  // TASK 12.1: Add Manager trait for path() method
+use tauri::{AppHandle, Manager, Emitter};  // TASK 12.1: Add Manager trait for path() method + Emitter for emit()
 
 
 // ========================================
@@ -215,7 +215,7 @@ pub async fn poll_training_status(
                 
                 if should_emit {
                     // Emit события в UI
-                    if let Err(e) = app_handle.emit_all("training_status_update", &status) {
+                    if let Err(e) = app_handle.emit("training_status_update", &status) {
                         log::error!("Failed to emit training_status_update: {}", e);
                     } else {
                         log::debug!("Emitted training status: {} (epoch {}/{})", 
@@ -263,7 +263,7 @@ pub fn clear_training_status(app_handle: &AppHandle) -> Result<(), String> {
         
         // Emit idle status в UI
         let idle_status = TrainingStatus::default();
-        if let Err(e) = app_handle.emit_all("training_status_update", &idle_status) {
+        if let Err(e) = app_handle.emit("training_status_update", &idle_status) {
             log::error!("Failed to emit idle status: {}", e);
         }
     }
@@ -384,9 +384,8 @@ mod tests {
     #[test]
     fn test_default_training_status() {
         let status = TrainingStatus::default();
-        assert_eq!(status.state, "idle");
-        assert!(status.profile.is_none());
-        assert!(status.progress.is_none());
+        assert_eq!(status.status, "idle");
+        // Поля profile и progress удалены в PULSE v1
     }
     
     #[test]
@@ -399,21 +398,18 @@ mod tests {
     #[test]
     fn test_training_status_serialization() {
         let status = TrainingStatus {
-            state: "running".to_string(),
-            profile: Some("default".to_string()),
-            dataset_path: Some("E:\\data".to_string()),
-            progress: Some(0.5),
-            log_path: Some("E:\\log.txt".to_string()),
-            updated_at: Some("2025-11-27T22:00:00+00:00".to_string()),
-            message: Some("Epoch 2/4".to_string()),
-            total_epochs: Some(4),
-            current_epoch: Some(2),
+            status: "running".to_string(),
+            epoch: 2.0,
+            total_epochs: 4.0,
+            loss: 0.5,
+            message: "Epoch 2/4".to_string(),
+            timestamp: 1234567890,
         };
         
         let json = serde_json::to_string(&status).unwrap();
         let deserialized: TrainingStatus = serde_json::from_str(&json).unwrap();
         
-        assert_eq!(deserialized.state, "running");
-        assert_eq!(deserialized.progress, Some(0.5));
+        assert_eq!(deserialized.status, "running");
+        assert_eq!(deserialized.epoch, 2.0);
     }
 }

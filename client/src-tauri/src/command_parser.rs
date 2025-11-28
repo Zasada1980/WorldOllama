@@ -42,9 +42,9 @@ impl std::fmt::Display for ParseError {
 /// Парсинг команды из текстового формата
 /// 
 /// Формат:
-/// ```
+/// ```text
 /// INDEX KNOWLEDGE
-/// PATH="D:\PROJECTS\TRIZ_LOGS"
+/// PATH="D:\\PROJECTS\\TRIZ_LOGS"
 /// MODE="local"
 /// PROFILE="triz_engineer"
 /// ```

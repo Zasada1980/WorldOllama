@@ -34,6 +34,8 @@ use commands::{
     execute_git_push,
 };
 
+use tauri::Manager;  // TASK 16.3: Required for path() method
+
 // Сохраняем старую команду для совместимости
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -51,7 +53,7 @@ pub fn run() {
             
             // Получаем путь к training_status.json
             let status_path = app_handle
-                .path_resolver()
+                .path()
                 .app_data_dir()
                 .expect("Failed to get app data dir")
                 .join("training_status.json");

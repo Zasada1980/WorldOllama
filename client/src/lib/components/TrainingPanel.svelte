@@ -1,29 +1,41 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-  import { apiClient } from '$lib/api/client';
-  import { notifications } from '$lib/stores/notifications';
+  import { onMount, onDestroy } from "svelte";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { apiClient } from "$lib/api/client";
+  import { notifications } from "$lib/stores/notifications";
 
   // ============================================================================
-  // TASK 16.3: TrainingPanel - PULSE v1 Protocol Integration
-  // ============================================================================
 
-  type TrainingState = 'idle' | 'running' | 'done' | 'error';
+  type TrainingState = "idle" | "running" | "done" | "error";
 
   interface TrainingStatus {
     // PULSE v1 Protocol (FROZEN - 6 fields only)
-    status: TrainingState;      // "idle" | "running" | "done" | "error"
-    epoch: number;              // 0.0, 2.5, 3.0
-    total_epochs: number;       // 3.0
-    loss: number;               // 0.0, 0.342, 0.127
-    message: string;            // "epoch 2/3, step 150/800"
-    timestamp: number;          // Unix timestamp (seconds)
+    status: TrainingState; // "idle" | "running" | "done" | "error"
+    epoch: number; // 0.0, 2.5, 3.0
+    total_epochs: number; // 3.0
+    loss: number; // 0.0, 0.342, 0.127
+    message: string; // "epoch 2/3, step 150/800"
+    timestamp: number; // Unix timestamp (seconds)
   }
 
   interface TrainingContext {
     // Client-side persistence (localStorage) - NOT in PULSE JSON
     profile: string;
     dataset: string;
+  }
+
+  interface TrainingProfile {
+    id: string;
+    name: string;
+    description: string;
+    base_model: string;
+    recommended_epochs: number;
+  }
+
+  interface DatasetRoot {
+    path: string;
+    name: string;
+    file_count?: number | null;
   }
 
   // ============================================================================
@@ -34,7 +46,7 @@
   let context: TrainingContext | null = null; // From localStorage
   let profiles: TrainingProfile[] = [];
   let datasets: DatasetRoot[] = [];
-  
+
   let isLoading = false;
   let isStarting = false;
   let errorMessage: string | null = null;
@@ -48,11 +60,14 @@
   // ============================================================================
 
   async function setupPulseListener() {
-    eventUnlisten = await listen<TrainingStatus>('training_status_update', (event) => {
-      status = event.payload;
-      timeSinceUpdate = 0;
-      console.log('[TrainingPanel] PULSE update:', status);
-    });
+    eventUnlisten = await listen<TrainingStatus>(
+      "training_status_update",
+      (event) => {
+        status = event.payload;
+        timeSinceUpdate = 0;
+        console.log("[TrainingPanel] PULSE update:", status);
+      },
+    );
   }
 
   // ============================================================================
@@ -60,19 +75,19 @@
   // ============================================================================
 
   function loadContext() {
-    const stored = localStorage.getItem('active_training_context');
+    const stored = localStorage.getItem("active_training_context");
     if (stored) {
       try {
         context = JSON.parse(stored);
       } catch (e) {
-        console.warn('Failed to parse training context from localStorage:', e);
+        console.warn("Failed to parse training context from localStorage:", e);
       }
     }
   }
 
   function saveContext(profileName: string, datasetName: string) {
     context = { profile: profileName, dataset: datasetName };
-    localStorage.setItem('active_training_context', JSON.stringify(context));
+    localStorage.setItem("active_training_context", JSON.stringify(context));
   }
 
   // ============================================================================
@@ -87,17 +102,17 @@
     const res = await apiClient.getTrainingStatus();
 
     if (!res) {
-      errorMessage = 'Не удалось получить статус обучения';
+      errorMessage = "Не удалось получить статус обучения";
       status = null;
     } else {
       // Convert old API format to PULSE v1 if needed
       status = {
-        status: (res as any).status || (res as any).state || 'idle',
+        status: (res as any).status || (res as any).state || "idle",
         epoch: (res as any).epoch || (res as any).current_epoch || 0,
         total_epochs: (res as any).total_epochs || 0,
         loss: (res as any).loss || 0,
-        message: (res as any).message || 'No training in progress',
-        timestamp: (res as any).timestamp || Math.floor(Date.now() / 1000)
+        message: (res as any).message || "No training in progress",
+        timestamp: (res as any).timestamp || Math.floor(Date.now() / 1000),
       };
       timeSinceUpdate = 0;
     }
@@ -120,7 +135,7 @@
   }
 
   async function handleClearStatus() {
-    if (!confirm('Очистить статус обучения? Это сбросит все текущие данные.')) {
+    if (!confirm("Очистить статус обучения? Это сбросит все текущие данные.")) {
       return;
     }
 
@@ -128,8 +143,8 @@
 
     if (res !== null) {
       notifications.push({
-        type: 'success',
-        message: 'Статус обучения очищен',
+        type: "success",
+        message: "Статус обучения очищен",
         timeoutMs: 4000,
       });
       await refreshStatus();
@@ -141,9 +156,9 @@
   // ============================================================================
 
   onMount(async () => {
-    loadContext();              // PULSE v1: Load profile/dataset from localStorage
+    loadContext(); // PULSE v1: Load profile/dataset from localStorage
     await setupPulseListener(); // PULSE v1: Subscribe to training_status_update events
-    refreshStatus();            // Initial status fetch
+    refreshStatus(); // Initial status fetch
     loadProfiles();
     loadDatasets();
 
@@ -163,8 +178,8 @@
   // START TRAINING (DSL → execute_agent_command)
   // ============================================================================
 
-  let selectedProfileId: string = '';
-  let selectedDatasetPath: string = '';
+  let selectedProfileId: string = "";
+  let selectedDatasetPath: string = "";
   let epochs: number = 3;
 
   $: if (!selectedProfileId && profiles.length > 0) {
@@ -180,8 +195,8 @@
 
     if (!selectedProfileId || !selectedDatasetPath) {
       notifications.push({
-        type: 'error',
-        message: 'Не выбран профиль или датасет',
+        type: "error",
+        message: "Не выбран профиль или датасет",
         timeoutMs: 4000,
       });
       return;
@@ -189,29 +204,32 @@
 
     if (epochs < 1 || epochs > 5) {
       notifications.push({
-        type: 'error',
-        message: 'EPOCHS должен быть в диапазоне 1–5',
+        type: "error",
+        message: "EPOCHS должен быть в диапазоне 1–5",
         timeoutMs: 4000,
       });
       return;
     }
 
     // PULSE v1: Save training context to localStorage (ОРДЕР №16.3-UI КОМАНДА 2)
-    const profileObj = profiles.find(p => p.id === selectedProfileId);
-    const datasetObj = datasets.find(d => d.path === selectedDatasetPath);
+    const profileObj = profiles.find((p) => p.id === selectedProfileId);
+    const datasetObj = datasets.find((d) => d.path === selectedDatasetPath);
     if (profileObj && datasetObj) {
-      saveContext(profileObj.name || selectedProfileId, datasetObj.name || selectedDatasetPath);
+      saveContext(
+        profileObj.name || selectedProfileId,
+        datasetObj.name || selectedDatasetPath,
+      );
     }
 
     const lines = [
-      'TRAIN AGENT',
+      "TRAIN AGENT",
       `PROFILE="${selectedProfileId}"`,
       `DATA_PATH="${selectedDatasetPath}"`,
       `EPOCHS="${epochs}"`,
       'MODE="llama_factory"',
     ];
 
-    const command_text = lines.join('\n');
+    const command_text = lines.join("\n");
 
     isStarting = true;
     try {
@@ -219,17 +237,17 @@
 
       if (res && res.success) {
         notifications.push({
-          type: 'success',
-          message: 'Обучение запущено',
+          type: "success",
+          message: "Обучение запущено",
           details: res.message,
           timeoutMs: 6000,
         });
         await refreshStatus();
       } else {
-        const msg = res?.message ?? 'Неизвестная ошибка при запуске обучения';
+        const msg = res?.message ?? "Неизвестная ошибка при запуске обучения";
         notifications.push({
-          type: 'error',
-          message: 'Ошибка запуска обучения',
+          type: "error",
+          message: "Ошибка запуска обучения",
           details: msg,
           timeoutMs: 6000,
         });
@@ -244,26 +262,283 @@
   // ============================================================================
 
   // PULSE v1: State labels and emojis
-  $: stateLabel = status ? {
-    idle: 'IDLE',
-    running: 'ВЫПОЛНЯЕТСЯ',
-    done: 'ЗАВЕРШЕНО',
-    error: 'ОШИБКА'
-  }[status.status] : 'НЕИЗВЕСТНО';
+  $: stateLabel = status
+    ? {
+        idle: "IDLE",
+        running: "ВЫПОЛНЯЕТСЯ",
+        done: "ЗАВЕРШЕНО",
+        error: "ОШИБКА",
+      }[status.status]
+    : "НЕИЗВЕСТНО";
 
-  $: stateEmoji = status ? {
-    idle: '💤',
-    running: '🔄',
-    done: '✅',
-    error: '❌'
-  }[status.status] : '❓';
+  $: stateEmoji = status
+    ? {
+        idle: "💤",
+        running: "🔄",
+        done: "✅",
+        error: "❌",
+      }[status.status]
+    : "❓";
 
   // PULSE v1: Progress calculation (ОРДЕР №16.3-UI КОМАНДА 2)
   // NaN Protection: Math.min + zero-division guard
-  $: progressPercent = (status && status.total_epochs > 0) 
-    ? Math.min(100, Math.round((status.epoch / status.total_epochs) * 100)) 
-    : 0;
+  $: progressPercent =
+    status && status.total_epochs > 0
+      ? Math.min(100, Math.round((status.epoch / status.total_epochs) * 100))
+      : 0;
 </script>
+
+<div class="training-panel">
+  <!-- ========================================
+       HEADER: Status Badge + Controls
+       ======================================== -->
+  <header class="training-header">
+    <div class="title-row">
+      <h2>
+        {stateEmoji} Training Status
+      </h2>
+      <span class={`badge badge-${status?.status ?? "unknown"}`}>
+        {stateLabel}
+      </span>
+    </div>
+
+    <div class="controls-row">
+      <button on:click={refreshStatus} disabled={isLoading}>
+        {#if isLoading}
+          ⏳ Обновление...
+        {:else}
+          🔄 Обновить
+        {/if}
+      </button>
+
+      <button
+        class="danger"
+        on:click={handleClearStatus}
+        disabled={isLoading || status?.status === "running"}
+      >
+        🗑️ Очистить статус
+      </button>
+
+      {#if status && status.timestamp > 0}
+        <span class="last-updated">
+          Обновлено: {timeSinceUpdate}s назад
+        </span>
+      {/if}
+    </div>
+
+    {#if errorMessage}
+      <div class="error-box">
+        ❌ {errorMessage}
+      </div>
+    {/if}
+  </header>
+
+  <!-- ========================================
+       DETAILS: Current Training Info
+       ======================================== -->
+  <section class="training-details">
+    <h3>📋 Детали обучения</h3>
+
+    {#if status}
+      <div class="details-grid">
+        <!-- PULSE v1: Context from localStorage -->
+        <div class="detail-item">
+          <div class="label">Профиль (localStorage)</div>
+          <div class="value">{context?.profile ?? "—"}</div>
+        </div>
+
+        <div class="detail-item">
+          <div class="label">Датасет (localStorage)</div>
+          <div class="value mono">{context?.dataset ?? "—"}</div>
+        </div>
+
+        <!-- PULSE v1: Live metrics -->
+        <div class="detail-item">
+          <div class="label">Эпохи (PULSE)</div>
+          <div class="value">
+            {status.epoch.toFixed(1)} / {status.total_epochs.toFixed(1)}
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <div class="label">Loss (PULSE)</div>
+          <div class="value">{status.loss.toFixed(4)}</div>
+        </div>
+
+        <div class="detail-item">
+          <div class="label">Timestamp (PULSE)</div>
+          <div class="value mono">
+            {new Date(status.timestamp * 1000).toLocaleString("ru-RU")}
+          </div>
+        </div>
+
+        <div class="detail-item">
+          <div class="label">Сообщение (PULSE)</div>
+          <div class="value">{status.message}</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar (PULSE v1) -->
+      {#if status.status === "running" && status.total_epochs > 0}
+        <div class="progress-section">
+          <div class="progress-label">
+            <span>Прогресс обучения</span>
+            <span>{progressPercent}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: {progressPercent}%">
+              {progressPercent > 10 ? `${progressPercent}%` : ""}
+            </div>
+          </div>
+        </div>
+      {/if}
+    {:else}
+      <p class="placeholder">
+        Данные о текущем обучении отсутствуют. Запустите обучение через вкладку <code
+          >🔧 Commands</code
+        >.
+      </p>
+    {/if}
+  </section>
+
+  <!-- ========================================
+       START TRAINING: Inline Form
+       ======================================== -->
+  <section class="start-training">
+    <h3>🚀 Запуск обучения из панели</h3>
+
+    <div class="start-grid">
+      <div class="form-control">
+        <label for="profile-select">Профиль</label>
+        <select id="profile-select" bind:value={selectedProfileId}>
+          {#each profiles as profile}
+            <option value={profile.id}>{profile.name}</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="form-control">
+        <label for="dataset-select">Датасет</label>
+        <select id="dataset-select" bind:value={selectedDatasetPath}>
+          {#each datasets as dataset}
+            <option value={dataset.path}>{dataset.name}</option>
+          {/each}
+        </select>
+      </div>
+
+      <div class="form-control">
+        <label for="epochs-input">Эпохи (1–5)</label>
+        <input
+          id="epochs-input"
+          type="number"
+          min="1"
+          max="5"
+          bind:value={epochs}
+        />
+      </div>
+    </div>
+
+    <div class="start-actions">
+      <button
+        on:click={startTraining}
+        disabled={isStarting || status?.status === "running"}
+      >
+        {#if isStarting}
+          ⏳ Запуск...
+        {:else}
+          ▶️ Запустить обучение
+        {/if}
+      </button>
+      <span class="hint"
+        >Команда уходит как DSL через execute_agent_command.</span
+      >
+    </div>
+  </section>
+
+  <!-- ========================================
+       LOG: Messages from Training
+       ======================================== -->
+  <section class="training-log">
+    <h3>📝 Лог обучения</h3>
+
+    {#if status && status.message}
+      <pre class="log-block">{status.message}</pre>
+    {:else}
+      <p class="placeholder">Пока нет сообщений от процесса обучения.</p>
+    {/if}
+  </section>
+
+  <!-- ========================================
+       INFO: Available Profiles
+       ======================================== -->
+  <section class="info-section">
+    <h3>🎯 Доступные профили обучения</h3>
+
+    {#if profiles.length > 0}
+      <div class="profile-grid">
+        {#each profiles as profile}
+          <div class="profile-card">
+            <h4>{profile.name}</h4>
+            <p>{profile.description}</p>
+            <p class="meta">
+              Модель: <code>{profile.base_model}</code><br />
+              Рекомендуемые эпохи: <code>{profile.recommended_epochs}</code>
+            </p>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="placeholder">Загрузка профилей...</p>
+    {/if}
+  </section>
+
+  <!-- ========================================
+       INFO: Available Datasets
+       ======================================== -->
+  <section class="info-section">
+    <h3>📁 Доступные датасеты</h3>
+
+    {#if datasets.length > 0}
+      <ul class="dataset-list">
+        {#each datasets as dataset}
+          <li class="dataset-item">
+            <div>
+              <div class="name">📂 {dataset.name}</div>
+              <div class="path">{dataset.path}</div>
+            </div>
+            {#if dataset.file_count !== null}
+              <div class="count">{dataset.file_count} файлов</div>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    {:else}
+      <p class="placeholder">Загрузка датасетов...</p>
+    {/if}
+  </section>
+
+  <!-- ========================================
+       HELP: How to Start Training
+       ======================================== -->
+  <section class="training-help">
+    <h3>💡 Как запустить обучение</h3>
+    <ol>
+      <li>Откройте вкладку <code>🔧 Commands</code>.</li>
+      <li>
+        Введите команду в формате DSL:
+        <pre
+          style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; color: #4CAF50;">TRAIN AGENT
+PROFILE: triz_engineer
+DATA_PATH: E:\WORLD_OLLAMA\library\raw_documents
+EPOCHS: 3
+MODE: llama_factory</pre>
+      </li>
+      <li>Нажмите <b>Запустить команду</b>.</li>
+      <li>Вернитесь на вкладку <code>🧪 Training</code> для мониторинга.</li>
+      <li>Статус будет автоматически обновляться каждые 5 секунд.</li>
+    </ol>
+  </section>
+</div>
 
 <style>
   .training-panel {
@@ -292,7 +567,7 @@
   }
 
   h2 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0;
     font-size: 1.8em;
     display: flex;
@@ -316,23 +591,28 @@
   }
 
   .badge-queued {
-    background: #FF9800;
+    background: #ff9800;
     color: #000;
   }
 
   .badge-running {
-    background: linear-gradient(90deg, #2196F3, #00BCD4);
+    background: linear-gradient(90deg, #2196f3, #00bcd4);
     color: white;
     animation: pulse 2s ease-in-out infinite;
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
 
   .badge-done {
-    background: #4CAF50;
+    background: #4caf50;
     color: white;
   }
 
@@ -425,7 +705,7 @@
   }
 
   .training-details h3 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0 0 20px 0;
     font-size: 1.3em;
   }
@@ -459,9 +739,9 @@
   }
 
   .value.mono {
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     font-size: 0.95em;
-    color: #4CAF50;
+    color: #4caf50;
   }
 
   .placeholder {
@@ -521,7 +801,7 @@
   }
 
   .training-log h3 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0 0 15px 0;
     font-size: 1.3em;
   }
@@ -531,8 +811,8 @@
     border: 1px solid #444;
     border-radius: 8px;
     padding: 15px;
-    color: #4CAF50;
-    font-family: 'Courier New', monospace;
+    color: #4caf50;
+    font-family: "Courier New", monospace;
     font-size: 0.9em;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -567,7 +847,7 @@
   }
 
   .info-section h3 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0 0 15px 0;
     font-size: 1.2em;
   }
@@ -633,8 +913,8 @@
   }
 
   .dataset-item .path {
-    color: #4CAF50;
-    font-family: 'Courier New', monospace;
+    color: #4caf50;
+    font-family: "Courier New", monospace;
     font-size: 0.85em;
   }
 
@@ -655,7 +935,7 @@
   }
 
   .training-help h3 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0 0 15px 0;
     font-size: 1.2em;
   }
@@ -675,7 +955,7 @@
     color: #667eea;
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'Courier New', monospace;
+    font-family: "Courier New", monospace;
     font-size: 0.9em;
   }
 
@@ -696,7 +976,7 @@
   }
 
   .start-training h3 {
-    color: #4CAF50;
+    color: #4caf50;
     margin: 0 0 15px 0;
     font-size: 1.2em;
   }
@@ -741,247 +1021,3 @@
     font-size: 0.85em;
   }
 </style>
-
-<div class="training-panel">
-  <!-- ========================================
-       HEADER: Status Badge + Controls
-       ======================================== -->
-  <header class="training-header">
-    <div class="title-row">
-      <h2>
-        {stateEmoji} Training Status
-      </h2>
-      <span class={`badge badge-${status?.status ?? 'unknown'}`}>
-        {stateLabel}
-      </span>
-    </div>
-
-    <div class="controls-row">
-      <button on:click={refreshStatus} disabled={isLoading}>
-        {#if isLoading}
-          ⏳ Обновление...
-        {:else}
-          🔄 Обновить
-        {/if}
-      </button>
-
-      <button class="danger" on:click={handleClearStatus} disabled={isLoading || status?.status === 'running'}>
-        🗑️ Очистить статус
-      </button>
-
-      {#if status && status.timestamp > 0}
-        <span class="last-updated">
-          Обновлено: {timeSinceUpdate}s назад
-        </span>
-      {/if}
-    </div>
-
-    {#if errorMessage}
-      <div class="error-box">
-        ❌ {errorMessage}
-      </div>
-    {/if}
-  </header>
-
-  <!-- ========================================
-       DETAILS: Current Training Info
-       ======================================== -->
-  <section class="training-details">
-    <h3>📋 Детали обучения</h3>
-
-    {#if status}
-      <div class="details-grid">
-        <!-- PULSE v1: Context from localStorage -->
-        <div class="detail-item">
-          <div class="label">Профиль (localStorage)</div>
-          <div class="value">{context?.profile ?? '—'}</div>
-        </div>
-
-        <div class="detail-item">
-          <div class="label">Датасет (localStorage)</div>
-          <div class="value mono">{context?.dataset ?? '—'}</div>
-        </div>
-
-        <!-- PULSE v1: Live metrics -->
-        <div class="detail-item">
-          <div class="label">Эпохи (PULSE)</div>
-          <div class="value">
-            {status.epoch.toFixed(1)} / {status.total_epochs.toFixed(1)}
-          </div>
-        </div>
-
-        <div class="detail-item">
-          <div class="label">Loss (PULSE)</div>
-          <div class="value">{status.loss.toFixed(4)}</div>
-        </div>
-
-        <div class="detail-item">
-          <div class="label">Timestamp (PULSE)</div>
-          <div class="value mono">
-            {new Date(status.timestamp * 1000).toLocaleString('ru-RU')}
-          </div>
-        </div>
-
-        <div class="detail-item">
-          <div class="label">Сообщение (PULSE)</div>
-          <div class="value">{status.message}</div>
-        </div>
-      </div>
-
-      <!-- Progress Bar (PULSE v1) -->
-      {#if status.status === 'running' && status.total_epochs > 0}
-        <div class="progress-section">
-          <div class="progress-label">
-            <span>Прогресс обучения</span>
-            <span>{progressPercent}%</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: {progressPercent}%">
-              {progressPercent > 10 ? `${progressPercent}%` : ''}
-            </div>
-          </div>
-        </div>
-      {/if}
-    {:else}
-      <p class="placeholder">
-        Данные о текущем обучении отсутствуют. Запустите обучение через вкладку <code>🔧 Commands</code>.
-      </p>
-    {/if}
-  </section>
-
-  <!-- ========================================
-       START TRAINING: Inline Form
-       ======================================== -->
-  <section class="start-training">
-    <h3>🚀 Запуск обучения из панели</h3>
-
-    <div class="start-grid">
-      <div class="form-control">
-        <label for="profile-select">Профиль</label>
-        <select id="profile-select" bind:value={selectedProfileId}>
-          {#each profiles as profile}
-            <option value={profile.id}>{profile.name}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="form-control">
-        <label for="dataset-select">Датасет</label>
-        <select id="dataset-select" bind:value={selectedDatasetPath}>
-          {#each datasets as dataset}
-            <option value={dataset.path}>{dataset.name}</option>
-          {/each}
-        </select>
-      </div>
-
-      <div class="form-control">
-        <label for="epochs-input">Эпохи (1–5)</label>
-        <input
-          id="epochs-input"
-          type="number"
-          min="1"
-          max="5"
-          bind:value={epochs}
-        />
-      </div>
-    </div>
-
-    <div class="start-actions">
-      <button
-        on:click={startTraining}
-        disabled={isStarting || status?.status === 'running'}
-      >
-        {#if isStarting}
-          ⏳ Запуск...
-        {:else}
-          ▶️ Запустить обучение
-        {/if}
-      </button>
-      <span class="hint">Команда уходит как DSL через execute_agent_command.</span>
-    </div>
-  </section>
-
-  <!-- ========================================
-       LOG: Messages from Training
-       ======================================== -->
-  <section class="training-log">
-    <h3>📝 Лог обучения</h3>
-
-    {#if status && status.message}
-      <pre class="log-block">{status.message}</pre>
-    {:else}
-      <p class="placeholder">
-        Пока нет сообщений от процесса обучения.
-      </p>
-    {/if}
-  </section>
-
-  <!-- ========================================
-       INFO: Available Profiles
-       ======================================== -->
-  <section class="info-section">
-    <h3>🎯 Доступные профили обучения</h3>
-
-    {#if profiles.length > 0}
-      <div class="profile-grid">
-        {#each profiles as profile}
-          <div class="profile-card">
-            <h4>{profile.name}</h4>
-            <p>{profile.description}</p>
-            <p class="meta">
-              Модель: <code>{profile.base_model}</code><br>
-              Рекомендуемые эпохи: <code>{profile.recommended_epochs}</code>
-            </p>
-          </div>
-        {/each}
-      </div>
-    {:else}
-      <p class="placeholder">Загрузка профилей...</p>
-    {/if}
-  </section>
-
-  <!-- ========================================
-       INFO: Available Datasets
-       ======================================== -->
-  <section class="info-section">
-    <h3>📁 Доступные датасеты</h3>
-
-    {#if datasets.length > 0}
-      <ul class="dataset-list">
-        {#each datasets as dataset}
-          <li class="dataset-item">
-            <div>
-              <div class="name">📂 {dataset.name}</div>
-              <div class="path">{dataset.path}</div>
-            </div>
-            {#if dataset.file_count !== null}
-              <div class="count">{dataset.file_count} файлов</div>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="placeholder">Загрузка датасетов...</p>
-    {/if}
-  </section>
-
-  <!-- ========================================
-       HELP: How to Start Training
-       ======================================== -->
-  <section class="training-help">
-    <h3>💡 Как запустить обучение</h3>
-    <ol>
-      <li>Откройте вкладку <code>🔧 Commands</code>.</li>
-      <li>Введите команду в формате DSL:
-        <pre style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; color: #4CAF50;">TRAIN AGENT
-PROFILE: triz_engineer
-DATA_PATH: E:\WORLD_OLLAMA\library\raw_documents
-EPOCHS: 3
-MODE: llama_factory</pre>
-      </li>
-      <li>Нажмите <b>Запустить команду</b>.</li>
-      <li>Вернитесь на вкладку <code>🧪 Training</code> для мониторинга.</li>
-      <li>Статус будет автоматически обновляться каждые 5 секунд.</li>
-    </ol>
-  </section>
-</div>
