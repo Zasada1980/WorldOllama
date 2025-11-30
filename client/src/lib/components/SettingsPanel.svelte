@@ -1,6 +1,13 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { apiClient } from "$lib/api/client";
+  import {
+    displayPreferences,
+    type WindowSizePreset,
+    type Theme,
+    type Background,
+  } from "$lib/stores/displayPreferences";
+  import { applyWindowSize, applyTheme } from "$lib/utils/applyDisplayPreferences";
 
   // ============================================================================
   // Task 5.4: SettingsPanel - Интерфейс настроек приложения
@@ -37,9 +44,21 @@
 
   // Профили агента
   const agentProfiles = [
-    { id: "triz_engineer", name: "🔧 ТРИЗ-инженер", description: "Решение изобретательских задач" },
-    { id: "doc_organizer", name: "📚 Документалист", description: "Организация знаний" },
-    { id: "code_assistant", name: "💻 Code Assistant", description: "Помощь в программировании" },
+    {
+      id: "triz_engineer",
+      name: "🔧 ТРИЗ-инженер",
+      description: "Решение изобретательских задач",
+    },
+    {
+      id: "doc_organizer",
+      name: "📚 Документалист",
+      description: "Организация знаний",
+    },
+    {
+      id: "code_assistant",
+      name: "💻 Code Assistant",
+      description: "Помощь в программировании",
+    },
   ];
 
   // ============================================================================
@@ -47,16 +66,16 @@
   // ============================================================================
   onMount(async () => {
     const response = await apiClient.getAppSettings();
-    
+
     if (response) {
       // Мержим полученные данные с дефолтными (apiClient возвращает не все поля)
       settings = {
         ...settings,
-        ...response
+        ...response,
       };
       console.log("✅ Настройки загружены:", settings);
     }
-    
+
     isLoading = false;
   });
 
@@ -66,12 +85,43 @@
   async function saveSettings() {
     isSaving = true;
 
-    const response = await apiClient.saveAppSettings(settings);
+    const success = await apiClient.saveAppSettings(settings);
 
-    // apiClient уже показал success уведомление при успехе
-    // Если response === null, показано error уведомление
-    
+    if (success) {
+      console.log("✅ Настройки сохранены:", settings);
+      // TODO: Показать toast success
+    } else {
+      console.error("❌ Ошибка сохранения настроек");
+      // TODO: Показать toast error
+    }
+
     isSaving = false;
+  }
+
+  // ============================================================================
+  // Order 34: Display Preferences управление
+  // ============================================================================
+  // Используем $-синтаксис для автоподписки (Fix #1: убрана двойная подписка)
+  $: displayPrefs = $displayPreferences;
+
+  async function updateWindowSize(size: WindowSizePreset) {
+    displayPreferences.update((p) => ({ ...p, windowSize: size }));
+    // Fix #2: Применяем изменения сразу через Tauri API
+    await applyWindowSize(size);
+    console.log('[SettingsPanel] Window size applied:', size);
+  }
+
+  async function updateTheme(theme: Theme) {
+    displayPreferences.update((p) => ({ ...p, theme }));
+    // Fix #2: Применяем изменения сразу
+    applyTheme(theme);
+    console.log('[SettingsPanel] Theme applied:', theme);
+  }
+
+  function updateBackground(bg: Background) {
+    displayPreferences.update((p) => ({ ...p, background: bg }));
+    // Background применяется через CSS класс в +page.svelte (реактивно)
+    console.log('[SettingsPanel] Background updated:', bg);
   }
 </script>
 
@@ -98,8 +148,8 @@
             {/each}
           </select>
           <p class="hint">
-            Модель для генерации ответов через Ollama. 
-            Более крупные модели (14b) точнее, но медленнее.
+            Модель для генерации ответов через Ollama. Более крупные модели
+            (14b) точнее, но медленнее.
           </p>
         </div>
 
@@ -113,7 +163,10 @@
             bind:value={settings.max_tokens}
             placeholder="Не ограничено"
           />
-          <p class="hint">Максимальная длина ответа в токенах (оставьте пустым для автоматического выбора).</p>
+          <p class="hint">
+            Максимальная длина ответа в токенах (оставьте пустым для
+            автоматического выбора).
+          </p>
         </div>
       </section>
 
@@ -132,8 +185,8 @@
             bind:value={settings.cortex_top_k}
           />
           <p class="hint">
-            Количество документов для поиска (5-50). 
-            Больше = точнее, но медленнее.
+            Количество документов для поиска (5-50). Больше = точнее, но
+            медленнее.
           </p>
         </div>
 
@@ -176,6 +229,72 @@
       </section>
 
       <!-- ================================================================== -->
+      <!-- Секция 4: Отображение / Display -->
+      <!-- ================================================================== -->
+      <section class="settings-section">
+        <h2>🖥️ Отображение</h2>
+        
+        <!-- Размер окна -->
+        <div class="setting-item">
+          <div class="label-text">Размер окна:</div>
+          <div class="button-group">
+            <button
+              class="size-button"
+              class:active={displayPrefs.windowSize === 'small'}
+              on:click={() => updateWindowSize('small')}
+            >
+              Малое<br /><span class="size-hint">1024×720</span>
+            </button>
+            <button
+              class="size-button"
+              class:active={displayPrefs.windowSize === 'medium'}
+              on:click={() => updateWindowSize('medium')}
+            >
+              Стандарт<br /><span class="size-hint">1280×800</span>
+            </button>
+            <button
+              class="size-button"
+              class:active={displayPrefs.windowSize === 'large'}
+              on:click={() => updateWindowSize('large')}
+            >
+              Большое<br /><span class="size-hint">1600×900</span>
+            </button>
+            <button
+              class="size-button"
+              class:active={displayPrefs.windowSize === 'fullscreen'}
+              on:click={() => updateWindowSize('fullscreen')}
+            >
+              Полный экран
+            </button>
+          </div>
+          <p class="hint">Изменения применяются сразу. Будет использовано при следующем запуске.</p>
+        </div>
+
+        <!-- Тема -->
+        <div class="setting-item">
+          <label for="theme-select">Тема:</label>
+          <select id="theme-select" bind:value={displayPrefs.theme} on:change={(e) => updateTheme((e.currentTarget as HTMLSelectElement).value as Theme)}>
+            <option value="system">🔄 Системная</option>
+            <option value="light">☀️ Светлая</option>
+            <option value="dark">🌙 Тёмная</option>
+          </select>
+          <p class="hint">Системная тема соответствует настройкам вашей ОС.</p>
+        </div>
+
+        <!-- Фон -->
+        <div class="setting-item">
+          <label for="background-select">Фон:</label>
+          <select id="background-select" bind:value={displayPrefs.background} on:change={(e) => updateBackground((e.currentTarget as HTMLSelectElement).value as Background)}>
+            <option value="default">По умолчанию</option>
+            <option value="solid">Сплошной</option>
+            <option value="grid">Сетка</option>
+            <option value="gradient">Градиент</option>
+          </select>
+          <p class="hint">Визуальное оформление фона приложения.</p>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
       <!-- Кнопка сохранения и сообщения -->
       <!-- ================================================================== -->
       <div class="actions">
@@ -192,7 +311,8 @@
     padding: 2rem;
     max-width: 900px;
     margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, sans-serif;
   }
 
   h1 {
@@ -220,8 +340,12 @@
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .settings-content {
@@ -252,6 +376,13 @@
   }
 
   label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #34495e;
+  }
+
+  .label-text {
     display: block;
     font-weight: 600;
     margin-bottom: 0.5rem;
@@ -334,6 +465,45 @@
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .size-button {
+    flex: 1;
+    min-width: 120px;
+    padding: 1rem;
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .size-button:hover {
+    border-color: #3498db;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .size-button.active {
+    border-color: #27ae60;
+    background: #f0fdf4;
+    font-weight: 600;
+  }
+
+  .size-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #7f8c8d;
+    margin-top: 0.25rem;
   }
 
   .actions {

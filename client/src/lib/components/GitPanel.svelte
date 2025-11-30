@@ -302,7 +302,8 @@
 <style>
   .git-panel {
     padding: 1rem;
-    max-width: 800px;
+    width: 100%;
+    max-width: 1200px; /* Increased from 800px */
     margin: 0 auto;
   }
 

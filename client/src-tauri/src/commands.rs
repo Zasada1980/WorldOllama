@@ -4,7 +4,8 @@ use std::time::Duration;
 use std::process::Command;
 use std::fs;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{AppHandle, Emitter};
+use crate::flow_manager;  // ORDER 38
 
 use crate::config::AppConfig;
 use crate::settings::{load_settings, save_settings, AppSettings};

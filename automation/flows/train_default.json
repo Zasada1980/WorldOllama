@@ -1,0 +1,22 @@
+{
+    "id": "train_default",
+    "name": "Train Default Profile",
+    "description": "Запуск обучения для профиля 'default' на 1 эпоху",
+    "steps": [
+        {
+            "id": "step_1",
+            "cmd": "STATUS",
+            "args": {},
+            "on_failure": "abort"
+        },
+        {
+            "id": "step_2",
+            "cmd": "TRAIN",
+            "args": {
+                "profile": "default",
+                "epochs": 1
+            },
+            "on_failure": "abort"
+        }
+    ]
+}

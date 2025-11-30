@@ -1,0 +1,23 @@
+{
+    "id": "smoke_test",
+    "name": "Smoke Test",
+    "description": "Быстрая проверка базового статуса и безопасного Git dry-run",
+    "steps": [
+        {
+            "id": "1",
+            "cmd": "STATUS",
+            "args": {},
+            "on_failure": "abort"
+        },
+        {
+            "id": "2",
+            "cmd": "GIT_PUSH",
+            "args": {
+                "remote": "origin",
+                "branch": "main",
+                "dry_run": true
+            },
+            "on_failure": "abort"
+        }
+    ]
+}

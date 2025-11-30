@@ -1,0 +1,31 @@
+{
+    "id": "index_and_train",
+    "name": "Index & Train Cycle",
+    "description": "Full workflow: Index library → Train default profile",
+    "steps": [
+        {
+            "id": "step_1",
+            "cmd": "STATUS",
+            "args": {},
+            "on_failure": "abort"
+        },
+        {
+            "id": "step_2",
+            "cmd": "INDEX",
+            "args": {
+                "profile": "default",
+                "mode": "full"
+            },
+            "on_failure": "abort"
+        },
+        {
+            "id": "step_3",
+            "cmd": "TRAIN",
+            "args": {
+                "profile": "default",
+                "epochs": 1
+            },
+            "on_failure": "abort"
+        }
+    ]
+}

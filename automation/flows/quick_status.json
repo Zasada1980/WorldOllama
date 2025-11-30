@@ -1,0 +1,13 @@
+{
+  "id": "quick_status",
+  "name": "Quick Status Check",
+  "description": "Fast system health check - just STATUS command",
+  "steps": [
+    {
+      "id": "status",
+      "cmd": "STATUS",
+      "args": {},
+      "on_failure": "abort"
+    }
+  ]
+}

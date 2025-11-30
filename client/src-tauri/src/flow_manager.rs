@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::io::Write;
-use tauri::{AppHandle, Manager, Emitter};
+use tauri::{AppHandle, Emitter};
 use chrono::Utc;
 
 // ==================================================================================
@@ -20,7 +20,7 @@ use chrono::Utc;
 // ==================================================================================
 
 /// Log entry for flow execution (JSON Lines format)
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct FlowLogEntry {
     timestamp: i64,
     flow_id: String,

@@ -798,6 +798,8 @@ MODE: llama_factory</pre>
     border-radius: 12px;
     padding: 25px;
     margin-bottom: 25px;
+    max-height: 400px; /* Limit height */
+    overflow-y: auto; /* Enable scroll */
   }
 
   .training-log h3 {

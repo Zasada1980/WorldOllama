@@ -1,0 +1,23 @@
+{
+    "id": "git_check",
+    "name": "Git Push Dry Run",
+    "description": "План + dry-run пуша без реального изменения remote",
+    "steps": [
+        {
+            "id": "step_1",
+            "cmd": "STATUS",
+            "args": {},
+            "on_failure": "abort"
+        },
+        {
+            "id": "step_2",
+            "cmd": "GIT_PUSH",
+            "args": {
+                "remote": "origin",
+                "branch": "main",
+                "dry_run": true
+            },
+            "on_failure": "abort"
+        }
+    ]
+}

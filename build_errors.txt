@@ -1,0 +1,78 @@
+   Compiling tauri_fresh v0.1.0 (E:\WORLD_OLLAMA\client\src-tauri)
+error[E0603]: function `start_training_job` is private
+   --> src\flow_manager.rs:245:31
+    |
+245 |         use crate::commands::{start_training_job, ExecutionResult};
+    |                               ^^^^^^^^^^^^^^^^^^ private function
+    |
+note: the function `start_training_job` is defined here
+   --> src\commands.rs:569:1
+    |
+569 | / fn start_training_job(
+570 | |     app_handle: tauri::AppHandle,  // NEW: TASK 12.1 - need app_handle for status
+571 | |     profile: String,
+572 | |     data_path: String,
+...   |
+706 | | }
+    | |_^
+
+warning: unused import: `PathBuf`
+  --> src\git_manager.rs:14:23
+   |
+14 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ExecutionResult`
+   --> src\flow_manager.rs:245:51
+    |
+245 |         use crate::commands::{start_training_job, ExecutionResult};
+    |                                                   ^^^^^^^^^^^^^^^
+
+warning: unused variable: `cached`
+   --> src\training_manager.rs:239:33
+    |
+239 |                 if let Some(ref cached) = last_known_status {
+    |                                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_cached`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+error[E0599]: no method named `unwrap_or_else` found for struct `Vec<std::string::String>` in the current scope
+   --> src\flow_manager.rs:315:48
+    |
+315 |             let reasons = plan.blocked_reasons.unwrap_or_else(|| vec!["Unknown reason".to_string()]);
+    |                                                ^^^^^^^^^^^^^^ method not found in `Vec<std::string::String>`
+
+error[E0609]: no field `commit_count` on type `GitPushPlan`
+   --> src\flow_manager.rs:320:92
+    |
+320 |             return Ok(format!("Git plan: {} commits ready (dry-run, no actual push)", plan.commit_count));
+    |                                                                                            ^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `status`, `remote`, `branch`, `current_branch`, `commits` ... and 2 others
+
+error[E0609]: no field `commit_count` on type `GitPushPlan`
+   --> src\flow_manager.rs:327:69
+    |
+327 |         Ok(format!("Git push successful: {} commits to {}/{}", plan.commit_count, remote, branch))
+    |                                                                     ^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `status`, `remote`, `branch`, `current_branch`, `commits` ... and 2 others
+
+warning: unused import: `tauri::Manager`
+ --> src\commands.rs:7:5
+  |
+7 | use tauri::Manager;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `Manager`
+ --> src\flow_manager.rs:5:24
+  |
+5 | use tauri::{AppHandle, Manager, Emitter};
+  |                        ^^^^^^^
+
+Some errors have detailed explanations: E0599, E0603, E0609.
+For more information about an error, try `rustc --explain E0599`.
+warning: `tauri_fresh` (lib) generated 5 warnings
+error: could not compile `tauri_fresh` (lib) due to 4 previous errors; 5 warnings emitted

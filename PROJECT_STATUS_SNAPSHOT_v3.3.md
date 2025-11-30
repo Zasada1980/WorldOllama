@@ -706,6 +706,146 @@ EXECUTE (write):
 
 ---
 
+## 🔒 INFRASTRUCTURE: Terminal Safety Policy (ОРДЕР 29)
+
+**Status:** 🟡 DOCUMENTATION COMPLETE | ⏳ PENDING MYSHELL IMPLEMENTATION  
+**Priority:** 🔴 CRITICAL (Blocks reliable agent operations)  
+**Date Started:** 29 ноября 2025 г.
+
+### Objective
+
+Implement terminal command timeout mechanism in myshell MCP server to prevent infinite hangs when CODEX agent executes long-running or stuck commands.
+
+### Problem Statement
+
+**Current Issue:**
+- Commands like `npm install`, `cargo build`, `Start-Sleep` run indefinitely
+- Agent cannot detect process hangs → waits forever → user session blocked
+- No automatic termination after reasonable timeout
+
+**Impact:**
+- Agent operations unreliable for any command >2 minutes
+- User must manually kill stuck processes
+- Cannot safely run builds, installations, or training
+
+### Solution Architecture
+
+**Two-tier timeout system:**
+1. **Execution Timeout (`exec_timeout_sec`):** Maximum total command runtime
+2. **No-Output Timeout (`no_output_timeout_sec`):** Maximum silence period (no stdout/stderr)
+
+**Termination Flow:**
+```
+Command exceeds timeout
+  ↓
+Send SIGTERM (soft kill)
+  ↓ wait 5 seconds
+Still alive?
+  ↓ Yes
+Send SIGKILL (hard kill)
+  ↓
+Return status="timeout" with reason
+```
+
+### Deliverables (Documentation Phase)
+
+| File | Size | Status | Purpose |
+|------|------|--------|---------|
+| `config/terminal_timeout_policy.json` | 1.7 KB | ✅ CREATED | Timeout rules and command patterns |
+| `docs/infra/TERMINAL_SAFETY_IMPLEMENTATION_GUIDE.md` | 11 KB | ✅ CREATED | Implementation guide for myshell developer |
+| `docs/infra/Terminal_Safety_Policy.md` | 10 KB | ✅ CREATED | Agent-side policy (system instructions) |
+| `docs/infra/TERMINAL_TIMEOUT_VERIFICATION.md` | 5 KB | ✅ CREATED | Test plan and results tracking |
+| `docs/infra/TERMINAL_SAFETY_QUICK_START.md` | 10 KB | ✅ CREATED | Step-by-step execution guide |
+| `docs/infra/GITHUB_ISSUE_TERMINAL_SAFETY.md` | 3 KB | ✅ CREATED | GitHub Issue template (manual creation) |
+
+**Total Documentation:** ~40 KB, 6 files
+
+### Policy Configuration
+
+**Timeout Categories:**
+- **Quick** (30s exec / 10s no-output): `ls`, `git status`, `echo`
+- **Medium** (120s exec / 30s no-output): `pwsh scripts`, `npm test`
+- **Long** (600s exec / 60s no-output): `npm install`, `cargo build`
+- **Extended** (900s exec / 120s no-output): `llamafactory-cli train` (max limit)
+
+**Pattern Matching:**
+- Regex patterns for automatic category detection
+- User can override with explicit `timeout_sec` parameter
+
+### Implementation Status
+
+**Phase 1: Documentation ✅ COMPLETE (29.11.2025)**
+- [x] Policy config created
+- [x] Implementation guide written
+- [x] Agent policy documented
+- [x] Verification plan prepared
+- [x] Quick start guide created
+
+**Phase 2: myshell Implementation ⏳ PENDING**
+- [ ] GitHub Issue created for myshell developer
+- [ ] Config loading at startup
+- [ ] Timeout calculation logic
+- [ ] Dual timeout monitoring
+- [ ] Soft/hard kill progression
+- [ ] Response schema with `timeoutReason`, `terminationMode`, `durationMs`
+
+**Phase 3: Verification ⏳ PENDING**
+- [ ] Test 1: Quick command (success)
+- [ ] Test 2: No-output timeout (hung process)
+- [ ] Test 3: Exec timeout (long command)
+- [ ] Test 4: Normal long command (success)
+
+### Acceptance Criteria
+
+**Implementation DONE when:**
+1. ✅ myshell loads `terminal_timeout_policy.json` at startup
+2. ✅ Timeouts calculated per command (user override OR pattern match)
+3. ✅ BOTH exec_timeout AND no_output_timeout enforced
+4. ✅ Soft kill → hard kill progression works
+5. ✅ Response includes `timeoutReason`, `terminationMode`, `durationMs`
+6. ✅ All 4 verification tests pass
+
+### Next Steps
+
+1. **Manual GitHub Issue Creation** (Alternative to `gh` CLI):
+   - URL: https://github.com/Zasada1980/WorldOllama/issues/new
+   - Template: `docs/infra/GITHUB_ISSUE_TERMINAL_SAFETY.md`
+   - Labels: `infrastructure`, `terminal`, `priority:critical`
+
+2. **Add Terminal_Safety_Policy.md to CODEX system prompt:**
+   - Content: `docs/infra/Terminal_Safety_Policy.md`
+   - Location: Agent system instructions / custom instructions
+   - Effect: Agent will always specify `timeout_sec` for terminal commands
+
+3. **After myshell implementation:**
+   - Run 4 verification tests (via CODEX agent)
+   - Update `TERMINAL_TIMEOUT_VERIFICATION.md` with results
+   - Mark ОРДЕР 29 as COMPLETE
+
+### Known Limitations
+
+**Pattern Matching:**
+- Case-insensitive (may cause false positives)
+- Simple regex (no semantic understanding)
+
+**Policy Reload:**
+- Requires myshell server restart to reload config
+- No hot-reload mechanism
+
+**Timeout Precision:**
+- Polling interval ~100ms (not real-time)
+- Soft kill wait time: 5 seconds (not configurable)
+
+### Timeline
+
+- **29.11.2025 13:00** — Documentation phase started
+- **29.11.2025 13:20** — All 6 documentation files created ✅
+- **TBD** — myshell developer implements timeout mechanism
+- **TBD** — Verification tests executed
+- **Target:** ОРДЕР 29 COMPLETE before ОРДЕР 28 (Display Preferences)
+
+---
+
 ## ✅ CONCLUSIONS
 
 ### Phase 1 Summary
@@ -740,7 +880,7 @@ EXECUTE (write):
 
 ---
 
-**Last Updated:** 27.11.2025 14:20  
+**Last Updated:** 29.11.2025 13:30  
 **Next Review:** 01.12.2025 (Phase 2 start)  
-**Document Version:** v3.3 (Phase 1 Complete + Phase 2 Scheduled)  
+**Document Version:** v3.7 (Phase 1 Complete + Phase 2 Scheduled + ОРДЕР 29 DOCUMENTED)  
 **Author:** Project Director + CODEC Team

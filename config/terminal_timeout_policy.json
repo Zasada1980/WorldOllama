@@ -1,0 +1,62 @@
+{
+    "version": "1.0.0",
+    "description": "Terminal Timeout & Watchdog Policy for CODEX Agent Terminal Operations",
+    "timeouts": {
+        "default_exec_timeout_sec": 120,
+        "max_exec_timeout_sec": 900,
+        "no_output_timeout_sec": 30,
+        "soft_kill_timeout_sec": 10,
+        "hard_kill_timeout_sec": 5,
+        "global_agent_timeout_sec": 90
+    },
+    "long_running_overrides": {
+        "npm_install": 600,
+        "npm_run_build": 300,
+        "cargo_build": 600,
+        "cargo_test": 300,
+        "index_knowledge": 600,
+        "train_agent": 900,
+        "git_clone": 300,
+        "docker_build": 600
+    },
+    "command_classification": {
+        "fast": {
+            "max_timeout_sec": 60,
+            "patterns": [
+                "dir",
+                "ls",
+                "git status",
+                "cat",
+                "type",
+                "echo",
+                "pwd",
+                "which"
+            ]
+        },
+        "medium": {
+            "max_timeout_sec": 120,
+            "patterns": [
+                "pwsh",
+                "node",
+                "python",
+                "test"
+            ]
+        },
+        "long": {
+            "max_timeout_sec": 900,
+            "patterns": [
+                "npm",
+                "cargo",
+                "docker",
+                "train",
+                "index"
+            ]
+        }
+    },
+    "behavior_on_timeout": {
+        "return_last_n_lines": 20,
+        "log_full_output": true,
+        "notify_user_on_long_timeout": true,
+        "auto_retry_on_soft_failure": false
+    }
+}
