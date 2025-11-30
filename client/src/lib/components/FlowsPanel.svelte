@@ -192,6 +192,21 @@
                             {flow.steps.length} steps
                         </span>
                     </div>
+
+                    <!-- CRITICAL FIX: Add Run Flow button -->
+                    <button
+                        on:click={() => runFlow(flow.id)}
+                        disabled={status.is_running}
+                        class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                    >
+                        {#if status.is_running && status.current_flow_id === flow.id}
+                            ⏳ Running...
+                        {:else if status.is_running}
+                            🔒 Another flow running
+                        {:else}
+                            ▶️ Run Flow
+                        {/if}
+                    </button>
                 </div>
             {/each}
         </div>
