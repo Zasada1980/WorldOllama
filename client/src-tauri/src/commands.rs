@@ -1055,3 +1055,12 @@ pub async fn execute_git_push(
         ),
     }
 }
+/// ORDER 38 КОМАНДА 2
+#[tauri::command]
+pub fn get_flow_history(limit: Option<usize>) -> ApiResponse<Vec<flow_manager::FlowRunSummary>> {
+    let limit = limit.unwrap_or(10);
+    match flow_manager::FlowManager::get_flow_history(limit) {
+        Ok(history) => ApiResponse::success(history),
+        Err(e) => ApiResponse::error("history_error", e),
+    }
+}

@@ -9,6 +9,61 @@ use tauri::{AppHandle, Manager, Emitter};  // TASK 12.1: Add Manager trait for p
 
 
 // ========================================
+// ORDER 36: TRAIN PUBLIC API STRUCTURES
+// ========================================
+
+/// Configuration for training job execution
+/// Used by both Tauri commands and flow_manager
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrainingConfig {
+    /// Training profile name (e.g., "triz_td010v3_full", "default")
+    pub profile: String,
+    
+    /// Optional dataset path (defaults to PROJECT_ROOT/library/raw_documents)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dataset: Option<String>,
+    
+    /// Number of epochs (1-5, default: 1)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub epochs: Option<u32>,
+    
+    /// Training mode ("full", "quick", "standard", etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<String>,
+    
+    /// Dry-run mode (reserved for future use, currently ignored)
+    #[serde(default)]
+    pub dry_run: bool,
+}
+
+impl Default for TrainingConfig {
+    fn default() -> Self {
+        Self {
+            profile: "default".to_string(),
+            dataset: None,
+            epochs: Some(1),
+            mode: Some("standard".to_string()),
+            dry_run: false,
+        }
+    }
+}
+
+/// Result of training job launch attempt
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrainingResult {
+    /// Success indicator
+    pub success: bool,
+    
+    /// Human-readable message (profile, epochs, job_id, or error)
+    pub message: String,
+    
+    /// Optional job ID for successful launches
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub job_id: Option<String>,
+}
+
+
+// ========================================
 // СТРУКТУРЫ ДАННЫХ
 // ========================================
 
@@ -185,6 +240,117 @@ pub fn get_training_status(app_handle: &AppHandle) -> Result<TrainingStatus, Str
     match TrainingStatus::from_file(&status_path) {
         Some(status) => Ok(status),
         None => Ok(TrainingStatus::default()), // Файл не существует → idle
+    }
+}
+
+/// Launch agent training job with given configuration (ORDER 36)
+///
+/// This is the canonical entry point for training execution.
+/// Used by both Tauri commands and flow_manager.
+///
+/// # Returns
+/// * `Ok(TrainingResult)` - training launched or validation failed
+/// * `Err(String)` - internal error (status read failed)
+pub async fn run_training(
+    app_handle: &AppHandle,
+    config: TrainingConfig,
+) -> Result<TrainingResult, String> {
+    use std::process::Command;
+    use chrono::Utc;
+    
+    // Validation 1: Epochs range
+    let epochs = config.epochs.unwrap_or(1);
+    if epochs < 1 || epochs > 5 {
+        return Ok(TrainingResult {
+            success: false,
+            message: "EPOCHS must be in range 1-5".to_string(),
+            job_id: None,
+        });
+    }
+    
+    // Validation 2: Profile whitelist
+    let valid_profiles = [
+        "triz_engineer", "triz_researcher",
+        "triz_td010v3_full", "triz_td010v3_smoketest",
+        "default"
+    ];
+    if !valid_profiles.contains(&config.profile.as_str()) {
+        return Ok(TrainingResult {
+            success: false,
+            message: format!("Invalid profile: {}. Valid: {:?}", 
+                           config.profile, valid_profiles),
+            job_id: None,
+        });
+    }
+    
+    // Validation 3: Dataset path
+    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
+        .unwrap_or_else(|_| std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().and_then(|p| p.parent())
+                .map(|p| p.to_string_lossy().to_string()))
+            .unwrap_or_else(|| ".".to_string()));
+    
+    let data_path = config.dataset.unwrap_or_else(|| 
+        format!("{}\\library\\raw_documents", project_root));
+    
+    if !std::path::Path::new(&data_path).exists() {
+        return Ok(TrainingResult {
+            success: false,
+            message: format!("Dataset path not found: {}", data_path),
+            job_id: None,
+        });
+   }
+    
+    // Validation 4: Check if already running
+    let current_status = get_training_status(app_handle)?;
+    
+    if current_status.status == "running" || current_status.status == "queued" {
+        return Ok(TrainingResult {
+            success: false,
+            message: format!("Training already in progress (status: {})", 
+                           current_status.status),
+            job_id: None,
+        });
+    }
+    
+    // Generate Job ID
+    let job_id = format!("train-{}", Utc::now().format("%Y%m%d-%H%M%S"));
+    
+    // Launch PowerShell training script
+    let script_path = format!("{}\\scripts\\start_agent_training.ps1", project_root);
+    
+    if !std::path::Path::new(&script_path).exists() {
+        return Ok(TrainingResult {
+            success: false,
+            message: format!("Training script not found: {}", script_path),
+            job_id: None,
+        });
+    }
+    
+    let mode = config.mode.unwrap_or_else(|| "standard".to_string());
+    
+    let result = Command::new("powershell")
+        .args(&["-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", &script_path,
+                "-Profile", &config.profile,
+                "-DataPath", &data_path,
+                "-Epochs", &epochs.to_string(),
+                "-Mode", &mode])
+        .spawn();
+    
+    match result {
+        Ok(_child) => Ok(TrainingResult {
+            success: true,
+            message: format!("Training started: profile={}, epochs={}, job_id={}", 
+                           config.profile, epochs, job_id),
+            job_id: Some(job_id),
+        }),
+        Err(e) => Ok(TrainingResult {
+            success: false,
+            message: format!("Failed to start training: {}", e),
+            job_id: None,
+        }),
     }
 }
 
