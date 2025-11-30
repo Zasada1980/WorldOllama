@@ -126,7 +126,7 @@ interface TerminalResponse {
 **Проблема:** GitHub CLI authentication failure с изначальным токеном
 
 **Решение:**
-- Использован новый токен: `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`
+- Использован новый токен: `[REDACTED]`
 - Issue создан успешно: https://github.com/Zasada1980/WorldOllama/issues/3
 - Title: "Implement Terminal Timeout Policy in myshell (ORDER 33)"
 - Body: Full content from `TERMINAL_SAFETY_IMPLEMENTATION_GUIDE.md`
