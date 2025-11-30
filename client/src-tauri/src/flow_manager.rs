@@ -489,14 +489,15 @@ impl FlowManager {
         
         let repo_root = std::env::var("WORLD_OLLAMA_ROOT")
             .unwrap_or_else(|_| {
+                // dev: target/debug/exe -> debug -> target -> src-tauri -> client -> WORLD_OLLAMA (5 levels)
                 std::env::current_exe()
                     .ok()
                     .and_then(|p| {
-                        p.parent()
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
+                        p.parent()  // debug
+                            .and_then(|p| p.parent())  // target
+                            .and_then(|p| p.parent())  // src-tauri
+                            .and_then(|p| p.parent())  // client
+                            .and_then(|p| p.parent())  // WORLD_OLLAMA root
                             .map(|p| p.to_string_lossy().to_string())
                     })
                     .unwrap_or_else(|| ".".to_string())
