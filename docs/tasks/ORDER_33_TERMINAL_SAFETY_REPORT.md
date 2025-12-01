@@ -278,7 +278,7 @@ Get-Content .\docs\infra\CODEX_SYSTEM_PROMPT_TERMINAL_SAFETY.md | Set-Clipboard
 ### GitHub CLI Authentication
 
 **Problem:** Initial GITHUB_TOKEN environment variable was invalid  
-**Solution:** User provided fresh token `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`  
+**Solution:** User provided fresh token `[REDACTED]`  
 **Workaround:** Created fallback manual issue template (`GITHUB_ISSUE_TERMINAL_SAFETY.md`)
 
 ### Documentation Strategy

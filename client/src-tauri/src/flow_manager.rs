@@ -63,20 +63,10 @@ impl FlowLogger {
     }
     
     fn get_project_root() -> Result<String, String> {
-        std::env::var("WORLD_OLLAMA_ROOT")
-            .or_else(|_| {
-                std::env::current_exe()
-                    .ok()
-                    .and_then(|p| {
-                        p.parent()
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
-                            .and_then(|p| p.parent())
-                            .map(|p| p.to_string_lossy().to_string())
-                    })
-                    .ok_or_else(|| "Failed to determine project root".to_string())
-            })
+        // ORDER 37-FIX: Use robust path resolution
+        Ok(crate::utils::get_project_root()
+            .to_string_lossy()
+            .to_string())
     }
     
     fn log(&self, entry: FlowLogEntry) -> Result<(), String> {
@@ -239,12 +229,9 @@ pub struct FlowManager {
 
 impl FlowManager {
     pub fn new(app_handle: AppHandle) -> Self {
-        let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-            .unwrap_or_else(|_| std::env::current_exe()
-                .ok()
-                .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
-                .unwrap_or_else(|| ".".to_string()));
-        let storage_path = PathBuf::from(&project_root).join("automation").join("flows");
+        // ORDER 37-FIX: Use robust project root
+        let project_root = crate::utils::get_project_root();
+        let storage_path = project_root.join("automation").join("flows");
         
         if !storage_path.exists() {
             let _ = fs::create_dir_all(&storage_path);
@@ -487,21 +474,9 @@ impl FlowManager {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         
-        let repo_root = std::env::var("WORLD_OLLAMA_ROOT")
-            .unwrap_or_else(|_| {
-                // dev: target/debug/exe -> debug -> target -> src-tauri -> client -> WORLD_OLLAMA (5 levels)
-                std::env::current_exe()
-                    .ok()
-                    .and_then(|p| {
-                        p.parent()  // debug
-                            .and_then(|p| p.parent())  // target
-                            .and_then(|p| p.parent())  // src-tauri
-                            .and_then(|p| p.parent())  // client
-                            .and_then(|p| p.parent())  // WORLD_OLLAMA root
-                            .map(|p| p.to_string_lossy().to_string())
-                    })
-                    .unwrap_or_else(|| ".".to_string())
-            });
+        // ORDER 37-FIX: Use robust project root
+        let project_root = crate::utils::get_project_root();
+        let repo_root = project_root.to_string_lossy().to_string();
         
         let plan = plan_git_push(&repo_root, remote, branch)
             .map_err(|e| format!("Git plan failed: {}", e))?;

@@ -283,16 +283,13 @@ pub async fn run_training(
         });
     }
     
-    // Validation 3: Dataset path
-    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-        .unwrap_or_else(|_| std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().and_then(|p| p.parent())
-                .map(|p| p.to_string_lossy().to_string()))
-            .unwrap_or_else(|| ".".to_string()));
+    // Validation 3: Dataset path (ORDER 37-FIX)
+    let project_root = crate::utils::get_project_root();
     
-    let data_path = config.dataset.unwrap_or_else(|| 
-        format!("{}\\library\\raw_documents", project_root));
+    let data_path = config.dataset.unwrap_or_else(|| {
+        project_root.join("library").join("raw_documents")
+            .to_string_lossy().to_string()
+    });
     
     if !std::path::Path::new(&data_path).exists() {
         return Ok(TrainingResult {
@@ -318,12 +315,12 @@ pub async fn run_training(
     let job_id = format!("train-{}", Utc::now().format("%Y%m%d-%H%M%S"));
     
     // Launch PowerShell training script
-    let script_path = format!("{}\\scripts\\start_agent_training.ps1", project_root);
+    let script_path = project_root.join("scripts").join("start_agent_training.ps1");
     
-    if !std::path::Path::new(&script_path).exists() {
+    if !script_path.exists() {
         return Ok(TrainingResult {
             success: false,
-            message: format!("Training script not found: {}", script_path),
+            message: format!("Training script not found: {}", script_path.display()),
             job_id: None,
         });
     }
@@ -332,7 +329,7 @@ pub async fn run_training(
     
     let result = Command::new("powershell")
         .args(&["-NoProfile", "-ExecutionPolicy", "Bypass",
-                "-File", &script_path,
+                "-File", &script_path.to_string_lossy(),
                 "-Profile", &config.profile,
                 "-DataPath", &data_path,
                 "-Epochs", &epochs.to_string(),
@@ -448,9 +445,16 @@ pub fn list_training_profiles() -> Vec<TrainingProfile> {
             recommended_epochs: 3,
         },
         TrainingProfile {
-            id: "triz-specialist".to_string(),
-            name: "TRIZ Specialist".to_string(),
-            description: "Специализация на ТРИЗ документах (rank=16, alpha=32)".to_string(),
+            id: "triz_engineer".to_string(),  // ← Fixed: underscore instead of dash
+            name: "TRIZ Engineer".to_string(),
+            description: "Специализация на ТРИЗ инженерных задачах (rank=16, alpha=32)".to_string(),
+            base_model: "qwen2.5:14b-instruct-q4_k_m".to_string(),
+            recommended_epochs: 5,
+        },
+        TrainingProfile {
+            id: "triz_researcher".to_string(),  // ← Fixed: underscore instead of dash
+            name: "TRIZ Researcher".to_string(),
+            description: "Специализация на ТРИЗ исследованиях (rank=16, alpha=32)".to_string(),
             base_model: "qwen2.5:14b-instruct-q4_k_m".to_string(),
             recommended_epochs: 5,
         },
@@ -468,15 +472,12 @@ pub fn list_training_profiles() -> Vec<TrainingProfile> {
 pub fn list_datasets_roots() -> Vec<DatasetRoot> {
     let mut roots = Vec::new();
     
-    // TASK 16.1: Dynamic project root
-    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-        .unwrap_or_else(|_| std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
-            .unwrap_or_else(|| ".".to_string()));
+    // ORDER 37-FIX: Use robust project root resolution
+    let project_root = crate::utils::get_project_root();
     
     // Главная библиотека WORLD_OLLAMA
-    let main_library = format!("{}\\library\\raw_documents", project_root);
+    let main_library = project_root.join("library").join("raw_documents");
+    let main_library_str = main_library.to_string_lossy().to_string();
     if let Ok(metadata) = fs::metadata(&main_library) {
         if metadata.is_dir() {
             let file_count = fs::read_dir(&main_library)
@@ -484,7 +485,7 @@ pub fn list_datasets_roots() -> Vec<DatasetRoot> {
                 .map(|entries| entries.filter_map(Result::ok).count());
             
             roots.push(DatasetRoot {
-                path: main_library.clone(),
+                path: main_library_str,
                 name: "Main Library (TRIZ)".to_string(),
                 file_count,
             });
@@ -492,7 +493,8 @@ pub fn list_datasets_roots() -> Vec<DatasetRoot> {
     }
     
     // Cleaned documents
-    let cleaned_docs = format!("{}\\library\\cleaned_documents", project_root);
+    let cleaned_docs = project_root.join("library").join("cleaned_documents");
+    let cleaned_docs_str = cleaned_docs.to_string_lossy().to_string();
     if let Ok(metadata) = fs::metadata(&cleaned_docs) {
         if metadata.is_dir() {
             let file_count = fs::read_dir(&cleaned_docs)
@@ -500,7 +502,7 @@ pub fn list_datasets_roots() -> Vec<DatasetRoot> {
                 .map(|entries| entries.filter_map(Result::ok).count());
             
             roots.push(DatasetRoot {
-                path: cleaned_docs.clone(),
+                path: cleaned_docs_str,
                 name: "Cleaned Documents".to_string(),
                 file_count,
             });

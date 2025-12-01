@@ -567,7 +567,8 @@ pub struct TrainingStartInfo {
 }
 
 /// Запускает фоновое обучение агента с заданными параметрами
-fn start_training_job(
+#[tauri::command]
+pub async fn start_training_job(
     app_handle: tauri::AppHandle,  // NEW: TASK 12.1 - need app_handle for status
     profile: String,
     data_path: String,
@@ -642,20 +643,15 @@ fn start_training_job(
     // через вызов pulse_wrapper.write_idle_status() или write_running_status()
 
     // ======== Launch PowerShell training script (TASK 16.1: Dynamic path) ========
-    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-        .unwrap_or_else(|_| std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
-            .unwrap_or_else(|| ".".to_string()));
-    
-    let script_path = format!("{}\\scripts\\start_agent_training.ps1", project_root);
-
+    let project_root = crate::utils::get_project_root();
+    let script_path = project_root.join("scripts").join("start_agent_training.ps1");
+    let script_path_str = script_path.to_string_lossy().to_string();
     // Check if script exists
     if !std::path::Path::new(&script_path).exists() {
         // PULSE v1: НЕ пишем error статус из Rust (Python пишет)
         return ApiResponse::error(
             "script_not_found",
-            format!("❌ Скрипт обучения не найден:\n{}", script_path),
+            format!("❌ Скрипт обучения не найден:\n{}", &script_path_str),
         );
     }
 
@@ -665,7 +661,7 @@ fn start_training_job(
             "-ExecutionPolicy",
             "Bypass",
             "-File",
-            &script_path,
+            &script_path_str,
             "-Profile",
             &profile,
             "-DataPath",
@@ -789,7 +785,7 @@ pub async fn execute_agent_command(
             let mode = parsed.args.get("MODE").cloned().unwrap_or_else(|| "llama_factory".to_string());
 
             // ✅ REAL ACTION (Task 12.1): Запуск фонового обучения через новый backend
-            start_training_job(app_handle.clone(), profile, data_path, epochs, mode)
+            start_training_job(app_handle.clone(), profile, data_path, epochs, mode).await
         }
 
         CommandKind::GitPush => {

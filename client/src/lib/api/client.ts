@@ -211,6 +211,24 @@ export async function listDatasetsRoots() {
   }>>("list_datasets_roots", {}, true);
 }
 
+// ORDER 42.2: Direct training start via Tauri (bypasses DSL)
+export async function startTrainingJob(
+  profile: string,
+  dataPath: string,  // ← camelCase (Tauri converts to data_path automatically)
+  epochs: number,
+  mode: string = "llama_factory"
+) {
+  return callApi<{
+    success: boolean;
+    message: string;
+  }>("start_training_job", {
+    profile,
+    dataPath,  // ← camelCase matches Tauri's auto-conversion
+    epochs,
+    mode
+  });
+}
+
 export const apiClient = {
   callApi,
   sendOllamaChat,
@@ -225,4 +243,5 @@ export const apiClient = {
   clearTrainingStatus,
   listTrainingProfiles,
   listDatasetsRoots,
+  startTrainingJob, // ORDER 42.2
 };

@@ -1,0 +1,13 @@
+    Checking tauri_fresh v0.1.0 (E:\WORLD_OLLAMA\client\src-tauri)
+error: unexpected closing delimiter: `}`
+   --> src\commands.rs:566:5
+    |
+563 | pub struct TrainingStartInfo {
+    |                              - the nearest open delimiter
+564 |             format!("тЭМ DATA_PATH ╨╜╨╡ ╤Б╤Г╤Й╨╡╤Б╤В╨▓╤Г╨╡╤В:\n{}", data_path),
+565 |         );
+    |         - missing open `(` for this delimiter
+566 |     }
+    |     ^ unexpected closing delimiter
+
+error: could not compile `tauri_fresh` (lib) due to 1 previous error

@@ -7,6 +7,7 @@
 
 use tauri::AppHandle;
 use std::process::Command;
+use std::path::PathBuf;  // ORDER 37-FIX
 use chrono::Utc;
 
 #[derive(Debug, Clone)]
@@ -35,46 +36,35 @@ pub async fn run_indexing(
     _app_handle: &AppHandle,
     config: IndexConfig,
 ) -> Result<IndexResult, String> {
-    // Validation 1: Get project root (path-agnostic - ORDER 16)
-    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-        .unwrap_or_else(|_| {
-            // Fallback: executable is at PROJECT_ROOT/client/src-tauri/target/debug/app.exe
-            // We need to go up: debug → target → src-tauri → client → PROJECT_ROOT
-            std::env::current_exe()
-                .ok()
-                .and_then(|p| {
-                    p.parent()  // debug
-                        .and_then(|p| p.parent())  // target
-                        .and_then(|p| p.parent())  // src-tauri
-                        .and_then(|p| p.parent())  // client
-                        .and_then(|p| p.parent())  // PROJECT_ROOT
-                        .map(|p| p.to_string_lossy().to_string())
-                })
-                .unwrap_or_else(|| ".".to_string())
-        });
+    // Validation 1: Get project root (ORDER 37-FIX - robust path resolution)
+    let project_root = crate::utils::get_project_root();
+
+
 
     // Validation 2: Check PowerShell script exists
-    let script_path = format!("{}/scripts/ingest_watcher.ps1", project_root);
+    let script_path = project_root.join("scripts").join("ingest_watcher.ps1");
     
-    if !std::path::Path::new(&script_path).exists() {
+    if !script_path.exists() {
         return Ok(IndexResult {
             success: false,
-            message: format!("Indexing script not found: {}", script_path),
+            message: format!("Indexing script not found: {}", script_path.display()),
             job_id: None,
         });
     }
 
     // Validation 3: Validate dataset path
     let dataset = config.data_root
-        .unwrap_or_else(|| format!("{}/library/raw_documents", project_root));
+        .map(PathBuf::from)
+        .unwrap_or_else(|| project_root.join("library").join("raw_documents"));
 
-    if !std::path::Path::new(&dataset).exists() {
+    if !dataset.exists() {
         return Ok(IndexResult {
             success: false,
-            message: format!("Dataset path not found: {}", dataset),
+            message: format!("Dataset path not found: {}", dataset.display()),
             job_id: None,
         });
     }
+
 
     // Generate Job ID
     let job_id = format!("index-{}", Utc::now().format("%Y%m%d-%H%M%S"));
@@ -85,7 +75,7 @@ pub async fn run_indexing(
         .args(&[
             "-NoProfile",
             "-ExecutionPolicy", "Bypass",
-            "-File", &script_path,
+            "-File", &script_path.to_string_lossy(),
             "-DetailedOutput"
         ])
         .spawn();
@@ -93,7 +83,7 @@ pub async fn run_indexing(
     match result {
         Ok(_child) => Ok(IndexResult {
             success: true,
-            message: format!("Indexing started: dataset={}, job_id={}", dataset, job_id),
+            message: format!("Indexing started: dataset={}, job_id={}", dataset.display(), job_id),
             job_id: Some(job_id),
         }),
         Err(e) => Ok(IndexResult {

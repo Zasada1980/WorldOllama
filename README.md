@@ -22,22 +22,26 @@ _💡 Экономия времени при поиске: ~60-70% (вся до�
 
 ---
 
-## 🎯 ТЕКУЩИЕ ЗАДАЧИ (актуально на 30.11.2025)
+## 🎯 ТЕКУЩИЕ ЗАДАЧИ (актуально на 01.12.2025)
 
-**✅ v0.3.0-alpha ГОТОВ К РЕЛИЗУ:**
+**✅ ORDER 42 ЗАВЕРШЁН (01.12.2025):**
 
-**Завершённые фичи:**
-- ✅ **Flows v1 System** - 5 pre-built workflows (quick_status, smoke_test, git_check, train_default, index_and_train)
-- ✅ **Flow Observability** - Runtime logging (JSON Lines) + execution history UI
-- ✅ **Full Backend Integration** - STATUS, TRAIN, GIT_PUSH, INDEX commands functional
-- ✅ **E2E Testing** - All flows tested and documented
+**Завершённые компоненты:**
+- ✅ **Training Profiles UX (42.1)** - Auto-selection, validation, 4 profiles
+- ✅ **E2E Integration (42.2)** - UI → Tauri → Rust → PowerShell → llamafactory-cli
+- ✅ **Diagnostics (42.3)** - Root cause analysis, logging, PULSE v1 integration
+
+**Состояние:**  
+UI/Backend pipeline **полностью функционален**. Внешний блокер (HF gated model) вынесен в ORDER 43.
 
 **Next Steps:**
-1. Run final smoke test: `npm run tauri dev` → test any flow
-2. Create CHANGELOG_v0.3.0.md
-3. Tag release: `git tag v0.3.0-alpha`
+1. ⚠️ **ORDER 43 - Model & HF Readiness** (опционально)
+   - Configure HuggingFace authentication OR use open model
+   - E2E smoke test (1 epoch)
+   - User documentation
+2. 🔴 **ORDER 37-FIX** - INDEX path resolution (production blocker)
 
-**Детали:** См. `ORDERS_1_38_COMPREHENSIVE_AUDIT.md` для полного списка завершённых задач
+**Детали:** См. `docs/tasks/ORDER_42_COMPLETION_REPORT.md` и `PROJECT_STATUS_SNAPSHOT_v4.0.md`
 
 ---
 
@@ -92,11 +96,38 @@ _💡 Экономия времени при поиске: ~60-70% (вся до�
 - Сохранение/загрузка/удаление профилей
 - Интеграция с чатом (переключение контекста)
 
-### 🔬 Training Panel (PULSE v1 Protocol)
+### 🔬 Training Panel (Enhanced - ORDER 42 ✅ COMPLETE)
 
-**🚀 NEW in v0.2.0:** Мониторинг обучения в реальном времени через PULSE v1 Protocol
+**✅ Fully Functional (01.12.2025):**
 
-**Архитектура:**
+**UI Features:**
+- Profile selection with auto-complete (default, triz_engineer, triz_researcher, lightweight)
+- Dataset path configuration  
+- Epochs validation (1-5)
+- Smart `canStartTraining` reactive logic
+- Real-time status via PULSE v1
+
+**Backend Pipeline:**
+```
+UI (TrainingPanel.svelte)
+  ↓
+Tauri API (startTrainingJob)
+  ↓
+Rust Backend (start_training_job)
+  ↓
+PowerShell Script (start_agent_training.ps1)
+  ↓
+llamafactory-cli train
+```
+
+**Features:**
+- ✅ Job ID generation (`train-YYYYMMDD-HHMMSS`)
+- ✅ PULSE v1 status updates (`training_status.json`)
+- ✅ Comprehensive logging (`logs/training/train-TIMESTAMP.log`)
+- ✅ Parameter validation (profile whitelist, epochs 1-5)
+- ⚠️ Requires environment setup for actual training (see ORDER 43)
+
+**Architecture:**
 ```
 Python (pulse_wrapper.py)
   ↓ atomic write (os.replace)

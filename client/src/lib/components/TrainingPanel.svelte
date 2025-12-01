@@ -182,13 +182,50 @@
   let selectedDatasetPath: string = "";
   let epochs: number = 3;
 
+  // ORDER 42.2-A: DEBUG LOGS (temporary)
+  $: console.log("[DEBUG] profiles:", profiles);
+  $: console.log("[DEBUG] datasets:", datasets);
+  $: console.log("[DEBUG] selectedProfileId:", selectedProfileId);
+  $: console.log("[DEBUG] selectedDatasetPath:", selectedDatasetPath);
+  $: console.log("[DEBUG] canStartTraining:", canStartTraining);
+
   $: if (!selectedProfileId && profiles.length > 0) {
     selectedProfileId = profiles[0].id;
+    console.log(
+      "[DEBUG] Auto-selected profile ID:",
+      selectedProfileId,
+      "from",
+      profiles[0],
+    );
   }
 
   $: if (!selectedDatasetPath && datasets.length > 0) {
     selectedDatasetPath = datasets[0].path;
+    console.log(
+      "[DEBUG] Auto-selected dataset path:",
+      selectedDatasetPath,
+      "from",
+      datasets[0],
+    );
   }
+
+  // ORDER 42.1: Computed - selected profile details
+  $: selectedProfile = profiles.find((p) => p.id === selectedProfileId);
+  $: selectedDataset = datasets.find((d) => d.path === selectedDatasetPath);
+
+  // ORDER 42.1: Auto-update epochs from profile's recommended_epochs
+  $: if (selectedProfile && selectedProfile.recommended_epochs > 0) {
+    epochs = selectedProfile.recommended_epochs;
+  }
+
+  // ORDER 42.1: Validation
+  $: canStartTraining =
+    selectedProfileId &&
+    selectedDatasetPath &&
+    epochs >= 1 &&
+    epochs <= 10 &&
+    status?.status !== "running" &&
+    !isStarting;
 
   async function startTraining() {
     if (isStarting) return;
@@ -221,19 +258,17 @@
       );
     }
 
-    const lines = [
-      "TRAIN AGENT",
-      `PROFILE="${selectedProfileId}"`,
-      `DATA_PATH="${selectedDatasetPath}"`,
-      `EPOCHS="${epochs}"`,
-      'MODE="llama_factory"',
-    ];
-
-    const command_text = lines.join("\n");
-
+    // ORDER 42.2: Direct API call (no DSL)
     isStarting = true;
     try {
-      const res = await apiClient.executeAgentCommand(command_text);
+      // NOTE: startTrainingJob is defined in client.ts (ORDER 42.2)
+      // It calls the Rust command 'start_training_job' directly
+      const res = await apiClient.startTrainingJob(
+        selectedProfileId,
+        selectedDatasetPath, // maps to data_path parameter
+        epochs,
+        "llama_factory",
+      );
 
       if (res && res.success) {
         notifications.push({
@@ -252,6 +287,14 @@
           timeoutMs: 6000,
         });
       }
+    } catch (e) {
+      console.error("Failed to start training:", e);
+      notifications.push({
+        type: "error",
+        message: "Ошибка при запуске обучения",
+        details: String(e),
+        timeoutMs: 6000,
+      });
     } finally {
       isStarting = false;
     }
@@ -438,10 +481,41 @@
       </div>
     </div>
 
+    <!-- ORDER 42.1: Selection Info Cards -->
+    {#if selectedProfile || selectedDataset}
+      <div class="selection-info">
+        {#if selectedProfile}
+          <div class="info-card profile-info">
+            <h4>{selectedProfile.name}</h4>
+            <p>{selectedProfile.description}</p>
+            <div class="meta">
+              <span class="badge">Model: {selectedProfile.base_model}</span>
+              <span class="badge"
+                >Epochs: {selectedProfile.recommended_epochs}</span
+              >
+            </div>
+          </div>
+        {/if}
+
+        {#if selectedDataset}
+          <div class="info-card dataset-info">
+            <h4>{selectedDataset.name}</h4>
+            <p class="path">{selectedDataset.path}</p>
+            {#if selectedDataset.file_count !== undefined}
+              <span class="badge"
+                >Files: {selectedDataset.file_count ?? "?"}</span
+              >
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
     <div class="start-actions">
       <button
         on:click={startTraining}
-        disabled={isStarting || status?.status === "running"}
+        disabled={!canStartTraining}
+        class:primary={canStartTraining}
       >
         {#if isStarting}
           ⏳ Запуск...
@@ -1021,5 +1095,52 @@ MODE: llama_factory</pre>
   .hint {
     color: #777;
     font-size: 0.85em;
+  }
+
+  /* ORDER 42.1: Selection Info Cards */
+  .selection-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .info-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .info-card h4 {
+    margin: 0 0 4px 0;
+    color: #a0aec0;
+    font-size: 0.9em;
+  }
+
+  .info-card p {
+    margin: 0 0 8px 0;
+    color: #fff;
+    font-size: 1em;
+  }
+
+  .info-card .path {
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #718096;
+    word-break: break-all;
+  }
+
+  .info-card .meta {
+    display: flex;
+    gap: 8px;
+  }
+
+  .badge {
+    background: #2d3748;
+    color: #a0aec0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8em;
   }
 </style>

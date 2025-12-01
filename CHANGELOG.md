@@ -146,43 +146,137 @@
 
 ## [Unreleased]
 
-### Planned for v0.2.0
+### Added
+- ORDER 42 — Ollama Training UI ✅ COMPLETE (01.12.2025)
+  - **Training Profiles UX (42.1)**
+    - Auto-selection of profiles and datasets
+    - Smart validation logic (`canStartTraining` reactive)
+    - 4 training profiles supported (default, triz_engineer, triz_researcher, lightweight)
+    - Epochs validation (1-5)
+  
+  - **E2E Training Integration (42.2)**
+    - Full pipeline: UI → Tauri → Rust → PowerShell → llamafactory-cli
+    - PULSE v1 protocol integration (`training_status.json`)
+    - Comprehensive logging system (`logs/training/train-TIMESTAMP.log`)
+    - Job ID generation (`train-YYYYMMDD-HHMMSS`)
+    - Parameter validation (profile whitelist, data_path, epochs)
+  
+  - **Training Engine Diagnosis (42.3)**
+    - Root cause analysis completed
+    - External blocker identified (HuggingFace gated model)
+    - Created ORDER 43 for resolution
 
-- **Complete Training Integration**
-  - Реальный запуск fine-tuning через UI
-  - VRAM мониторинг во время обучения
-  - Progress tracking (epochs, loss, ETA)
-  - Автоматическая валидация адаптеров
-  
-- **Complete Git Integration**
-  - Двухфазовый workflow: dry-run → confirm → real push
-  - Реальные `git commit` и `git push`
-  - GitHub API интеграция (создание PR)
-  
-- **UI Improvements**
-  - Live progress bars для команд
-  - Toast notifications для фоновых задач
-  - Command history log (последние 10 команд)
-  
-- **Multi-Model Support**
-  - Тестирование на LLaMA 3, Mistral, Gemma
-  - Автоматическое определение оптимальных параметров
+### Fixed
+- `scripts/start_agent_training.ps1` — Полностью переписан (clean UTF-8, proper validation)
+- `client/src-tauri/src/commands.rs` — Added `#[tauri::command]`, fixed path resolution
 
-### Planned for v0.3.0
-
-- **Agent Automation**
-  - Автоматическое выполнение цепочек команд
-  - Scheduled tasks (периодическая индексация)
-  - Error recovery механизмы
-  
-- **Advanced RAG**
-  - Fine-tuning retrieval параметров
-  - Custom embedding models
-  - Hybrid search tuning
+### Known Issues
+- **ORDER 43 — Model & HF Readiness** (blocks real training execution)
+  - HuggingFace gated model requires authentication
+  - Training launches but fails on tokenizer loading
+  - **NOT a UI/Backend bug** - environment setup needed
+  - Solution: HF login OR use open model
 
 ---
 
-## Соглашения
+## [0.3.0-alpha] - 2025-11-30
+
+### Added
+
+#### Flows v1 System (ORDER 22, 35, 36)
+- **FlowsPanel UI** — визуальный интерфейс управления workflows
+  - Отображение 5 pre-built workflows
+  - Execution status tracking
+  - Flow history viewer
+  
+- **Flow Execution Engine** (ORDER 35)
+  - Backend commands: `cmd_index`, `cmd_train`, `cmd_git_push`
+  - Flow orchestration через `flow_manager.rs`
+  - Error handling и recovery
+  
+- **Pre-built Workflows:**
+  1. `quick_status` — Быстрая проверка системы
+  2. `smoke_test` — Полная проверка всех компонентов
+  3. `git_check` — Проверка git статуса
+  4. `train_default` — Запуск тренировки default профиля
+  5. `index_and_train` — Индексация + обучение (⚠️ зависит от ORDER 37)
+
+#### Flow Observability (ORDER 38)
+- **FlowLogger** — JSON Lines логирование
+  - Файлы: `logs/flow_executions.jsonl`
+  - Структура: timestamp, flow_id, step, status, message
+  
+- **Execution History** 
+  - История выполнения flows в UI
+  - Фильтрация по статусу (success, error, running)
+
+#### Terminal Safety Policy (ORDER 33)
+- Документация безопасности терминала
+- Best practices для timeout handling
+- Logging standards
+- **Note:** Enforcement depends on myshell MCP
+
+#### Display Settings (ORDER 34)
+- UI конфигурация отображения
+- Локальное сохранение настроек
+
+### Known Issues
+- **ORDER 37 — INDEX Path Resolution**
+  - Uses `current_exe()` with hardcoded paths
+  - Blocks `index_and_train` flow in production
+  - **Fix:** ORDER 37-FIX created (PENDING)
+
+---
+
+## [0.2.0] - 2025-11-29
+
+### Added
+
+#### PULSE v1 Protocol (TASK 16)
+- **Training Status Tracking**
+  - 6-field schema: status, message, current_epoch, total_epochs, loss, last_update
+  - Status file: `%APPDATA%\com.tauri.world-ollama\training_status.json`
+  - Real-time polling every 2 seconds
+  
+- **TrainingPanel Integration**
+  - Status display with progress indicators
+  - Loss tracking
+  - Epoch counter (current/total)
+  
+- **Backend Support**
+  - `get_training_status` Tauri command
+  - `start_training_job` command (scaffold mode in v0.2.0)
+
+#### Safe Git Assistant v1 (ORDER 17)
+- **Git Commands**
+  - `plan_git_push` — Dry-run mode with change preview
+  - `execute_git_push` — Safe execution with validation
+  
+- **Safety Features**
+  - Pre-check for uncommitted changes
+  - Confirmation before actual push
+  - Error handling и rollback support
+
+#### Enhanced Training Panel UI (TASK 12.2)
+- Profile selection dropdown
+- Dataset path configuration
+- Epochs input (1-10 validation)
+- Status display panel
+- **Mode:** Scaffold mode (реальная интеграция в ORDER 42)
+
+### Changed
+- Training commands теперь используют PULSE v1 protocol
+- Git operations работают через Safe Git API
+
+### Known Limitations
+- **PULSE v1:** Ambiguous `idle` status (acceptable for v1)
+- **Training:** Scaffold mode только (real training в ORDER 42)
+- **Git:** Dry-run mode (real push в следующих версиях)
+
+---
+
+## [0.1.0] - 2025-11-27
+
 
 ### Типы изменений
 - **Added** — новая функциональность

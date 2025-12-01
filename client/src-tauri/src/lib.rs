@@ -16,6 +16,7 @@ mod training_manager;  // NEW: TASK 12.1
 mod git_manager;       // NEW: TASK 17 - Git Push Safety
 mod flow_manager;      // NEW: TASK 24 - Agent Automation
 mod index_manager;     // NEW: ORDER 37 - INDEX Rust Wrapper
+mod utils;             // NEW: ORDER 37-FIX - Path utilities
 // ===== /CORE MODULES =====
 
 // ===== TAURI IMPORTS (НЕ ТРОГАТЬ) =====
@@ -39,6 +40,7 @@ use crate::commands::{
     clear_training_status,
     list_training_profiles,
     list_datasets_roots,
+    start_training_job, // NEW: ORDER 42.2
     // NEW: TASK 16.1 Path Agnosticism
     get_project_root,
     // NEW: TASK 17 Git Safety
@@ -122,6 +124,7 @@ pub fn run() {
             clear_training_status,
             list_training_profiles,
             list_datasets_roots,
+            start_training_job, // NEW: ORDER 42.2
             // NEW: TASK 16.1 Path Agnosticism
             get_project_root,
             // NEW: TASK 17 Git Safety
