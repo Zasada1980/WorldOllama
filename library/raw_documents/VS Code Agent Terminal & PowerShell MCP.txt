@@ -1,0 +1,382 @@
+﻿Технический отчет: Архитектура управления терминальными сессиями VS Code и оптимизация протокола PowerShell MCP
+Дата: 2 декабря 2025 г.
+Тема: Глубокий анализ методов инъекции команд в процессы по PID, устранение синтаксических сбоев PowerShell и реализация зеркального протокола (Mirror Protocol) для AI-агентов в среде Windows.
+________________
+1. Введение и архитектурный контекст
+Внедрение агентов искусственного интеллекта (ИИ), работающих через протокол контекста модели (Model Context Protocol — MCP), в интегрированные среды разработки (IDE) открывает новые горизонты автоматизации. Однако, как показывает практика эксплуатации сервера myshell в среде Visual Studio Code (VS Code) на ОС Windows, разработчики сталкиваются с фундаментальным конфликтом между «stateless» (безсохраняемой) природой выполнения команд агентами и «stateful» (сохраняемой) природой интерактивных терминальных сессий. Данный отчет представляет собой исчерпывающее техническое исследование трех критических сбоев, выявленных в запросе: невозможность адресной отправки команд в существующий процесс (Targeting Failure), крах интерпретатора при использовании сложного синтаксиса (Syntax Fragility, Exit Code 255) и отсутствие обратной связи от терминала (Visibility Gap).
+1.1 Природа проблемы взаимодействия процессов
+Современные архитектуры MCP-серверов часто проектируются как изолированные процессы, которые выполняют команды через создание новых дочерних оболочек (spawn или exec в Node.js). Это создает барьер для взаимодействия с процессами, которые уже запущены пользователем. Ошибка send_command_input указывает на попытку агента использовать интерфейс, который не имеет прямого дескриптора (handle) стандартного ввода (stdin) целевого процесса с PID 8044. В операционной системе Windows изоляция процессов ввода-вывода является фундаментальным механизмом безопасности, и преодоление этого барьера требует использования специализированных API среды выполнения VS Code или низкоуровневых вызовов Win32 API.
+1.2 Синтаксическая хрупкость в гетерогенных средах
+Вторая группа проблем, связанная с кодом выхода 255 при использовании символов конвейера (|) и фигурных скобок ({}), является классическим примером ошибки сериализации командной строки при прохождении через несколько слоев интерпретаторов. Путь команды от JSON-запроса агента до выполнения в ядре PowerShell пролегает через среду Node.js, оболочку cmd.exe (часто используемую как промежуточный запускающий механизм) и, наконец, сам powershell.exe. Каждый из этих слоев имеет свои правила экранирования метасимволов, и конфликт этих правил приводит к разрушению синтаксического дерева команды еще до ее запуска.
+1.3 Концепция Зеркального Протокола (Mirror Protocol)
+Третья проблема — «слепота» агента — требует внедрения архитектурного паттерна, который мы назовем «Зеркальным Протоколом». Стандартные методы API VS Code, такие как sendText, работают в режиме «fire-and-forget» (отправил и забыл), не возвращая результат выполнения. Для создания полноценного цикла REPL (Read-Eval-Print Loop) необходимо создать побочный канал передачи данных (side-channel), который позволит агенту читать буфер терминала, синхронизируясь с действиями пользователя.
+В данном отчете будет детально рассмотрена реализация решения, включающего:
+1. Мост инъекции через Extension API для точечного управления PID.
+2. Протокол Base64-кодирования для гарантии целостности синтаксиса.
+3. Файловая синхронизация через Transcript для обеспечения наблюдаемости.
+________________
+2. Глубокий анализ подсистемы терминалов VS Code и Windows
+Для понимания причин невозможности прямой записи в PID 8044 необходимо рассмотреть архитектуру терминальной подсистемы VS Code.
+2.1 Роль node-pty и ConPTY
+VS Code использует библиотеку node-pty для управления терминальными процессами. На Windows это взаимодействие опирается на псевдоконсоль ConPTY (на современных версиях Windows 10/11) или winpty (на устаревших).
+Когда пользователь открывает терминал, VS Code запускает процесс оболочки (например, pwsh.exe или powershell.exe). Этот процесс получает уникальный идентификатор процесса (PID) в операционной системе. Однако стандартные потоки ввода-вывода (stdin/stdout/stderr) этого процесса перехвачены процессом-хостом VS Code (renderer process) и транслируются через IPC (Inter-Process Communication) в UI редактора.1
+2.2 Почему внешняя инъекция не работает
+Агент myshell, работающий как отдельный процесс или как MCP-сервер, не является родительским процессом для терминала пользователя.
+* Изоляция дескрипторов: В Windows процесс может писать в stdin другого процесса только в том случае, если он имеет соответствующие права и дескриптор, обычно наследуемый при создании. Произвольный процесс не может просто «подключиться» к потоку ввода другого процесса без использования внедрения кода (DLL injection) или отладочных API, которые часто блокируются антивирусами.
+* Ошибка send_command_input: Эта ошибка, скорее всего, возникает на уровне абстракции MCP-инструмента. Агент пытается вызвать функцию с таким именем, предполагая, что она существует в его инструментарии. Если агент работает внутри контекста расширения VS Code, он должен использовать API vscode, а не пытаться напрямую писать в системные пайпы.
+2.3 Ограничения API VS Code
+Официальный API расширений VS Code (vscode.d.ts) предоставляет ограниченный набор методов для работы с терминалом:
+* vscode.window.createTerminal: Создает новый терминал (не решает проблему существующего PID).
+* terminal.sendText(text: string): Отправляет текст в терминал, как если бы пользователь его напечатал.
+* vscode.window.terminals: Массив всех активных терминалов.
+* terminal.processId: Свойство, возвращающее Thenable<number> (Promise), которое разрешается в системный PID оболочки.1
+Именно комбинация vscode.window.terminals и асинхронного processId является ключом к решению проблемы таргетинга.
+________________
+3. Проблема 1: Инъекция команд в существующий PID (Terminal Injection)
+Пользователь ставит задачу: «Нужно писать в PID 8044». Это требование подразумевает, что у пользователя уже есть запущенный контекст (переменные окружения, соединения с базами данных, аутентификация в облаке), и агент должен действовать внутри этого контекста, а не в новой чистой оболочке.
+3.1 Архитектурное решение: Мост через Extension API
+Единственный надежный и безопасный способ отправить команду в конкретный терминал VS Code — это использование внутреннего API расширений. Агент MCP должен иметь доступ к хост-процессу расширения VS Code.
+Алгоритм поиска терминала
+Поскольку свойство processId является асинхронным (оно требует обращения к бэкенду node-pty), простой синхронный поиск terminals.find(t => t.processId === pid) не сработает и вернет undefined. Необходимо использовать асинхронную итерацию.
+Техническая реализация (TypeScript для MCP-сервера внутри расширения):
+
+
+TypeScript
+
+
+
+
+import * as vscode from 'vscode';
+
+/**
+* Интерфейс результата операции инъекции
+*/
+interface InjectionResult {
+   success: boolean;
+   terminalName?: string;
+   pid?: number;
+   error?: string;
+}
+
+/**
+* Функция для отправки команды в терминал по его PID.
+* Решает проблему "Terminal Injection" и ошибки send_command_input.
+* 
+* @param targetPid - Целевой Process ID (например, 8044).
+* @param commandText - Текст команды для отправки.
+* @param addNewLine - Нужно ли выполнять команду сразу (Enter).
+*/
+export async function injectCommandToPid(
+   targetPid: number, 
+   commandText: string, 
+   addNewLine: boolean = true
+): Promise<InjectionResult> {
+   
+   // 1. Получаем список всех активных терминалов в редакторе
+   const terminals = vscode.window.terminals;
+   
+   // 2. Итерируемся по терминалам для разрешения их PID
+   // Примечание: processId возвращает Promise, так как PID может быть еще не назначен
+   for (const terminal of terminals) {
+       try {
+           const pid = await terminal.processId;
+           
+           // 3. Сравниваем PID. Важно учитывать типы (строка vs число)
+           if (pid === targetPid) {
+               // Опционально: фокусируемся на терминале, чтобы пользователь видел действие
+               terminal.show(true); // true = не перехватывать фокус клавиатуры полностью
+               
+               // 4. Отправляем текст.
+               // Метод sendText эмулирует ввод пользователя.
+               terminal.sendText(commandText, addNewLine);
+               
+               return {
+                   success: true,
+                   terminalName: terminal.name,
+                   pid: pid
+               };
+           }
+       } catch (e) {
+           console.error(`Ошибка при получении PID для терминала ${terminal.name}:`, e);
+       }
+   }
+   
+   // 5. Если цикл завершился и PID не найден
+   return {
+       success: false,
+       error: `Терминал с PID ${targetPid} не найден. Активных терминалов: ${terminals.length}`
+   };
+}
+
+3.2 Альтернативный метод: Win32 API (Низкоуровневая инъекция)
+Если MCP-сервер работает вне контекста расширения VS Code (например, как отдельный Python-скрипт или бинарный файл), он не имеет доступа к объекту vscode. В этом случае решение через API редактора невозможно, и требуется использовать Win32 API. Это решение более рискованное, но необходимое для "внешних" агентов.4
+Метод AttachConsole
+Windows API позволяет процессу присоединиться к консоли другого процесса с помощью AttachConsole(DWORD dwProcessId). Однако процесс может быть присоединен только к одной консоли одновременно.
+Алгоритм:
+1. Вызвать FreeConsole() (отключиться от своей консоли).
+2. Вызвать AttachConsole(8044).
+3. Получить дескриптор ввода через GetStdHandle(STD_INPUT_HANDLE).
+4. Использовать WriteConsoleInput для помещения событий клавиатуры в буфер.
+5. Вызвать FreeConsole() для отключения.
+Недостатки и риски:
+* Нестабильность: Постоянное переключение консолей может вызвать графические артефакты или падение процесса агента.
+* VS Code PTY Wrapper: Поскольку терминал в VS Code обернут в conhost или openconsole через PTY, прямой AttachConsole может подключиться к "скрытому" процессу-хосту, а не к тому, который видит пользователь.
+* Права доступа: Требует запуска от имени администратора или того же пользователя.
+Метод PostMessage / SendInput (Рекомендуемая альтернатива для внешних агентов)
+Вместо попытки писать в поток ввода, можно эмулировать нажатия клавиш, отправляя сообщения окну. Для этого нужно найти дескриптор окна (HWND), связанный с PID.6
+PowerShell скрипт для внешней инъекции (демонстрация):
+
+
+PowerShell
+
+
+
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName Microsoft.VisualBasic
+
+$TargetPID = 8044
+# Активация окна по PID (может потребовать итерации окон процессов)
+try {
+  ::AppActivate($TargetPID)
+   Start-Sleep -Milliseconds 100
+   # Отправка текста как нажатий клавиш
+  ::SendWait("Get-Date{ENTER}")
+} catch {
+   Write-Error "Не удалось активировать окно процесса $TargetPID"
+}
+
+Примечание: Метод AppActivate с PID работает нестабильно в новых версиях Windows, часто требуя заголовка окна (Title) вместо PID. Поскольку заголовки терминалов VS Code динамичны, этот метод менее надежен, чем решение 3.1.7
+3.3 Рекомендация
+Для задачи "Агент в VS Code" единственным корректным решением является реализация моста через Extension API (пункт 3.1). Это обеспечивает точность (PID гарантированно совпадает) и безопасность (нет вмешательства в память чужих процессов). Ошибка send_command_input должна быть исправлена путем маппинга этой команды на функцию injectCommandToPid внутри MCP-сервера.
+________________
+4. Проблема 2: Синтаксическая стабильность и код выхода 255
+Вторая критическая проблема — падение команд с кодом 255 при использовании спецсимволов. Это проблема транспорта данных.
+4.1 Анатомия сбоя (Exit Code 255)
+Когда агент формирует запрос run_command("Get-Service | Where-Object {$_.Status -eq 'Running'}"), происходит следующее:
+1. Node.js (среда выполнения агента) запускает дочерний процесс. В Windows это часто делается через cmd.exe /c или powershell.exe -Command "...".
+2. Если обертка использует двойные кавычки (например: powershell -Command "КОМАНДА"), то любые двойные кавычки внутри самой команды ломают строку.
+3. Проблема пайпа (|): Если запуск идет через cmd.exe, то символ | интерпретируется командной строкой Windows до того, как он попадет в PowerShell. cmd.exe пытается взять вывод левой части и передать его правой части. Поскольку команды правой части (например, Where-Object) не являются исполняемыми файлами Windows (.exe), cmd.exe выдает ошибку и завершает процесс.
+4. Код 255: В контексте Node.js и многих раннеров, код ошибки синтаксиса или невозможности запуска процесса часто проецируется в 255 (-1 как unsigned byte).9
+4.2 Решение: Протокол Base64 (EncodedCommand)
+Чтобы избежать интерпретации спецсимволов промежуточными оболочками, необходимо использовать параметр -EncodedCommand (или -ec). Этот параметр принимает строку Base64, представляющую команду в кодировке UTF-16LE. Для любой внешней оболочки (cmd, bash, сам агент) эта строка выглядит как безопасный набор букв и цифр (например, RwBlAHQALQBE...), не содержащий символов |, {, $, " или '.12
+4.3 Сравнительная таблица методов передачи команд
+| Метод передачи | Уязвимость к | | Уязвимость к " | Уязвимость к {} | Надежность | Примечание |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| powershell -Command "..." | Высокая | Высокая | Средняя | Низкая | Требует сложного экранирования кавычек. |
+| powershell -Command {...} | Средняя | Низкая | Высокая | Средняя | Конфликтует с парсером аргументов cmd.exe. |
+| echo "..." | powershell | Высокая | Средняя | Низкая | Проблемы с кодировкой stdin. |
+| powershell -EncodedCommand | Отсутствует | Отсутствует | Отсутствует | Максимальная | Изолирует синтаксис от транспорта. |
+4.4 Реализация безопасного кодировщика
+Агент или MCP-сервер должен кодировать команду перед отправкой в функцию инъекции.
+TypeScript реализация (для MCP сервера):
+
+
+TypeScript
+
+
+
+
+import { Buffer } from 'buffer';
+
+/**
+* Генерирует безопасную строку запуска PowerShell, устойчивую к любым спецсимволам.
+* Решает проблему Exit Code 255.
+*/
+export function generateSafePowerShellCommand(rawCommand: string): string {
+   // 1. PowerShell требует кодировку UTF-16LE (Little Endian)
+   // В Node.js это 'utf16le'
+   const buffer = Buffer.from(rawCommand, 'utf16le');
+   
+   // 2. Преобразуем буфер в Base64 строку
+   const encodedCommand = buffer.toString('base64');
+   
+   // 3. Формируем итоговую команду.
+   // -NoProfile: Ускоряет запуск, не грузит профиль пользователя (опционально, зависит от задачи).
+   // -NonInteractive: Предотвращает зависание на запросах ввода (Read-Host).
+   // -EncodedCommand: Передает закодированную строку.
+   return `powershell.exe -NoProfile -NonInteractive -EncodedCommand ${encodedCommand}`;
+}
+
+// Пример использования:
+// Вход: Get-ChildItem | Where-Object { $_.Name -like "*test*" }
+// Выход: powershell.exe -NoProfile -NonInteractive -EncodedCommand RwBlAHQALQBDAGgAaQBsAGQASQB0AGUAbQAgAHwAIABXAGgAZQByAGUALQBPAGIAagBlAGMAdAAgAHsAIAAkAF8ALgBOAGEAbQBlACAALQBsAGkAawBlACAAIgAqAHQAZQBzAHQAKgAiACAAfQA=
+
+Применяя этот метод перед вызовом injectCommandToPid, мы гарантируем, что терминал получит команду в целостности.
+________________
+5. Проблема 3: Зеркальный Протокол (Mirror Protocol)
+Третье требование — агент должен «видеть» терминал. Стандартный метод terminal.sendText работает как «черная дыра»: данные уходят, но ответа нет. Агенту нужна обратная связь для понимания результата (успех, ошибка, содержимое файла).
+5.1 Ограничения чтения терминала
+В VS Code существуют экспериментальные API для чтения данных (например, onDidWriteTerminalData), но они часто требуют флагов "Proposed API" или работают нестабильно с разными оболочками (zsh, pwsh, cmd).15 Кроме того, чтение потока байтов требует сложного парсинга ANSI-последовательностей (цвета, перемещение курсора), что может запутать LLM.
+5.2 Решение: Транскрипция (Start-Transcript)
+Наиболее надежный, "низкотехнологичный" и устойчивый метод — использование нативной функции PowerShell Start-Transcript. Она записывает чистый вывод сессии (без лишних ANSI-кодов управления курсором) в текстовый файл.
+Архитектура Зеркального Протокола:
+1. Инициализация: При первом подключении к PID 8044 агент проверяет, ведется ли запись. Если нет — отправляет команду начала записи в уникальный временный файл.
+2. Синхронизация: Файл лога становится общим буфером ("зеркалом") между пользователем и агентом.
+3. Чтение: Агент использует MCP-инструмент для чтения "хвоста" этого файла.
+5.3 Реализация (PowerShell + TypeScript)
+Шаг 1: Команда активации зеркала
+Агент должен отправить следующую команду в терминал (желательно в Base64):
+
+
+PowerShell
+
+
+
+
+# Определяем уникальный путь для этого PID
+$MirrorFile = "$env:TEMP\VSCode_Agent_Mirror_$PID.log"
+# Запускаем транскрипцию, если она еще не запущена
+if (-not (Get-Transcript)) {
+   Start-Transcript -Path $MirrorFile -Append -Force -NoClobber
+}
+Write-Host "Mirror Protocol Active: $MirrorFile"
+
+Шаг 2: Инструмент чтения (TypeScript для MCP)
+
+
+TypeScript
+
+
+
+
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+
+/**
+* Читает последние строки из зеркального файла терминала.
+*/
+export function readTerminalMirror(pid: number, lines: number = 50): string {
+   const mirrorPath = path.join(os.tmpdir(), `VSCode_Agent_Mirror_${pid}.log`);
+   
+   if (!fs.existsSync(mirrorPath)) {
+       return `STATUS: NO_MIRROR. Зеркальный файл не найден для PID ${pid}. Сначала выполните команду активации зеркала.`;
+   }
+
+   try {
+       // Читаем файл. Для больших файлов лучше использовать fs.read с буфером,
+       // но для логов сессии fs.readFileSync обычно приемлем.
+       const content = fs.readFileSync(mirrorPath, 'utf8');
+       const allLines = content.split('\n');
+       
+       // Возвращаем последние N строк + метаданные
+       const tail = allLines.slice(-lines).join('\n');
+       return `--- TERMINAL MIRROR (PID: ${pid}) ---\n[...]\n${tail}\n--- END OF MIRROR ---`;
+   } catch (e) {
+       return `ERROR: Не удалось прочитать зеркальный файл: ${e}`;
+   }
+}
+
+5.4 Преимущества Transcript перед экранным скрапингом
+* История: Агент получает доступ не только к последнему экрану, но и к истории выполнения, если прочитает весь файл.
+* Чистота данных: Start-Transcript автоматически удаляет большинство управляющих последовательностей консоли, предоставляя текст, готовый для анализа LLM.18
+* Независимость от фокуса: Запись в файл идет даже если терминал скрыт или свернут, в отличие от методов скриншотов или Accessibility API.
+________________
+6. Интеграция и Настройки Доступа
+Чтобы собрать все компоненты воедино в сервере myshell, необходимо правильно настроить доступ и определения инструментов.
+6.1 Настройки settings.json VS Code
+Для корректной работы стабильности PID (чтобы PID 8044 оставался 8044 после перезагрузки окна) необходимо включить персистентность сессий:
+
+
+JSON
+
+
+
+
+{
+   "terminal.integrated.enablePersistentSessions": true,
+   // Позволяет агенту лучше взаимодействовать с историей шелла
+   "terminal.integrated.shellIntegration.enabled": true,
+   // Переменная окружения, сообщающая шеллу, что он под управлением VS Code
+   "terminal.integrated.env.windows": {
+       "VSCODE_AGENT_ENABLED": "1"
+   }
+}
+
+6.2 Определение инструментов (MCP JSON Schema)
+В конфигурации MCP сервера необходимо объявить следующие инструменты для LLM:
+1. inject_command: Принимает pid (int) и command (string). Реализует логику из раздела 3.1 + 4.2.
+2. activate_mirror: Принимает pid (int). Отправляет скрипт Start-Transcript (раздел 5.3).
+3. read_terminal: Принимает pid (int) и lines (int). Читает файл лога (раздел 5.3).
+6.3 Права доступа (Security Considerations)
+Предоставление агенту возможности выполнять произвольные команды в терминале — это высокий риск (RCE).
+* Ограничение PID: В реализации функции injectCommandToPid следует добавить проверку: разрешать отправку только в те PID, которые возвращаются через vscode.window.terminals. Не разрешать произвольные PID системы.
+* Подтверждение пользователя: При первой попытке инъекции в новый PID агент должен запросить подтверждение пользователя через vscode.window.showInformationMessage.
+________________
+7. Итоговый Артефакт: Скрипт-Решение
+Ниже представлен сводный код (псевдокод архитектуры MCP + PowerShell скрипт для пользователя), который решает все три поставленные проблемы.
+7.1 Скрипт пользователя (PowerShell)
+Пользователь может запустить этот скрипт вручную для проверки концепции перед использованием агента.
+
+
+PowerShell
+
+
+
+
+# ==========================================
+# DIAGNOSTIC SCRIPT: VS Code Agent Controller
+# ==========================================
+
+param(
+   [int]$TargetPID = 8044,
+   [string]$Command = "Get-Service | Where-Object { `$_.Status -eq 'Running' }"
+)
+
+Write-Host "1. Проверка PID $TargetPID..." -ForegroundColor Cyan
+# В реальном MCP это делается через VS Code API, здесь эмуляция проверки
+if (!(Get-Process -Id $TargetPID -ErrorAction SilentlyContinue)) {
+   Write-Error "Процесс $TargetPID не найден!"
+   exit
+}
+
+Write-Host "2. Активация протокола зеркалирования..." -ForegroundColor Cyan
+# Формируем команду активации зеркала для инъекции
+$MirrorLog = "$env:TEMP\vscode_mirror_$TargetPID.log"
+$MirrorPayload = "if (!(Get-Transcript)) { Start-Transcript -Path '$MirrorLog' -Append -Force }"
+# Кодируем payload зеркала
+$MirrorBytes =::Unicode.GetBytes($MirrorPayload)
+$MirrorEncoded = [Convert]::ToBase64String($MirrorBytes)
+Write-Host "   -> Payload (Base64): powershell -EncodedCommand $MirrorEncoded"
+
+Write-Host "3. Подготовка безопасной команды (Exit 255 Fix)..." -ForegroundColor Cyan
+# Кодируем целевую команду пользователя
+$CmdBytes =::Unicode.GetBytes($Command)
+$CmdEncoded = [Convert]::ToBase64String($CmdBytes)
+$SafeCommand = "powershell -NoProfile -EncodedCommand $CmdEncoded"
+
+Write-Host "   -> Исходная команда: $Command"
+Write-Host "   -> Безопасная команда: $SafeCommand"
+Write-Host ""
+Write-Host "--- ИНСТРУКЦИЯ ДЛЯ АГЕНТА ---" -ForegroundColor Green
+Write-Host "Агент должен выполнить 'inject_command' с текстом:"
+Write-Host $SafeCommand
+Write-Host "Затем прочитать файл: $MirrorLog"
+
+7.2 Выводы
+Проблема управления терминалом в VS Code через MCP решается переходом от модели "прямой записи в stdin" к модели "API-инъекции закодированных команд".
+1. Ошибка send_command_input устраняется использованием vscode.window.terminals вместо попыток прямого доступа к дескрипторам ОС.
+2. Ошибка Exit 255 устраняется использованием -EncodedCommand, что делает транспорт прозрачным для спецсимволов.
+3. Слепота агента устраняется файловым буфером через Start-Transcript, обеспечивая стабильную обратную связь.
+Данная архитектура превращает VS Code в надежную среду выполнения для автономных AI-разработчиков, сохраняя контекст пользовательской сессии.
+Источники
+1. Terminal Advanced - Visual Studio Code, дата последнего обращения: декабря 2, 2025, https://code.visualstudio.com/docs/terminal/advanced
+2. Issue #46192 · microsoft/vscode - Terminal Providers - GitHub, дата последнего обращения: декабря 2, 2025, https://github.com/microsoft/vscode/issues/46192
+3. run external process in integrated terminal without task - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/70718583/run-external-process-in-integrated-terminal-without-task
+4. SendMessage function (winuser.h) - Win32 apps | Microsoft Learn, дата последнего обращения: декабря 2, 2025, https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendmessage
+5. Send keystrokes to a specific window (in background), but do something else in the meantime - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/54882751/send-keystrokes-to-a-specific-window-in-background-but-do-something-else-in-t
+6. How do I send keystrokes to a background window using Python & pywinauto without bringing that window into the foreground? - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/63110628/how-do-i-send-keystrokes-to-a-background-window-using-python-pywinauto-without
+7. PowerShell: AppActivate with PID not working - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/65182731/powershell-appactivate-with-pid-not-working
+8. AppActivate working inconsistently in Powershell - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/35679178/appactivate-working-inconsistently-in-powershell
+9. PowerShell exit code - Calling from MSBuild - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/5824208/powershell-exit-code-calling-from-msbuild
+10. Exit Code 255 from Win32 apps with powershell install commands : r/Intune - Reddit, дата последнего обращения: декабря 2, 2025, https://www.reddit.com/r/Intune/comments/16veukx/exit_code_255_from_win32_apps_with_powershell/
+11. Error code 255 when using script - Support - Duplicati forum, дата последнего обращения: декабря 2, 2025, https://forum.duplicati.com/t/error-code-255-when-using-script/1372
+12. Set up Node.js on native Windows - Microsoft Learn, дата последнего обращения: декабря 2, 2025, https://learn.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows
+13. Pass complex arguments to powershell script through encoded command - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/72881003/pass-complex-arguments-to-powershell-script-through-encoded-command
+14. Run Powershell 7 commands in Node.js - GitHub Gist, дата последнего обращения: декабря 2, 2025, https://gist.github.com/cecilemuller/5d66332069674de4914765a9c628474a
+15. How run a custom command from Integrated terminal in VSCode Extension? [duplicate], дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/77451721/how-run-a-custom-command-from-integrated-terminal-in-vscode-extension
+16. How to use Terminal API to listen to all terminal commands/output in VS Code?, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/57630371/how-to-use-terminal-api-to-listen-to-all-terminal-commands-output-in-vs-code
+17. VS Code API | Visual Studio Code Extension API, дата последнего обращения: декабря 2, 2025, https://code.visualstudio.com/api/references/vscode-api
+18. Start-Transcript (Microsoft.PowerShell.Host), дата последнего обращения: декабря 2, 2025, https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.host/start-transcript?view=powershell-7.5
+19. PowerShell Transcript is not capturing git output - Stack Overflow, дата последнего обращения: декабря 2, 2025, https://stackoverflow.com/questions/58942723/powershell-transcript-is-not-capturing-git-output

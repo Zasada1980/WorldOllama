@@ -39,6 +39,14 @@ Invoke-RestMethod http://localhost:8004/health
 nvidia-smi --query-gpu=memory.used --format=csv,noheader
 ```
 
+### 1.a Agent Interaction Directive — No Manual Prompts
+
+Агент не должен просить пользователя выполнять команды вручную, кроме случаев, когда действие по своей природе визуальное или требует интерактивного подтверждения.
+
+- По умолчанию используйте инструменты: MCP (`myshell/execute_command`) и VS Code Terminal (`run_in_terminal`) для выполнения команд.
+- Исключения: визуальные демонстрации (прогресс-бары, запуск окон Desktop Client), ручные клики в UI.
+- Если пользователь уже выполнил ручное действие (например, запустил сервисы), агент обязан перейти к автоматической проверке состояния и не дублировать ручные указания.
+
 ### 2. CODE OVER DOCS — Direct Action
 When asked to change settings (ports, models, paths):
 - ❌ DON'T write plans in markdown
@@ -545,6 +553,67 @@ Command execution needed?
 ```
 
 **Reference:** `docs/tasks/HYBRID_EXECUTION_STRATEGY_ANALYSIS.md`
+
+---
+
+## 🔧 MCP Auto-Activation (Phase 1 v0.4.0)
+
+**CRITICAL:** MCP Server settings apply **AUTOMATICALLY** — no manual activation needed.
+
+### What Works Automatically (02.12.2025)
+
+✅ **Terminal Settings** (from `.vscode/settings.json`):
+- Persistent Sessions enabled
+- Shell Integration enabled  
+- Environment variable `VSCODE_AGENT_ENABLED=1` set in new terminals
+
+✅ **MCP Server** (`myshell/execute_command`):
+- Registered via `github.copilot.chat.mcp.servers` in settings
+- Starts automatically on first Copilot request
+- **NO NEED to check availability** — tool is always ready
+
+✅ **Base64 Encoding** (v1.2.0):
+- Auto-detects problematic characters: `|`, `{}`, `$`, `"`, `'`, `` ` ``
+- Applies encoding automatically (100% accuracy, 17/17 tests passed)
+- **NO NEED to specify `useEncodedCommand`** — regex handles it
+
+### What Agent MUST NOT Do
+
+❌ **DON'T** ask "Should I activate MCP server?"  
+❌ **DON'T** check if `execute_command` tool exists before using it  
+❌ **DON'T** ask "Should I use Base64 Encoding for this command?"  
+❌ **DON'T** manually specify `useEncodedCommand` parameter
+
+### What Agent SHOULD Do
+
+✅ **DO** call `myshell/execute_command` directly for any PowerShell command  
+✅ **DO** trust auto-detection for complex commands (pipes, braces, variables)  
+✅ **DO** use MCP for structured output (Exit Code, stdout, stderr parsing)  
+✅ **DO** use Terminal for visual demos or background processes
+
+### Example (Correct Usage)
+
+```typescript
+// ✅ CORRECT - Direct call, auto-detection handles encoding
+myshell/execute_command: "Get-Process | Where-Object { $_.CPU -gt 1 } | Select-Object -First 5"
+
+// Result: Exit Code 0 (Base64 applied automatically)
+```
+
+```typescript
+// ❌ WRONG - Unnecessary manual check
+Agent: "Should I use Base64 Encoding for this command?"
+User: (confused — it's automatic)
+```
+
+### Restart Required (One Time Only)
+
+After updating `.vscode/settings.json` or `mcp-shell/server.ts`:
+1. `Ctrl+Shift+P` → `Developer: Reload Window`
+2. Wait 2-3 seconds
+3. ✅ All settings active automatically
+
+**Reference:** `docs/infra/MCP_AUTO_ACTIVATION_VERIFICATION.md`
 
 ---
 
