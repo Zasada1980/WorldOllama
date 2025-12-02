@@ -1,8 +1,8 @@
 # PROJECT STATUS SNAPSHOT v4.0
 
-**Дата:** 01.12.2025  
+**Дата:** 02.12.2025  
 **Версия релиза:** v0.3.0-alpha  
-**Статус:** Post ORDER 42 Completion  
+**Статус:** Post ORDER 51 Housekeeping (v51 baseline)  
 
 ---
 
@@ -92,6 +92,42 @@ All v0.1.0 tasks validated:
 ---
 
 ### PHASE 6 — v0.3.1+ (Current Work)
+
+#### ORDER 51 — GLOBAL HOUSEKEEPING & INDEX ✅ **COMPLETE 02.12.2025**
+
+**Status:** ✅ v51 baseline established
+
+**Objective:** Clean up documentation, verify system health, create project index, establish agent memory protocol
+
+**Components:**
+- 51.1: LOGS_INVENTORY_v51.md (48 files inventoried, 15 canonical defined)
+- 51.2: TASK_51_HEALTHCHECK_REPORT.md (Terminal Safety compliant commands)
+- 51.3: LEGACY_FEATURES_REPORT_v51.md (14 legacy zones cataloged, immediate cleanup)
+- 51.4: Canonical files verified, 5 duplicates archived
+- 51.5: TASK_51_HEALTHCHECK_EXECUTION_REPORT.md (5/7 passed, 0 critical issues)
+- 51.6: Directory cleanup (archived legacy script)
+- 51.7: PROJECT_INDEX_v51.json (44909 files indexed with tags/statuses)
+- 51.8: CODEX_MEMORY_BOOTSTRAP_v51.md (15 sources of truth, pre-task protocol)
+
+**Deliverables:**
+- ✅ PROJECT_INDEX_v51.json (15.8 MB, tags: ui/backend/training/rag/flows/docs)
+- ✅ CODEX_MEMORY_BOOTSTRAP_v51.md (FALSE GREENS prevention rules)
+- ✅ System healthcheck: 0 critical errors (15 cleanup items deferred to v0.3.1+)
+- ✅ Copilot instructions updated to v2.0 (codebase-specific technical patterns)
+
+**Impact:**
+- Agent now has structured index (44909 files) with subsystem tags
+- Pre-task protocol established (read INDEX → STATUS → LEGACY before any work)
+- Documented cleanup backlog (7 Rust warnings + 8 Svelte warnings)
+
+**Files:**
+- `docs/project/PROJECT_INDEX_v51.json`
+- `docs/infra/CODEX_MEMORY_BOOTSTRAP_v51.md`
+- `docs/project/LOGS_INVENTORY_v51.md`
+- `docs/project/LEGACY_FEATURES_REPORT_v51.md`
+- `docs/tasks/ORDER_51_COMPLETION_REPORT.md`
+
+---
 
 #### ORDER 42 — Ollama Training UI ✅ **COMPLETE 01.12.2025**
 
