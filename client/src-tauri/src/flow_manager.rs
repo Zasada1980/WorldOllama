@@ -459,7 +459,7 @@ impl FlowManager {
         }
     }
 
-    async fn cmd_git_push(step: &FlowStep, app: &AppHandle) -> Result<String, String> {
+    async fn cmd_git_push(step: &FlowStep, _app: &AppHandle) -> Result<String, String> {
         use crate::git_manager::{plan_git_push, execute_git_push};
         
         let remote = step.args.get("remote")

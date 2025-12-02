@@ -399,7 +399,7 @@ pub async fn poll_training_status(
             }
             None => {
                 // Файл не существует или битый JSON → используем cached
-                if let Some(ref cached) = last_known_status {
+                if let Some(ref _cached) = last_known_status {
                     log::warn!("training_status.json unreadable, using cached status");
                 } else {
                     log::debug!("training_status.json not yet created");

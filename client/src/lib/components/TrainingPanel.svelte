@@ -219,11 +219,12 @@
   }
 
   // ORDER 42.1: Validation
+  // ORDER 40.3: Align UI validation with backend (epochs 1–5)
   $: canStartTraining =
     selectedProfileId &&
     selectedDatasetPath &&
     epochs >= 1 &&
-    epochs <= 10 &&
+    epochs <= 5 &&
     status?.status !== "running" &&
     !isStarting;
 

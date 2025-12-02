@@ -4,7 +4,7 @@ use std::time::Duration;
 use std::process::Command;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use crate::flow_manager;  // ORDER 38
 
 use crate::config::AppConfig;
@@ -445,34 +445,29 @@ fn start_indexation_internal(
         );
     }
     
-    // TASK 16.1: Динамический путь к скрипту индексации
-    // Note: Эта функция вызывается из Tauri command, но app_handle недоступен
-    // Используем относительный путь от exe или environment variable
-    let project_root = std::env::var("WORLD_OLLAMA_ROOT")
-        .unwrap_or_else(|_| std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().and_then(|p| p.parent()).map(|p| p.to_string_lossy().to_string()))
-            .unwrap_or_else(|| ".".to_string()));
-    
-    let script_path = format!("{}\\scripts\\ingest_watcher.ps1", project_root);
-    
-    if !std::path::Path::new(&script_path).exists() {
+    // TASK 16.1 / ORDER 37-FIX: Динамический путь к скрипту индексации (единый helper)
+    // Используем crate::utils::get_project_root() для устойчивого определения корня
+    let project_root = crate::utils::get_project_root();
+    let script_path = project_root.join("scripts").join("ingest_watcher.ps1");
+
+    if !script_path.exists() {
         let mut error_status = current_status;
         error_status.state = "error".to_string();
-        error_status.last_error = Some(format!("Скрипт индексации не найден: {}", script_path));
+        error_status.last_error = Some(format!("Скрипт индексации не найден: {}", script_path.display()));
         let _ = save_indexation_status(&error_status);
         
         return ApiResponse::error(
             "script_not_found",
-            format!("Скрипт индексации не найден: {}", script_path),
+            format!("Скрипт индексации не найден: {}", script_path.display()),
         );
     }
     
     // Формируем аргументы для скрипта
+    let script_path_str = script_path.to_string_lossy().to_string();
     let args = vec![
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
-        "-File", &script_path,
+        "-File", &script_path_str,
         "-DetailedOutput"
     ];
     
