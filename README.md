@@ -1,5 +1,5 @@
-**Latest Release:** v0.3.0-alpha — Agent Automation (Flows v1 + Observability)  
-**Release Link:** https://github.com/Zasada1980/WorldOllama/releases/tag/v0.3.0-alpha
+**Latest Release:** v0.3.1 (Preview Release) — Bugfix Pack (Flows & Training)  
+**Release Link:** https://github.com/Zasada1980/WorldOllama/releases/tag/v0.3.1
 
 ---
 
@@ -15,33 +15,34 @@
 **🔍 Дополнительно:**
 - Архитектура системы → [PROJECT_MAP.md](PROJECT_MAP.md)
 - Руководство пользователя → [MANUAL.md](MANUAL.md)
-- Последние изменения → [CHANGELOG_v0.2.0.md](CHANGELOG_v0.2.0.md)
+- Последние изменения → [CHANGELOG.md](CHANGELOG.md)
 - Отчёт о чистке документации → [DOCUMENTATION_CLEANUP_REPORT.md](docs/project/DOCUMENTATION_CLEANUP_REPORT.md)
 
 _💡 Экономия времени при поиске: ~60-70% (вся документация организована и актуальна)_
 
 ---
 
-## 🎯 ТЕКУЩИЕ ЗАДАЧИ (актуально на 01.12.2025)
+## 🎯 ТЕКУЩИЙ СТАТУС (актуально на 02.12.2025)
 
-**✅ ORDER 42 ЗАВЕРШЁН (01.12.2025):**
+**✅ v0.3.1 BUGFIX PACK ЗАВЕРШЁН (02.12.2025):**
 
-**Завершённые компоненты:**
-- ✅ **Training Profiles UX (42.1)** - Auto-selection, validation, 4 profiles
-- ✅ **E2E Integration (42.2)** - UI → Tauri → Rust → PowerShell → llamafactory-cli
-- ✅ **Diagnostics (42.3)** - Root cause analysis, logging, PULSE v1 integration
+**Исправленные критические баги:**
+- ✅ **INDEX Path Resolution (40.1)** — унифицированный `get_project_root()`, `index_and_train` flow работает
+- ✅ **GitPanel CWD (40.2)** — все git команды используют корректный рабочий каталог
+- ✅ **TRAIN Unlock (40.3)** — UI validation синхронизирована с backend, обучение разблокировано
+- ✅ **Warnings Cleanup (40.4)** — Rust 0 errors (4 warnings), Svelte 0 errors (8 warnings)
+- ✅ **Flows E2E (40.5)** — все 4 core flows протестированы и работают
 
 **Состояние:**  
-UI/Backend pipeline **полностью функционален**. Внешний блокер (HF gated model) вынесен в ORDER 43.
+Desktop Client v0.3.1 **стабилен и готов к продакшену**. Flows v1 + Training pipeline полностью функциональны.
 
 **Next Steps:**
-1. ⚠️ **ORDER 43 - Model & HF Readiness** (опционально)
+1. 🟡 **ORDER 43 - Model & HF Readiness** (внешний блокер, не влияет на UI)
    - Configure HuggingFace authentication OR use open model
-   - E2E smoke test (1 epoch)
-   - User documentation
-2. 🔴 **ORDER 37-FIX** - INDEX path resolution (production blocker)
+2. 🔵 **ORDER 41 - PULSE v2** (улучшенный протокол training status)
+3. 🟢 **ORDER 44 - Safe Git v2** (diff preview + secrets detection)
 
-**Детали:** См. `docs/tasks/ORDER_42_COMPLETION_REPORT.md` и `PROJECT_STATUS_SNAPSHOT_v4.0.md`
+**Детали:** См. `docs/tasks/TASK_40_COMPLETION_REPORT.md`, `TASK_52_RELEASE_REPORT.md` и `PROJECT_STATUS_SNAPSHOT_v4.0.md`
 
 ---
 

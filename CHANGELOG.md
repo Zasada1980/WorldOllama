@@ -7,6 +7,50 @@
 
 ---
 
+## [0.3.1] - 2025-12-02
+
+### Fixed
+
+#### ORDER 40 — BUGFIX PACK v0.3.1
+
+**Index Path Resolution (40.1)**
+- Унифицирована логика построения пути к `scripts/ingest_watcher.ps1`
+- Все вызовы используют `get_project_root()` + `PathBuf::join`
+- Исправлено в: `index_manager.rs`, `commands.rs`, `flow_manager.rs`
+- E2E verified: `index_and_train` flow находит скрипт корректно
+
+**GitPanel CWD (40.2)**
+- Все git команды теперь используют `.current_dir(repo_root)` от project root
+- Исправлено в: `git_manager.rs`, `commands.rs`, `GitPanel.svelte`
+- E2E verified: `git_check` flow без ошибок "not a git repository"
+
+**TRAIN Flow Unlock (40.3)**
+- UI validation синхронизирована с backend (epochs 1–5)
+- Pipeline UI → Tauri → Rust → PowerShell верифицирован
+- Исправлено в: `TrainingPanel.svelte`, `client.ts`, `commands.rs`, `training_manager.rs`
+- E2E verified: `train_default` и `index_and_train` flows запускают обучение
+
+**Warnings Cleanup (40.4)**
+- Rust: исправлена критическая ошибка E0716 (temporary value lifetime)
+- Rust: удалены неиспользуемые импорты (`Emitter`, `PathBuf`)
+- Результат: 0 errors, 4 non-blocking warnings
+- Svelte/TS: 0 errors, 8 non-blocking warnings (self-closing tags, a11y, unused CSS)
+
+**Flows E2E (40.5)**
+- Протестированы все core flows:
+  - `quick_status` ✅ (STATUS команда работает)
+  - `git_check` ✅ (Safe Git корректно определяет состояние)
+  - `train_default` ✅ (TRAIN pipeline functional)
+  - `index_and_train` ✅ (INDEX + TRAIN sequential execution)
+- Все flow логи в `logs/flows/*.jsonl`
+
+### Changed
+
+- Версия приложения обновлена до v0.3.1
+- Статус релиза: Beta → Preview (Flows v1 + TRAIN pipeline стабильны)
+
+---
+
 ## [0.1.0] - 2025-11-27
 
 ### Added
