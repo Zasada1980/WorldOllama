@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "title": "VS Code Indexation Tools Configuration",
+  "description": "Configuration file for automatic documentation indexation system",
+  "type": "object",
+  "properties": {
+    "projectRoot": {
+      "type": "string",
+      "description": "Absolute path to project root. Use ${workspaceFolder} for VS Code variable or leave empty for auto-detection.",
+      "default": "${workspaceFolder}",
+      "examples": [
+        "${workspaceFolder}",
+        "C:\\Projects\\MyApp",
+        "/home/user/projects/myapp"
+      ]
+    },
+    "indexFile": {
+      "type": "string",
+      "description": "Relative path to index file (from projectRoot)",
+      "default": "docs/project/RUNTIME_LOGS_JOURNAL_INDEX.md",
+      "examples": [
+        "docs/project/INDEX.md",
+        "DOCUMENTATION_INDEX.md",
+        "docs/README.md"
+      ]
+    },
+    "watchPatterns": {
+      "type": "array",
+      "description": "Glob patterns for files to monitor and index",
+      "items": {
+        "type": "string"
+      },
+      "default": ["**/*.md"],
+      "examples": [
+        ["**/*.md"],
+        ["**/*.md", "**/*.rst", "**/*.adoc"],
+        ["docs/**/*.md", "README.md"]
+      ]
+    },
+    "excludePatterns": {
+      "type": "array",
+      "description": "Glob patterns for files/directories to exclude",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "**/node_modules/**",
+        "**/venv/**",
+        "**/.venv/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/__pycache__/**",
+        "**/archive/**",
+        "**/.git/**"
+      ],
+      "examples": [
+        ["**/node_modules/**", "**/venv/**"],
+        ["**/build/**", "**/dist/**", "**/archive/**"]
+      ]
+    },
+    "debounceMs": {
+      "type": "integer",
+      "description": "Debounce delay in milliseconds for FileSystemWatcher",
+      "minimum": 500,
+      "maximum": 10000,
+      "default": 2000,
+      "examples": [1000, 2000, 5000]
+    },
+    "heartbeatIntervalMin": {
+      "type": "integer",
+      "description": "Heartbeat interval in minutes for FileSystemWatcher",
+      "minimum": 1,
+      "maximum": 60,
+      "default": 10,
+      "examples": [5, 10, 30]
+    },
+    "scheduledTask": {
+      "type": "object",
+      "description": "Configuration for Windows Scheduled Task",
+      "properties": {
+        "taskName": {
+          "type": "string",
+          "description": "Name of the scheduled task",
+          "default": "VSCode_Daily_Reindex",
+          "examples": [
+            "VSCode_Daily_Reindex",
+            "MyProject_Reindex",
+            "Documentation_Update"
+          ]
+        },
+        "executionTime": {
+          "type": "string",
+          "description": "Daily execution time in HH:MM format (24-hour)",
+          "pattern": "^([01]\\d|2[0-3]):([0-5]\\d)$",
+          "default": "03:00",
+          "examples": ["03:00", "02:30", "23:45"]
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to install scheduled task",
+          "default": true
+        }
+      },
+      "required": ["taskName", "executionTime", "enabled"]
+    },
+    "gitHook": {
+      "type": "object",
+      "description": "Configuration for Git post-commit hook",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to install Git post-commit hook",
+          "default": true
+        },
+        "fileExtensions": {
+          "type": "array",
+          "description": "File extensions to trigger reindex (without leading dot)",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+$"
+          },
+          "default": ["md", "rst", "adoc", "txt"],
+          "examples": [
+            ["md"],
+            ["md", "rst", "adoc"],
+            ["md", "markdown", "mdown", "txt"]
+          ]
+        }
+      },
+      "required": ["enabled", "fileExtensions"]
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "logDir": {
+          "type": "string",
+          "description": "Relative path to logs directory (from projectRoot)",
+          "default": "logs",
+          "examples": ["logs", "logs/indexation", ".logs"]
+        },
+        "maxLogSizeMB": {
+          "type": "integer",
+          "description": "Maximum log file size in MB before rotation",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10,
+          "examples": [5, 10, 50]
+        },
+        "retentionDays": {
+          "type": "integer",
+          "description": "Days to keep old log files",
+          "minimum": 7,
+          "maximum": 365,
+          "default": 30,
+          "examples": [14, 30, 90]
+        }
+      },
+      "required": ["logDir", "maxLogSizeMB", "retentionDays"]
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

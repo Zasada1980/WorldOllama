@@ -1,0 +1,22 @@
+{
+    "id": "train_triz_engineer",
+    "name": "Train TRIZ Engineer",
+    "description": "Обучение профиля triz_engineer на 3 эпохи (Qwen2-7B)",
+    "steps": [
+        {
+            "id": "step_1",
+            "cmd": "STATUS",
+            "args": {},
+            "on_failure": "abort"
+        },
+        {
+            "id": "step_2",
+            "cmd": "TRAIN",
+            "args": {
+                "profile": "triz_engineer",
+                "epochs": 3
+            },
+            "on_failure": "abort"
+        }
+    ]
+}

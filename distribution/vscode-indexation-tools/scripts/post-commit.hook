@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# Universal Git post-commit hook for VS Code project indexing
+# 
+# Installation:
+#   Run: pwsh scripts/INSTALL_GIT_HOOK.ps1
+#   Manual: Copy to .git/hooks/post-commit and chmod +x
+#
+# Version: 2.0
+# Author: GitHub Copilot Agent
+# Date: December 3, 2025
+# License: MIT
+
+echo "[POST-COMMIT] Starting automatic reindex..."
+
+# Detect project root
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+UPDATE_SCRIPT="$PROJECT_ROOT/scripts/UPDATE_PROJECT_INDEX.ps1"
+
+# Check script exists
+if [ ! -f "$UPDATE_SCRIPT" ]; then
+    echo "[POST-COMMIT] WARNING: UPDATE_PROJECT_INDEX.ps1 not found at $UPDATE_SCRIPT"
+    echo "[POST-COMMIT] Skipping reindex"
+    exit 0
+fi
+
+# Get changed files from last commit (customize patterns as needed)
+# Default: *.md files (modify grep pattern for other extensions)
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD | grep -E '\.(md|rst|adoc|txt)$')
+
+if [ -z "$CHANGED_FILES" ]; then
+    echo "[POST-COMMIT] No documentation files changed, skipping reindex"
+    exit 0
+fi
+
+echo "[POST-COMMIT] Changed documentation files:"
+echo "$CHANGED_FILES"
+
+# Detect PowerShell (prefer pwsh over powershell)
+PWSH_CMD=""
+if command -v pwsh >/dev/null 2>&1; then
+    PWSH_CMD="pwsh"
+elif command -v powershell >/dev/null 2>&1; then
+    PWSH_CMD="powershell"
+else
+    echo "[POST-COMMIT] ERROR: PowerShell not found (requires pwsh or powershell)"
+    echo "[POST-COMMIT] Install PowerShell: https://aka.ms/powershell"
+    exit 1
+fi
+
+# Run reindex script
+echo "[POST-COMMIT] Running: $PWSH_CMD -File \"$UPDATE_SCRIPT\" -IncrementalMode"
+$PWSH_CMD -File "$UPDATE_SCRIPT" -IncrementalMode -TriggerFile "$(echo "$CHANGED_FILES" | head -n 1)" -ProjectRoot "$PROJECT_ROOT"
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "[POST-COMMIT] Reindex completed successfully ✅"
+else
+    echo "[POST-COMMIT] WARNING: Reindex exited with code $EXIT_CODE ❌"
+    echo "[POST-COMMIT] Check logs/indexation.log for details"
+    # Non-blocking: don't fail the commit
+fi
+
+exit 0

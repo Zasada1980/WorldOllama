@@ -51,7 +51,8 @@ function Wait-ForService {
         [string]$Name,
         [int]$Port,
         [string]$HealthEndpoint,
-        [int]$TimeoutSeconds = 30
+        [int]$TimeoutSeconds = 30,
+        [switch]$IsChainlit = $false
     )
     
     Write-Log "Waiting for $Name to start (port $Port)..." "INFO"
@@ -60,21 +61,31 @@ function Wait-ForService {
     while ($elapsed -lt $TimeoutSeconds) {
         if (Test-Port -Port $Port) {
             try {
-                $response = Invoke-RestMethod -Uri $HealthEndpoint -TimeoutSec 2 -ErrorAction SilentlyContinue
-                if ($response) {
-                    Write-Log "✓ $Name is ready!" "SUCCESS"
-                    return $true
+                if ($IsChainlit) {
+                    # Chainlit проверка: ждём реальный HTML ответ
+                    $response = Invoke-WebRequest -Uri $HealthEndpoint -TimeoutSec 3 -UseBasicParsing -ErrorAction SilentlyContinue
+                    if ($response -and $response.StatusCode -eq 200 -and $response.Content.Length -gt 100) {
+                        Write-Log "✓ $Name is ready! (HTTP 200, Content: $($response.Content.Length) bytes)" "SUCCESS"
+                        return $true
+                    }
+                } else {
+                    # Обычная проверка health endpoint
+                    $response = Invoke-RestMethod -Uri $HealthEndpoint -TimeoutSec 2 -ErrorAction SilentlyContinue
+                    if ($response) {
+                        Write-Log "✓ $Name is ready!" "SUCCESS"
+                        return $true
+                    }
                 }
             } catch {
-                # Health endpoint not ready yet
+                # Health endpoint not ready yet, продолжаем ждать
             }
         }
         
         Start-Sleep -Seconds 1
         $elapsed++
         
-        if ($elapsed % 5 -eq 0) {
-            Write-Log "  Waiting... ($elapsed/$TimeoutSeconds seconds)" "INFO"
+        if ($elapsed % 10 -eq 0) {
+            Write-Log "  Still waiting... ($elapsed/$TimeoutSeconds seconds)" "INFO"
         }
     }
     
@@ -188,10 +199,12 @@ chainlit run app.py --port 8501
             
             Start-Process powershell -ArgumentList "-NoExit", "-Command", $neuroCmd -WindowStyle Normal
             
-            if (Wait-ForService -Name "Neuro-Terminal" -Port 8501 -HealthEndpoint "http://localhost:8501" -TimeoutSeconds 20) {
+            if (Wait-ForService -Name "Neuro-Terminal" -Port 8501 -HealthEndpoint "http://localhost:8501" -TimeoutSeconds 120 -IsChainlit) {
                 Write-Log "✓ Neuro-Terminal started successfully" "SUCCESS"
             } else {
-                Write-Log "⚠ Neuro-Terminal failed to start (non-critical)" "WARNING"
+                Write-Log "⚠ Neuro-Terminal failed to start within 120s (non-critical, continuing...)" "WARNING"
+                Write-Log "  Service may still be starting in background - check http://localhost:8501 in browser" "WARNING"
+                Write-Log "  You can verify status later with CHECK_STATUS.ps1" "WARNING"
             }
         }
     }

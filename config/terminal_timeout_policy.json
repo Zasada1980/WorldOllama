@@ -53,6 +53,10 @@
             ]
         }
     },
+    "breaker": {
+        "base_backoff_ms": 6000,
+        "jitter_ms": 1000
+    },
     "behavior_on_timeout": {
         "return_last_n_lines": 20,
         "log_full_output": true,

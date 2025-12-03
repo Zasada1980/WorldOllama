@@ -1,649 +1,271 @@
-# AI Agent Codebase Guide — WORLD_OLLAMA
+# AI Agent Quickstart — WORLD_OLLAMA
 
-**Purpose:** Guide AI coding agents to be immediately productive in this multi-service AI knowledge system.  
-**Updated:** 2025-12-02  
-**Version:** 2.1  
-**Last Verified:** ORDER 42 complete, v0.3.0-alpha released
+**Project Type:** Local-first AI stack — Tauri/Svelte desktop client + LightRAG GraphRAG + Ollama + LLaMA Factory fine-tuning  
+**Target Platform:** Windows 11, RTX GPU (16GB VRAM), PowerShell-first automation  
+**Current Version:** v0.3.1 (Preview Release) — Flows automation + bugfix pack  
+**Release Date:** 02.12.2025  
+**GitHub:** https://github.com/Zasada1980/WorldOllama
 
----
+## Path Resolution (CRITICAL)
+**NEVER hardcode `E:\WORLD_OLLAMA`.** Always use:
+- **Rust:** `crate::utils::get_project_root()` returns `PathBuf`
+- **Python:** Check `WORLD_OLLAMA_ROOT` env var, fallback to `Path(__file__).resolve().parent.parent.parent`
+- **PowerShell:** `$ProjectRoot = $PSScriptRoot` or param with default
 
-## 🎯 Project At A Glance
-
-**WORLD_OLLAMA** is a local-first AI knowledge system combining:
-- **Desktop Client** (Tauri/Svelte) - User interface with 6 panels + Flows automation
-- **CORTEX** (LightRAG) - GraphRAG knowledge server (port 8004)
-- **Ollama** (qwen2.5:14b) - LLM inference (port 11434)
-- **LLaMA Factory** - Model fine-tuning platform
-- **Knowledge Base** - 486+ TRIZ documents (7.7 MB)
-
-**Root:** `E:\WORLD_OLLAMA\` (NEVER hardcode - use `WORLD_OLLAMA_ROOT` env var or `get_project_root()`)  
-**GPU:** RTX 5060 Ti 16GB VRAM  
-**OS:** Windows 11 (PowerShell primary shell)
-
----
-
-## ⚠️ CRITICAL: Development Protocols
-
-### 1. NO SIMULATION — Verify Everything
-**PROHIBITED:** Fake terminal output, invented logs, claiming status without proof.
-
-**REQUIRED:** Execute commands and show real output:
-```powershell
-# Want to say "File exists"? → Show proof
-Test-Path E:\WORLD_OLLAMA\services\lightrag\data\*.json
-
-# Want to say "Server running"? → Verify health
-Invoke-RestMethod http://localhost:8004/health
-
-# Want to say "Models loaded"? → Check VRAM
-nvidia-smi --query-gpu=memory.used --format=csv,noheader
-```
-
-### 1.a Agent Interaction Directive — No Manual Prompts
-
-Агент не должен просить пользователя выполнять команды вручную, кроме случаев, когда действие по своей природе визуальное или требует интерактивного подтверждения.
-
-- По умолчанию используйте инструменты: MCP (`myshell/execute_command`) и VS Code Terminal (`run_in_terminal`) для выполнения команд.
-- Исключения: визуальные демонстрации (прогресс-бары, запуск окон Desktop Client), ручные клики в UI.
-- Если пользователь уже выполнил ручное действие (например, запустил сервисы), агент обязан перейти к автоматической проверке состояния и не дублировать ручные указания.
-
-### 2. CODE OVER DOCS — Direct Action
-When asked to change settings (ports, models, paths):
-- ❌ DON'T write plans in markdown
-- ✅ DO modify source code (`.py`, `.rs`, `.yaml`, `.ps1`)
-- ✅ DO show `Get-Content` verification after changes
-
-### 3. Path Agnosticism — Dynamic Root Resolution
-**NEVER hardcode** `E:\WORLD_OLLAMA\` in code:
-
+Example (Rust):
 ```rust
-// ✅ CORRECT - Dynamic resolution
-let root = std::env::var("WORLD_OLLAMA_ROOT")
-    .or_else(|_| std::env::current_exe()
-        .map(|p| p.parent().unwrap().parent().unwrap().to_string_lossy().to_string()))
-    .unwrap();
-
-// ❌ WRONG - Hardcoded path
-let root = "E:\\WORLD_OLLAMA\\";
+let project_root = crate::utils::get_project_root();
+let script_path = project_root.join("scripts").join("ingest_watcher.ps1");
 ```
 
-See `TASK 16.1` in consolidated reports for context.
+## MCP Shell Server — Production Tool
+**Use `myshell/execute_command` for all PowerShell** unless visual progress needed. Provides:
+- **Auto Base64 encoding:** Eliminates Exit Code 255 for pipes `|`, braces `{}`, variables `$` (94.44% test coverage)
+- **Circuit Breaker:** After 3 failures → `fallbackSuggested=true`, switch to `run_in_terminal`
+- **Smart Retries:** Fast cmds retry 2×1s, medium 1×5s, long no retry (idempotent only)
+- **Watchdog:** Kills hung processes after 30s no output; adaptive timeouts 60s/120s/900s
+- **Error UX:** Russian `userMessage` for common failures (file not found, access denied)
 
----
+**When to use MCP:**
+- Health checks: `Test-NetConnection`, `ollama list | Select-String`, `nvidia-smi`
+- Git operations: `git status --porcelain`, `git log origin/main..HEAD`
+- Quick reads: `Get-Content`, `Test-Path`, complex pipelines
 
-### 📋 АВТОМАТИЧЕСКАЯ НАВИГАЦИЯ ПО ДОКУМЕНТАЦИИ
+**When to fallback to terminal:**
+- `meta.fallbackSuggested=true` (circuit breaker open)
+- Visual progress: `npm run tauri dev`, `START_ALL.ps1`, training UI
+- Background services: `isBackground=true` for long-running servers
 
-**ПРАВИЛО:** Перед ответом на вопрос пользователя агент **ОБЯЗАН**:
+**Verify:** `pwsh mcp-shell/test_phase1_edge_cases.ps1` → 17/18 PASS. Logs: `logs/mcp/mcp-events.log`
 
-1. **Определить категорию запроса:**
-   - 🔵 Desktop Client / TASK → `docs/tasks/TASKS_CONSOLIDATED_REPORT.md`
-   - 🤖 Модели / Обучение → `docs/models/MODELS_CONSOLIDATED_REPORT.md`
-   - 🏗️ Инфраструктура / CORTEX → `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md`
-   - 📊 Архитектура / Проект → `PROJECT_MAP.md`, `DOCUMENTATION_STRUCTURE_ANALYSIS.md`
-   - 📦 Релиз / Статус → `docs/release/v0.1.0/`, `PROJECT_STATUS.md`
+## Automatic Indexation Tools (v2.0 — 03.12.2025)
 
-2. **Загрузить соответствующий консолидированный отчёт:**
-   ```python
-   # Псевдокод
-   if query.contains("TASK", "Desktop Client", "UI"):
-       read_file("docs/tasks/TASKS_CONSOLIDATED_REPORT.md")
-   elif query.contains("model", "training", "TD-010"):
-       read_file("docs/models/MODELS_CONSOLIDATED_REPORT.md")
-   elif query.contains("CORTEX", "RAG", "Security", "Ollama"):
-       read_file("docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md")
-   ```
+**Three automation mechanisms** for keeping `RUNTIME_LOGS_JOURNAL_INDEX.md` up-to-date (Consensus.app Research + Agent Testing validated):
 
-3. **Использовать граф зависимостей для поиска связанных файлов:**
-   - Если документ упоминает другой → загрузить связанный
-   - Если нужен детальный контекст → найти оригинальный TASK отчёт в архиве
+### 1. FileSystemWatcher (Real-time)
+**Script:** `scripts/WATCH_FILE_CHANGES.ps1`  
+**Purpose:** Monitor `.md` files and trigger incremental reindexing on changes  
+**Features:**
+- Debounce 2s (prevents excessive updates)
+- Excludes: venv, node_modules, archive, llamaboard_cache
+- Heartbeat every 10 min
+- Logs: `logs/file_watcher.log`
 
-**ПРИМЕР WORKFLOW:**
-
-**Запрос пользователя:** "Как работает Command DSL?"
-
-**Автоматические действия агента:**
-1. ✅ Читаю `DOCUMENTATION_STRUCTURE_ANALYSIS.md` → определяю кластер: **Desktop Client Tasks**
-2. ✅ Вижу что TASK 8 (Commands Panel) в консолидированном отчёте
-3. ✅ Читаю `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` → нахожу раздел TASK 8
-4. ✅ Извлекаю информацию о Command DSL
-5. ✅ Отвечаю с указанием источника: `docs/tasks/TASKS_CONSOLIDATED_REPORT.md`, раздел TASK 8
-
-**БЕЗ этой процедуры** → агент может не найти нужную информацию или использовать устаревшие данные
-
----
-
-### 🗺️ КАРТА НАВИГАЦИИ ПО ДОКУМЕНТАЦИИ (ОБЯЗАТЕЛЬНАЯ СПРАВКА)
-
-**Для агента:** Этот справочник **ВСЕГДА** доступен в памяти
-
-| Тема запроса | Первичный источник | Детальный архив |
-|--------------|-------------------|-----------------|
-| **TASK 4-15 (Desktop Client)** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` | `client/TASK_*_REPORT.md` |
-| **System Status Panel** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (TASK 4) | `client/TASK4_REPORT.md` |
-| **Settings + Profiles** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (TASK 5) | `client/TASK5_REPORT.md` |
-| **Library Panel** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (TASK 6-7) | `client/TASK_6_COMPLETION_REPORT.md` |
-| **Commands Panel (DSL)** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (TASK 8) | `client/TASK_8_COMPLETION_REPORT.md` |
-| **Training UI** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (TASK 12.2) | `client/TASK_12_2_COMPLETION_REPORT.md` |
-| **Модели (TD-010v2/v3)** | `docs/models/MODELS_CONSOLIDATED_REPORT.md` | `docs/TD010v2_DEPLOYMENT_COMPLETE.md` |
-| **VRAM Calculator** | `docs/models/MODELS_CONSOLIDATED_REPORT.md` | `docs/qwen3b_training_requirements.md` |
-| **CORTEX Configuration** | `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | `docs/CORTEX_CONFIGURATION_REFERENCE.md` |
-| **Security (API Keys)** | `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | `docs/SECURE_ENCLAVE_REPORT.md` |
-| **RAG Quality** | `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | `docs/reports/RAG_QUALITY_REPORT.md` |
-| **Orchestration Scripts** | `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | `scripts/START_ALL.ps1`, `STOP_ALL.ps1` |
-| **Архитектура проекта** | `PROJECT_MAP.md` | `DOCUMENTATION_STRUCTURE_ANALYSIS.md` |
-| **Векторные зависимости** | `docs/project/DOCUMENTATION_STRUCTURE_ANALYSIS.md` | — |
-| **Индекс документации** | `docs/project/INDEX_NEW.md` | — |
-
----
-
-### 🎯 КОНТЕКСТНЫЕ ПРАВИЛА
-
-**1. При упоминании TASK номера:**
-```python
-# ВСЕГДА загружать консолидированный отчёт ПЕРВЫМ
-read_file("docs/tasks/TASKS_CONSOLIDATED_REPORT.md")
-
-# Если нужна детализация → найти оригинальный отчёт
-if need_details:
-    read_file(f"client/TASK_{task_number}_COMPLETION_REPORT.md")
+**Usage (MCP Shell — recommended):**
+```json
+{
+  "tool": "mcp_myshell_execute_command",
+  "parameters": {
+    "command": "pwsh -File scripts\\WATCH_FILE_CHANGES.ps1",
+    "isBackground": true
+  }
+}
 ```
+**Notes:** Monitor `meta.breakerState`; fallback to `run_in_terminal` if `OPEN`. Infinite loop requires `isBackground: true`.
 
-**2. При работе с моделями:**
-```python
-# ВСЕГДА проверить статус в консолидированном отчёте
-read_file("docs/models/MODELS_CONSOLIDATED_REPORT.md")
-
-# Если вопрос про конкретную модель → загрузить детали
-if model_name == "TD-010v2":
-    read_file("docs/TD010v2_DEPLOYMENT_COMPLETE.md")
-```
-
-**3. При вопросах об инфраструктуре:**
-```python
-# ВСЕГДА начинать с консолидированного отчёта
-read_file("docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md")
-
-# Если нужен код → использовать код из консолидированного отчёта
-# Он содержит готовые code snippets
-```
-
----
-
-### 📊 ВЕКТОРНЫЙ ГРАФ (ALWAYS IN MEMORY)
-
-**6 тематических кластеров:**
-
-1. **Архитектура проекта (4 файла):**
-   - `PROJECT_MAP.md` → `README.md` → `MANUAL.md` → `CHANGELOG.md`
-
-2. **Статус и прогресс (4 файла):**
-   - `PROJECT_STATUS.md` → `docs/project/DOCUMENTATION_STRUCTURE_ANALYSIS.md` → `docs/project/INDEX_NEW.md` → `docs/project/DOCUMENTATION_REORGANIZATION_COMPLETE.md`
-
-3. **Desktop Client Tasks (11 TASK):**
-   - `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` → все TASK 4-15
-
-4. **Модели и обучение (7 отчётов):**
-   - `docs/models/MODELS_CONSOLIDATED_REPORT.md` → TD-010v2/v3 отчёты
-
-5. **Инфраструктура (4 отчёта + 2 лога):**
-   - `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` → CORTEX/Security/RAG/Orchestration
-
-6. **UX спецификации (8 файлов):**
-   - `UX_SPEC/*.md` → UI/UX документация
-
-**ПРАВИЛО:** При работе с документом → проверить его кластер → загрузить связанные файлы
-
----
-
-## 🏗️ Architecture — Data Flow Patterns
-
-### Service Communication (Critical Integration Points)
-
-```
-Desktop Client (Tauri)
-  ↓ invoke("start_training_job")
-Rust Backend (commands.rs)
-  ↓ Command::new("pwsh")
-PowerShell Script (start_agent_training.ps1)
-  ↓ llamafactory-cli train
-LLaMA Factory Process
-  ↓ writes training_status.json (PULSE v1)
-Rust Singleton Poller (training_manager.rs)
-  ↓ app.emit("training_status_update")
-Svelte UI (TrainingPanel.svelte)
-```
-
-**Key Insight:** UI doesn't call Python directly. All training goes through Rust → PowerShell → llamafactory-cli.
-
-### CORTEX (LightRAG) Request Flow
-
-```
-UI API call (client.ts)
-  ↓ fetch("http://localhost:8004/query")
-FastAPI Server (lightrag_server.py)
-  ↓ rag.query(mode="hybrid")
-LightRAG Library
-  ↓ ollama_model_complete(qwen2.5:14b)
-Ollama (port 11434)
-  ↓ returns context + entities
-FastAPI Response
-  ↓ JSON with answer + sources
-UI renders with chain-of-thought
-```
-
-**Key Insight:** `mode="hybrid"` is recommended (adaptive local/global search). `enable_rerank=False` due to LightRAG bug.
-
----
-
-## 🚀 Critical Developer Workflows
-
-### Starting Services (REQUIRED for development)
-
+**Usage (Terminal — fallback):**
 ```powershell
-# ONE-COMMAND START (recommended)
-pwsh E:\WORLD_OLLAMA\scripts\START_ALL.ps1
-
-# Verify all services running
-pwsh E:\WORLD_OLLAMA\scripts\CHECK_STATUS.ps1 -Detailed
-
-# Expected output:
-# ✓ Ollama (11434): Running
-# ✓ CORTEX (8004): Running  
-# ○ Neuro-Terminal (8501): Down (optional)
+# From repo root
+pwsh -File scripts\WATCH_FILE_CHANGES.ps1
 ```
 
-**CRITICAL:** Desktop Client expects CORTEX running. If `CHECK_STATUS` shows CORTEX down, troubleshoot before running client.
-
-### Desktop Client Development
-
+**Management:**
 ```powershell
-# Terminal 1: Keep services running (see above)
+# Check status
+Get-Process pwsh | Where-Object { $_.CommandLine -like "*WATCH_FILE_CHANGES*" }
 
-# Terminal 2: Run Tauri dev mode
-cd E:\WORLD_OLLAMA\client
-npm run tauri dev  # Opens window automatically
+# Stop watcher
+$watcher = Get-Process pwsh | Where-Object { $_.CommandLine -like "*WATCH_FILE_CHANGES*" }
+if ($watcher) { Stop-Process -Id $watcher.Id -Force }
 
-# Hot reload: Edit .svelte files → auto-refresh
-# Rust changes: Requires manual restart (Ctrl+C → re-run)
+# Tail logs
+Get-Content logs\file_watcher.log -Tail 20 -Wait
 ```
 
-### Training a Model (E2E Workflow)
-
+### 2. Git Post-Commit Hook (On-commit)
+**Scripts:** `scripts/post-commit.hook` + `scripts/INSTALL_GIT_HOOK.ps1`  
+**Purpose:** Automatic reindexing after Git commits with `.md` changes  
+**Installation:**
 ```powershell
-# 1. Verify services
-pwsh scripts\CHECK_STATUS.ps1
-
-# 2. Option A: Via UI
-#    - Open Desktop Client → Training Panel
-#    - Select profile (e.g., "triz_engineer")
-#    - Set epochs (1-5)
-#    - Click "Start Training"
-
-# 3. Option B: Via Script (for testing)
-pwsh scripts\start_agent_training.ps1 `
-  -ProfileName "triz_engineer" `
-  -DataPath "E:\WORLD_OLLAMA\services\llama_factory\data\triz_synthesis_v1.jsonl" `
-  -OutputDir "E:\WORLD_OLLAMA\models\test_output" `
-  -Epochs 1
-
-# 4. Monitor PULSE status
-Get-Content E:\WORLD_OLLAMA\services\llama_factory\training_status.json
-
-# 5. Check logs
-Get-Content E:\WORLD_OLLAMA\logs\training\train-*.log -Tail 20
+pwsh scripts\INSTALL_GIT_HOOK.ps1
 ```
-
-**Known Issue (ORDER 43):** Training fails if HuggingFace model is gated. Either:
-- Login: `huggingface-cli login` (requires HF token)
-- OR switch to open model in `llama3_lora_sft.yaml`
-
-### VRAM Monitoring (GPU Health Check)
-
+**Verification:**
 ```powershell
-# Check VRAM usage (models loaded when >6GB)
-nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader
+Test-Path .git\hooks\post-commit  # Should return True
+```
+**Trigger:** Runs after each `git commit` if `.md` files changed (non-blocking, won't fail commit on errors)
 
-# Expected when CORTEX indexing:
-# 8500, 16384  (8.5GB used, healthy)
+### 3. Windows Scheduled Task (Daily)
+**Script:** `scripts/CREATE_SCHEDULED_TASK.ps1`  
+**Purpose:** Full reindexing daily at 03:00 (cleanup accumulated errors)  
+**Installation (requires admin):**
+```powershell
+# Create task (default: daily at 03:00)
+pwsh scripts\CREATE_SCHEDULED_TASK.ps1
 
-# If <6000 MB → Models NOT loaded, indexing broken
+# Create with custom time
+pwsh scripts\CREATE_SCHEDULED_TASK.ps1 -ExecutionTime "02:30"
+
+# Remove task
+pwsh scripts\CREATE_SCHEDULED_TASK.ps1 -RemoveTask
+```
+**Verification:**
+```powershell
+Get-ScheduledTask -TaskName "WORLD_OLLAMA_Daily_Reindex"
+# Manually trigger (test)
+Start-ScheduledTask -TaskName "WORLD_OLLAMA_Daily_Reindex"
+# Check result (0=success)
+(Get-ScheduledTaskInfo -TaskName "WORLD_OLLAMA_Daily_Reindex").LastTaskResult
 ```
 
-**RULE:** VRAM <6GB = indexing not working. Don't report success until VRAM >6GB.
+### Core Reindexing Script
+**Script:** `scripts/UPDATE_PROJECT_INDEX.ps1`  
+**Modes:**
+```powershell
+# Incremental (1-5 files, <500ms)
+pwsh scripts\UPDATE_PROJECT_INDEX.ps1 -IncrementalMode -TriggerFile "path.md"
+
+# Full (all files, ~870ms for 166 files)
+pwsh scripts\UPDATE_PROJECT_INDEX.ps1 -FullReindex
+```
+**Updates:** `docs/project/RUNTIME_LOGS_JOURNAL_INDEX.md` metadata (file counts, timestamps, coverage period)  
+**Logs:** `logs/indexation.log`
+
+**Summary:** Use all three mechanisms together — FileSystemWatcher (development), Git Hook (CI/CD), Scheduled Task (safety net). Overhead: ~0.001% (1s/day).
+
+## Architecture & Data Flows
+
+### Training Pipeline (UI → Rust → PowerShell → Python)
+```
+TrainingPanel.svelte (UI validation: epochs 1-5, profile whitelist)
+  ↓ POST /api/training/start
+client/src/lib/api/client.ts (startTrainingJob)
+  ↓ Tauri invoke
+client/src-tauri/src/commands.rs (start_training_job)
+  ↓ PowerShell call
+scripts/start_agent_training.ps1 (params validation)
+  ↓ llamafactory-cli
+services/llama_factory/src/train.py
+  ↓ writes atomically (os.replace)
+training_status.json
+  ↑ polled by training_manager.rs (2-10s adaptive)
+  ↓ emit Tauri event
+UI updates (PULSE v1 protocol: idle/running/done/error)
+```
+**Key files:** `commands.rs::start_training_job`, `start_agent_training.ps1`, `training_manager.rs::start_polling`, `TrainingPanel.svelte`
+
+### CORTEX RAG Pipeline (GraphRAG with LightRAG)
+```
+UI query → client/src/lib/api/client.ts
+  ↓ POST http://localhost:8004/query
+services/lightrag/lightrag_server.py (FastAPI)
+  ↓ LightRAG(mode="hybrid", enable_rerank=False)
+  ↓ ollama_model_complete("qwen2.5:14b")
+  ↓ ollama_embed("nomic-embed-text")
+Ollama (http://localhost:11434)
+  ↓ returns context + answer
+lightrag_server.py → JSON response
+  ↓ back to UI
+ChatPanel.svelte renders sources + chain-of-thought
+```
+**Health check:** `Invoke-RestMethod http://localhost:8004/health` or `curl http://localhost:11434/api/tags`  
+**GPU telemetry:** `nvidia-smi --query-gpu=memory.used --format=csv,noheader` (>6 GB = embeddings loaded)  
+**Chunking:** Fixed ~10 KB in `lightrag_server.py`, token budget <4k/chunk for Ollama limits
+
+## Documentation Compass
+
+**ALWAYS start with consolidated reports** before touching code:
+- **UI tasks** (TASK 4-16, ORDER 33-42, ORDER 52) → `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` (полные спецификации + тестирование)
+- **Models/training** (TD-010v2/v3, fine-tuning) → `docs/models/MODELS_CONSOLIDATED_REPORT.md`
+- **Infrastructure** (CORTEX, security, RAG, tools audit) → `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md`
+- **Tools cleanup** (VS Code extensions) → `docs/infra/TOOLS_CLEANUP_RESULTS.md` (71 → 51 расширений, конфликты решены)
+
+**Architecture/status questions:**
+1. `PROJECT_MAP.md` — directory structure, ignored folders, generation protocol
+2. `PROJECT_STATUS_SNAPSHOT_v4.0.md` — current phase (v0.3.1 Released 02.12.2025), ORDER 40+52 COMPLETE, known blockers (ORDER 43 - HF gated models)
+3. `README.md` — user-facing features, quick start, troubleshooting, релиз v0.3.1
+4. `DOCUMENTATION_INDEX.md` — полная карта документации (68 файлов, консолидированные отчёты)
+
+**Task-specific deep dives:** Cross-referenced in consolidated reports (e.g., `client/TASK8_COMPLETION_REPORT.md` for Command DSL details)
+
+## Core Workflows
+- **Start stack:** `pwsh scripts/START_ALL.ps1`, then `pwsh scripts/CHECK_STATUS.ps1 -Detailed`. Desktop client (6 panels + ⚡ Flows) expects CORTEX up before `npm run tauri dev`.
+- **Flows automation:** JSON definitions live in `automation/flows/*.json`, executed through `FlowExecutor` in `client/src-tauri/src/flow_manager.rs`. Every run logs JSON lines to `logs/flows/flow_{id}_{timestamp}.jsonl`; inspect there when troubleshooting multi-step failures.
+- **Training:** Allowed epochs 1-5, profiles restricted to whitelisted names (see `start_training_job` and `scripts/start_agent_training.ps1`). If the HF base model is gated (ORDER 43), either `huggingface-cli login` or switch to the open config in `services/llama_factory/config/llama3_lora_sft.yaml`. Track progress via `services/llama_factory/training_status.json` and `logs/training/train-*.log`.
+- **Safe Git Assistant:** Tauri command `plan_git_push` enforces seven blockers (unstaged changes, wrong branch, remote ahead, etc.) before `execute_git_push`. Always re-run the plan right before pushing; UI mirrors the Rust validations.
+
+## Project Conventions
+
+**PowerShell automation:**
+- Use JSON logs (one object per line) for all orchestration — compatible with `FlowLogger` in `flow_manager.rs`
+- Always use `$ErrorActionPreference = "Stop"` for fail-fast behavior
+- Log format: `[timestamp] [LEVEL] message` to `logs/orchestrator.log`
+
+**RAG/CORTEX constraints:**
+- LightRAG chunking: fixed ~10 KB in `lightrag_server.py`
+- Token budget: <4k per chunk (Ollama context window limits)
+- Never re-index without checking `services/lightrag/data/kv_store_doc_status.json`
+- Rerank disabled (`enable_rerank=False`) due to stability issues (see PLAN C baseline)
+
+**Tauri/Rust patterns:**
+- All Tauri commands return `ApiResponse<T>` (see `commands.rs::ApiResponse`)
+- Use `crate::utils::get_project_root()` for path operations — never `current_exe()` directly
+- Settings persistence: `%APPDATA%/WorldOllama` via `settings.rs`
+- Profile switching: check `client/src/lib/stores/settings.ts` for state management
+
+**Code style:**
+- Rust: Follow existing pattern of extensive comments with ORDER/TASK references
+- Svelte: Reactive statements (`$:`) for derived state, avoid imperative updates
+- Python: Type hints required, use `Path` objects not string concatenation for file paths
+
+## Testing & Verification
+- UI/bridge smoke tests live in `client/run_auto_tests.ps1`, `client/test_task4_scenarios.ps1`, `client/test_task5_settings.ps1`; run them from repo root with PowerShell.
+- For release builds use `pwsh scripts/BUILD_RELEASE.ps1`; manual fallback is `npm run tauri build` (output in `client/src-tauri/target/release`).
+- Before claiming GPU-intensive work succeeded, quote real telemetry: `nvidia-smi`, `ollama list`, log tails from `logs/services` or `logs/mcp`.
+
+## When Things Break
+- Dockerized Ollama is unsupported on this host—if you see `/usr/bin/ollama runner` in logs, stop/remove the container and ensure native Ollama answers `curl http://localhost:11434/api/tags`.
+- If the MCP circuit breaker opens (meta `breakerState="OPEN"`), pause MCP usage, switch the next command to a terminal, then probe `myshell/health_check` after ~5 s before resuming structured calls.
+- **MCP meta field reference:** Every `execute_command` response includes `meta: { breakerState, classification, consecutiveFailures, fallbackSuggested, durationMs, retryAttempt, maxRetries, errorCode?, userMessage? }`. Use `classification` for debugging: `timeout_exec` (>120s), `no_output_timeout` (hung), `exec_error` (Exit Code >0), `spawn_error`, `file_not_found`, `access_denied`, `path_issue`. Agent should report `userMessage` to user when present.
+- **Performance thresholds:** Fast commands <500ms, medium <5s, long 30-300s expected. If `durationMs` exceeds 2× → investigate system load. Check `logs/mcp/mcp-events.log` for execution history.
+- **Concurrency limit:** Max 5 concurrent `execute_command` calls. Requests beyond this queue automatically (no agent action needed).
+
+## MCP Testing & Verification
+- **Smoke test:** `myshell/health_check` → expect `{status: "ok", breakerState: "CLOSED"}`. If degraded, wait 5s and retry.
+- **Edge case suite:** `pwsh mcp-shell/test_phase1_edge_cases.ps1` → 17/18 PASS validates Base64 encoding. Test 16 (port 8004 check) fails if CORTEX down (expected).
+- **E2E tests:** `mcp-shell/e2e/` contains concurrency stress, watchdog, soft kill, long command tests. Run with `npx tsx mcp-shell/e2e/test_*.ts` from project root.
+- **Logs:** All executions logged to `logs/mcp/mcp-events.log` (JSON lines): `EXEC cmd=...`, `SUCCESS durationMs=...`, `FAIL classification=...`, `STATE_CHANGE CLOSED→OPEN`. Mirror to project root when running from subfolders (controlled by `MCP_LOG_MIRROR_ROOT=1` env var).
+
+## VS Code Tooling (After Cleanup 03.12.2025)
+
+**Status:** 51 расширений (было 71, удалено 20 за -28%)  
+**Конфликты:** Все решены ✅ (AI дубликаты, MCP конфликт, Azure ecosystem)
+
+**Критичные расширения (6):**
+- `github.copilot` + `github.copilot-chat` — единственный AI ассистент с MCP интеграцией
+- `ms-vscode.powershell` — PowerShell automation (проект core)
+- `ms-python.python` — Python services (LightRAG, LLaMA Factory)
+- `svelte.svelte-vscode` — Svelte UI framework
+- `ms-mssql.mssql` — MCP MSSQL server integration
+
+**Autoapprove whitelist (8 команд):**
+```json
+{
+  "pwsh": true,
+  "Get-NetTCPConnection": true,
+  "nvidia-smi": true,
+  "Test-NetConnection": true,
+  "ollama": true,
+  "git": true,
+  "npm": true,
+  "/.*/": true
+}
+```
+
+**⚠️ Безопасность:** Удалены хардкод токены (Invoice API, Telegram bot) из старого autoapprove (67 записей из проектов REVIZOR/Telegram bot).
+
+**Детали:** См. `docs/infra/TOOLS_CLEANUP_RESULTS.md` и `docs/infra/TOOLS_AUDIT_REPORT.md`
 
 ---
 
-## 📚 Documentation Navigation Protocol
-
-### Quick Reference Map
-
-| Topic | Primary Source | Detailed Archive |
-|-------|---------------|------------------|
-| **Desktop Client (TASK 4-16)** | `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` | `client/docs/TASK_*_REPORT.md` |
-| **Models (TD-010v2/v3)** | `docs/models/MODELS_CONSOLIDATED_REPORT.md` | `docs/TD010v2_DEPLOYMENT_COMPLETE.md` |
-| **Infrastructure (CORTEX)** | `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | `docs/CORTEX_CONFIGURATION_REFERENCE.md` |
-| **Architecture** | `PROJECT_MAP.md`, `README.md` | `DOCUMENTATION_INDEX.md` |
-| **Current Status** | `PROJECT_STATUS_SNAPSHOT_v4.0.md` | `CHANGELOG_v0.3.0.md` |
-
-### Context Gathering Strategy
-
-When working on a task:
-
-1. **Identify cluster** (Desktop/Models/Infrastructure/Architecture)
-2. **Read consolidated report** for overview
-3. **Check detailed reports** only if needed
-4. **Verify with code** (don't trust docs alone)
-
-**Example:** "How does Command DSL work?"
-```
-1. Category: Desktop Client
-2. Read: docs/tasks/TASKS_CONSOLIDATED_REPORT.md → TASK 8
-3. If need code: grep "parseCommand" client/src/lib/
-4. Verify: Check client/src/lib/components/CommandsPanel.svelte
-```
-
----
-
-## 🔍 Key Files Reference
-
-| File Pattern | Purpose | Example |
-|--------------|---------|---------|
-| `scripts/*.ps1` | Service orchestration | `START_ALL.ps1`, `CHECK_STATUS.ps1` |
-| `client/src-tauri/src/commands.rs` | All Tauri commands (1063 lines) | `start_training_job`, `execute_agent_command` |
-| `client/src-tauri/src/flow_manager.rs` | Flows automation backend | `FlowExecutor`, `FlowLogger` |
-| `client/src-tauri/src/training_manager.rs` | PULSE v1 implementation | `TrainingStatus`, polling logic |
-| `client/src/lib/api/client.ts` | Frontend API client | All `invoke()` wrappers |
-| `client/src/lib/components/FlowsPanel.svelte` | Flows UI | Flow cards, execution history |
-| `automation/flows/*.json` | Flow definitions | `quick_status.json`, `index_and_train.json` |
-| `services/lightrag/lightrag_server.py` | CORTEX FastAPI server (756 lines) | `/query`, `/insert`, `/health` |
-| `services/llama_factory/config/*.yaml` | Training configurations | `llama3_lora_sft.yaml` |
-| `docs/tasks/TASKS_CONSOLIDATED_REPORT.md` | TASK 4-16 complete reference | UI implementation details |
-| `docs/models/MODELS_CONSOLIDATED_REPORT.md` | Model training reports | TD-010v2 eval_loss: 0.8591 |
-| `docs/infrastructure/INFRASTRUCTURE_CONSOLIDATED_REPORT.md` | CORTEX, Security, RAG | Configuration reference |
-
----
-
-## 🛠️ Build & Release
-
-### Development Build
-
-```powershell
-cd E:\WORLD_OLLAMA\client
-
-# Frontend only (no Rust rebuild)
-npm run dev
-
-# Full Tauri dev (hot reload)
-npm run tauri dev
-```
-
-### Production Build
-
-```powershell
-# Automated build script (recommended)
-pwsh E:\WORLD_OLLAMA\scripts\BUILD_RELEASE.ps1
-
-# Manual (if script fails)
-cd E:\WORLD_OLLAMA\client
-npm run tauri build
-
-# Output: client/src-tauri/target/release/tauri_fresh.exe
-```
-
-**Requirements:**
-- Windows SDK 10.0+
-- MSVC Build Tools 2022
-- Rust 1.75+
-
-### Testing
-
-```powershell
-# Core Bridge integration tests
-pwsh E:\WORLD_OLLAMA\client\run_auto_tests.ps1
-
-# System Status (3 scenarios)
-pwsh E:\WORLD_OLLAMA\client\test_task4_scenarios.ps1
-
-# Settings (5 scenarios)
-pwsh E:\WORLD_OLLAMA\client\test_task5_settings.ps1
-
-# E2E smoke test
-pwsh E:\WORLD_OLLAMA\USER\TEST_E2E.ps1
-```
-
----
-
-## 💡 Critical Learnings (Hard-Won Knowledge)
-
-### 1. Micro-Chunking for Large Files
-**Problem:** Ollama limit 4096 tokens (~15K chars), but files were 3.3MB  
-**Solution:** 10KB chunks (~3-4K tokens, 25% safety margin)  
-**Result:** 3.3MB file = 330 chunks, ~15 min indexing, 100% reliable
-
-See: `services/lightrag/lightrag_server.py` chunking logic
-
-### 2. GPU Memory Discovery (MSI Afterburner)
-**Problem:** RTX 5060 Ti showed 13GB VRAM instead of 16GB  
-**Root Cause:** Memory Clock not overclocked  
-**Solution:** +2000 MHz Memory Clock → full 16GB available  
-
-Files: `docs/gpu-optimization-todo.md`, `docs/rtx-5060ti-16gb-safe-tuning-roadmap.md`
-
-### 3. Docker Ollama Breaks GPU (Windows)
-**Symptoms:** Logs show `/usr/bin/ollama runner`, low GPU utilization (<10%)  
-**Cause:** Docker Ollama (Linux) can't access Windows GPU properly  
-**Solution:** Stop Docker Ollama, use only local Windows Ollama
-
-```powershell
-docker stop ollama; docker rm ollama
-curl http://localhost:11434/api/tags  # Verify local works
-```
-
-### 4. LightRAG State Persistence
-**WRONG:** Assuming restart = data loss, reindexing from scratch  
-**CORRECT:** `data/kv_store_doc_status.json` survives restarts
-
-```powershell
-# Check progress before reindexing
-$docs = Get-Content services\lightrag\data\kv_store_doc_status.json | ConvertFrom-Json
-$docs.PSObject.Properties.Name.Count  # Shows indexed documents
-```
-
----
-
-## 🚦 Quick Commands Reference
-
-```powershell
-# === SERVICE MANAGEMENT ===
-pwsh scripts\START_ALL.ps1              # Start Ollama + CORTEX (+ optional Neuro-Terminal)
-pwsh scripts\STOP_ALL.ps1               # Stop all services
-pwsh scripts\CHECK_STATUS.ps1           # Health check (single)
-pwsh scripts\CHECK_STATUS.ps1 -Detailed # With response times
-
-# === MONITORING ===
-nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv  # GPU stats
-netstat -ano | Select-String ":8004"    # Check CORTEX port
-Get-Content services\lightrag\logs\cortex.log -Tail 20  # CORTEX logs
-
-# === DEVELOPMENT ===
-cd client; npm run tauri dev            # Start Desktop Client dev mode
-pwsh client\run_auto_tests.ps1          # Run tests
-
-# === TRAINING ===
-pwsh scripts\start_training_ui.ps1      # Launch LLaMA Board (web UI)
-Get-Content services\llama_factory\training_status.json  # PULSE v1 status
-
-# === TROUBLESHOOTING ===
-Get-Process python | Where-Object {$_.CommandLine -like "*lightrag*"} | Stop-Process
-ollama list | Select-String "qwen|nomic"  # Check models
-```
-
----
-
-## 🔄 Hybrid Execution Strategy (MCP + Terminal)
-
-**Principle:** Use the right tool for the right job
-
-### Use `myshell/execute_command` (MCP) for:
-
-✅ **Automated Testing & Validation** (TASK 51 pattern)
-```powershell
-# Structured output needed for analysis
-myshell/execute_command: "cargo check"
-myshell/execute_command: "npm run check"
-myshell/execute_command: "Get-Command script.ps1"
-```
-
-✅ **Health Checks** (agent needs exitCode for logic)
-```powershell
-myshell/execute_command: "Test-NetConnection localhost -Port 8004"
-myshell/execute_command: "ollama list | Select-String qwen"
-```
-
-✅ **Quick Information Retrieval** (<2 min, for agent parsing)
-```powershell
-myshell/execute_command: "git status --porcelain"
-myshell/execute_command: "Get-Content config.json | ConvertFrom-Json"
-```
-
-**Why MCP:** Structured JSON output (`exitCode`, `stdout`, `stderr`), isolated process, agent can parse results.
-
----
-
-### Use `run_in_terminal` (VS Code) for:
-
-✅ **Presentation & Demonstration** (user observes)
-```powershell
-run_in_terminal: "pwsh scripts/START_ALL.ps1"
-run_in_terminal: "nvidia-smi"
-run_in_terminal: "cargo build --release"  # Show progress bars
-```
-
-✅ **Background Processes** (services, dev servers)
-```powershell
-run_in_terminal(isBackground=true): "npm run tauri dev"
-run_in_terminal(isBackground=true): "pwsh scripts/start_lightrag.ps1"
-```
-
-✅ **Long Operations** (>2 min, avoid MCP timeout)
-```powershell
-run_in_terminal: "npm install"
-run_in_terminal: "docker build ."
-run_in_terminal: "pwsh scripts/train_model.ps1"
-```
-
-✅ **Interactive/Debugging** (requires user input)
-```powershell
-run_in_terminal: "python -m pdb script.py"
-```
-
-**Why Terminal:** Visual output, colors, progress bars, no timeout risk, user control.
-
----
-
-### Decision Tree:
-
-```
-Command execution needed?
-├─ Result needed for agent logic? → Time < 2 min?
-│  ├─ YES → ✅ MCP (structured output)
-│  └─ NO → ⚠️ Terminal (avoid timeout)
-└─ User observes execution? OR Background process?
-   └─ YES → ✅ Terminal (presentation/services)
-```
-
-**Reference:** `docs/tasks/HYBRID_EXECUTION_STRATEGY_ANALYSIS.md`
-
----
-
-## 🔧 MCP Auto-Activation (Phase 1 v0.4.0)
-
-**CRITICAL:** MCP Server settings apply **AUTOMATICALLY** — no manual activation needed.
-
-### What Works Automatically (02.12.2025)
-
-✅ **Terminal Settings** (from `.vscode/settings.json`):
-- Persistent Sessions enabled
-- Shell Integration enabled  
-- Environment variable `VSCODE_AGENT_ENABLED=1` set in new terminals
-
-✅ **MCP Server** (`myshell/execute_command`):
-- Registered via `github.copilot.chat.mcp.servers` in settings
-- Starts automatically on first Copilot request
-- **NO NEED to check availability** — tool is always ready
-
-✅ **Base64 Encoding** (v1.2.0):
-- Auto-detects problematic characters: `|`, `{}`, `$`, `"`, `'`, `` ` ``
-- Applies encoding automatically (100% accuracy, 17/17 tests passed)
-- **NO NEED to specify `useEncodedCommand`** — regex handles it
-
-### What Agent MUST NOT Do
-
-❌ **DON'T** ask "Should I activate MCP server?"  
-❌ **DON'T** check if `execute_command` tool exists before using it  
-❌ **DON'T** ask "Should I use Base64 Encoding for this command?"  
-❌ **DON'T** manually specify `useEncodedCommand` parameter
-
-### What Agent SHOULD Do
-
-✅ **DO** call `myshell/execute_command` directly for any PowerShell command  
-✅ **DO** trust auto-detection for complex commands (pipes, braces, variables)  
-✅ **DO** use MCP for structured output (Exit Code, stdout, stderr parsing)  
-✅ **DO** use Terminal for visual demos or background processes
-
-### Example (Correct Usage)
-
-```typescript
-// ✅ CORRECT - Direct call, auto-detection handles encoding
-myshell/execute_command: "Get-Process | Where-Object { $_.CPU -gt 1 } | Select-Object -First 5"
-
-// Result: Exit Code 0 (Base64 applied automatically)
-```
-
-```typescript
-// ❌ WRONG - Unnecessary manual check
-Agent: "Should I use Base64 Encoding for this command?"
-User: (confused — it's automatic)
-```
-
-### Restart Required (One Time Only)
-
-After updating `.vscode/settings.json` or `mcp-shell/server.ts`:
-1. `Ctrl+Shift+P` → `Developer: Reload Window`
-2. Wait 2-3 seconds
-3. ✅ All settings active automatically
-
-**Reference:** `docs/infra/MCP_AUTO_ACTIVATION_VERIFICATION.md`
-
----
-
-## ⚡ Task Tracking & Versioning
-
-**Current Status:** v0.3.0-alpha (ORDER 42 complete, ORDER 43 pending)
-
-| Version | Status | Key Features |
-|---------|--------|--------------|
-| **v0.1.0** | ✅ Released 27.11.2025 | Desktop Client MVP (TASK 4-15) |
-| **v0.2.0** | ✅ Released 29.11.2025 | PULSE v1, Safe Git Assistant |
-| **v0.3.0-alpha** | ✅ Released 30.11.2025 | Flows Automation (ORDER 35-38, 42) |
-| **v0.3.1** | 📋 Planned | ORDER 37 fix (INDEX paths), ORDER 43 (HF auth) |
-
-**Active Blockers:**
-- 🔴 ORDER 37: INDEX path resolution (production blocker)
-- 🟡 ORDER 43: HuggingFace authentication (optional for training)
-
-See `PROJECT_STATUS_SNAPSHOT_v4.0.md` for detailed status.
-
----
-
-## 📖 Further Reading
-
-- **Full Architecture:** `PROJECT_MAP.md`
-- **User Manual:** `MANUAL.md`
-- **All Tasks:** `docs/tasks/TASKS_CONSOLIDATED_REPORT.md`
-- **All Changes:** `CHANGELOG.md`, `CHANGELOG_v0.3.0.md`
-- **Complete Index:** `DOCUMENTATION_INDEX.md` (68 markdown files)
-
----
-
-_This guide prioritizes actionable technical knowledge over aspirational practices. Focus on discoverable patterns, not documentation-only claims._
+_Questions or missing details? Let me know which section feels light so I can expand it._

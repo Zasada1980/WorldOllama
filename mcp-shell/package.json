@@ -9,7 +9,12 @@
   },
   "scripts": {
     "start": "tsx server.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "e2e:failures": "npm run build && tsx e2e/test_mcp_e2e_failures.ts --quick",
+    "e2e:stress": "npm run build && tsx e2e/test_concurrency_stress.ts",
+    "e2e:watchdog": "npm run build && tsx e2e/test_watchdog_no_output.ts",
+    "e2e:long": "npm run build && tsx e2e/test_long_commands_no_retry.ts",
+    "e2e:softkill": "npm run build && tsx e2e/test_soft_kill_grace.ts"
   },
   "keywords": [
     "mcp",

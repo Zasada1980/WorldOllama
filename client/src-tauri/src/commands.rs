@@ -650,6 +650,16 @@ pub async fn start_training_job(
         );
     }
 
+    // TASK 16.1: Pass -ProjectRoot explicitly to avoid $PSScriptRoot issue
+    let project_root_str = project_root.to_string_lossy().to_string();
+    
+    // Normalize mode to supported value
+    let mode_normalized = if mode.to_lowercase() != "llama_factory" {
+        "llama_factory".to_string()
+    } else {
+        mode.clone()
+    };
+
     let result = Command::new("powershell")
         .args(&[
             "-NoProfile",
@@ -664,7 +674,9 @@ pub async fn start_training_job(
             "-Epochs",
             &epochs.to_string(),
             "-Mode",
-            &mode,
+            &mode_normalized,
+            "-ProjectRoot",
+            &project_root_str,
         ])
         .spawn();
 

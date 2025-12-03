@@ -1,0 +1,11 @@
+{
+  "alpaca": {
+    "file_name": "triz_dataset.jsonl",
+    "formatting": "alpaca",
+    "columns": {
+      "prompt": "instruction",
+      "query": "input",
+      "response": "output"
+    }
+  }
+}

@@ -51,6 +51,8 @@
   let isStarting = false;
   let errorMessage: string | null = null;
   let timeSinceUpdate: number = 0;
+  // App settings for fallback model
+  let appModel: string | null = null;
 
   let eventUnlisten: UnlistenFn | null = null;
   let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -162,6 +164,10 @@
     loadProfiles();
     loadDatasets();
 
+    // Load app settings to get default Ollama model
+    const settings = await apiClient.getAppSettings();
+    appModel = settings?.ollama_model ?? null;
+
     intervalId = setInterval(() => {
       if (status && status.timestamp > 0) {
         timeSinceUpdate = Math.floor(Date.now() / 1000) - status.timestamp;
@@ -181,6 +187,46 @@
   let selectedProfileId: string = "";
   let selectedDatasetPath: string = "";
   let epochs: number = 3;
+
+  // ===============================
+  // TEST MODEL (quick prompt)
+  // ===============================
+  let testPrompt: string = "Объясни принцип ИКР в ТРИЗ на примере";
+  let testResult: string = "";
+  let isTesting: boolean = false;
+
+  async function runModelTest() {
+    if (isTesting) return;
+    const prompt = (testPrompt || "").trim();
+    if (!prompt) {
+      notifications.push({
+        type: "error",
+        message: "Введите тестовый запрос",
+        timeoutMs: 4000,
+      });
+      return;
+    }
+
+    isTesting = true;
+    testResult = "";
+    try {
+      // Выбор модели: профиль → настройки приложения → пусто (пусть бекенд возьмёт дефолт)
+      const model = selectedProfile?.base_model || appModel || "";
+      const res = await apiClient.sendOllamaChat(prompt, model);
+      if (res && typeof res.text === "string") {
+        testResult = res.text;
+      } else if ((res as any)?.response) {
+        // Совместимость с альтернативной схемой
+        testResult = (res as any).response;
+      } else {
+        testResult = "Пустой ответ";
+      }
+    } catch (e) {
+      testResult = `Ошибка: ${String(e)}`;
+    } finally {
+      isTesting = false;
+    }
+  }
 
   // ORDER 42.2-A: DEBUG LOGS (temporary)
   $: console.log("[DEBUG] profiles:", profiles);
@@ -528,6 +574,50 @@
         >Команда уходит как DSL через execute_agent_command.</span
       >
     </div>
+  </section>
+
+  <!-- ========================================
+       TEST MODEL: Quick prompt runner
+       ======================================== -->
+  <section class="test-model">
+    <h3>⚗️ Тест модели (быстрый запрос)</h3>
+
+    <div class="test-grid">
+      <div class="form-control">
+        <label for="test-prompt">Запрос</label>
+        <textarea
+          id="test-prompt"
+          bind:value={testPrompt}
+          rows="4"
+          placeholder="Введите вопрос для проверки качества ответов"
+        ></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button on:click={runModelTest} disabled={isTesting}>
+          {#if isTesting}
+            ⏳ Тестирование...
+          {:else}
+            🧪 Запустить тест
+          {/if}
+        </button>
+        {#if selectedProfile}
+          <span class="hint">Модель: <code>{selectedProfile.base_model}</code></span>
+        {/if}
+      </div>
+    </div>
+
+    <div class="test-output">
+      {#if testResult}
+        <pre class="log-block">{testResult}</pre>
+      {:else}
+        <p class="placeholder">Результат теста появится здесь.</p>
+      {/if}
+    </div>
+    <p class="note">
+      Внимание: быстрый тест использует модель Ollama из профиля. Чтобы протестировать именно
+      LoRA-адаптер из LLaMA Factory, необходимо экспортировать его в GGUF и импортировать в Ollama.
+    </p>
   </section>
 
   <!-- ========================================
@@ -1143,5 +1233,54 @@ MODE: llama_factory</pre>
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.8em;
+  }
+
+  /* ========================================
+     TEST MODEL SECTION
+     ======================================== */
+  .test-model {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+  }
+
+  .test-model h3 {
+    color: #4caf50;
+    margin: 0 0 15px 0;
+    font-size: 1.2em;
+  }
+
+  .test-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-control textarea {
+    background: #252525;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #fff;
+    padding: 10px;
+    font-size: 0.95em;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .test-output {
+    margin-top: 10px;
+  }
+
+  .note {
+    color: #888;
+    font-size: 0.85em;
+    margin-top: 8px;
   }
 </style>

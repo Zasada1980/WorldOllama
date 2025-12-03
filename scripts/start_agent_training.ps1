@@ -16,8 +16,20 @@ param(
     
     [string]$Mode = "llama_factory",
     
-    [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$ProjectRoot
 )
+
+# TASK 16.1: Dynamic root detection (fallback if called without -ProjectRoot)
+if (-not $ProjectRoot) {
+    if ($PSScriptRoot) {
+        $ProjectRoot = Split-Path -Parent $PSScriptRoot
+    } elseif ($env:WORLD_OLLAMA_ROOT) {
+        $ProjectRoot = $env:WORLD_OLLAMA_ROOT
+    } else {
+        # Fallback: assume script is in E:\WORLD_OLLAMA\scripts
+        $ProjectRoot = "E:\WORLD_OLLAMA"
+    }
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -39,6 +51,7 @@ if (-not (Test-Path $DataPath)) {
 if ($Mode -ne "llama_factory") {
     Write-Host " WARNING: Only 'llama_factory' mode supported (got: $Mode)" -ForegroundColor Yellow
     Write-Host "    Proceeding with llama_factory..." -ForegroundColor Gray
+    $Mode = "llama_factory"
 }
 
 # Navigate to LLaMA Factory (TASK 16.1: Dynamic path)
@@ -108,18 +121,26 @@ Write-Host "   Epochs:      $Epochs" -ForegroundColor White
 
 Write-Host "`n Launching LLaMA Factory training..." -ForegroundColor Green
 
+# Формируем путь к CLI (явный вызов, минуя PATH)
+$cliPath = Join-Path $llamaFactoryPath "venv\Scripts\llamafactory-cli.exe"
+if (-not (Test-Path $cliPath)) {
+    Write-Host " ERROR: LLaMA Factory CLI not found: $cliPath" -ForegroundColor Red
+    exit 1
+}
+
 # Формируем команду для вызова llamafactory-cli train
-$trainCommand = "llamafactory-cli train `"$ConfigPath`""
-
+$trainCommand = "& `"$cliPath`" train `"$ConfigPath`""
 Write-Host "   Command: $trainCommand" -ForegroundColor Gray
-
-# Escape quotes for interpolation in Start-Process argument
-$trainCommandEscaped = $trainCommand -replace '"', '`"'
 
 # Запускаем обучение в отдельном окне PowerShell (не блокируя UI)
 try {
-    Start-Process -FilePath "pwsh.exe" -ArgumentList "-NoExit", "-Command", "cd '$llamaFactoryPath'; . .\venv\Scripts\Activate.ps1; $trainCommandEscaped" -WorkingDirectory $llamaFactoryPath
-    
+    $psArgs = @(
+        "-NoExit",
+        "-Command",
+        "Set-Location `"$llamaFactoryPath`"; . .\venv\Scripts\Activate.ps1; $trainCommand"
+    )
+    Start-Process -FilePath "pwsh.exe" -ArgumentList $psArgs -WorkingDirectory $llamaFactoryPath
+
     Write-Host " Training process started in new window" -ForegroundColor Green
 }
 catch {

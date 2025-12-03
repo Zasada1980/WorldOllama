@@ -6,6 +6,7 @@ import {
     ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { spawn } from "child_process";
+import { getErrorInfo, classifyByStderr, type Classification } from "./error_catalog.js";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -25,6 +26,10 @@ interface TimeoutPolicy {
         medium: { max_timeout_sec: number; patterns: string[] };
         long: { max_timeout_sec: number; patterns: string[] };
     };
+    breaker?: {
+        base_backoff_ms?: number;
+        jitter_ms?: number;
+    };
 }
 
 let timeoutPolicy: TimeoutPolicy | null = null;
@@ -33,9 +38,9 @@ function loadTimeoutPolicy(): TimeoutPolicy {
     if (timeoutPolicy) return timeoutPolicy;
     
     try {
-        // Try to load from project root
-        const projectRoot = process.env.WORLD_OLLAMA_ROOT || process.cwd();
-        const policyPath = path.join(projectRoot, "config", "terminal_timeout_policy.json");
+        // GLOBAL MCP: Load config from server's own directory (independent of any project)
+        const serverDir = path.dirname(process.argv[1] || __dirname);
+        const policyPath = path.join(serverDir, "config", "terminal_timeout_policy.json");
         
         if (fs.existsSync(policyPath)) {
             const content = fs.readFileSync(policyPath, "utf-8");
@@ -144,15 +149,33 @@ const mcpState: McpState = {
     nextProbeTs: 0,
 };
 const FAILURE_THRESHOLD = 3; // 3 подряд ошибки → OPEN
-const BASE_BACKOFF_MS = 5000; // начальный backoff для HALF_OPEN
+function getBaseBackoffMs(): number {
+    const policy = loadTimeoutPolicy();
+    return policy.breaker?.base_backoff_ms ?? 5000;
+}
+function getJitterMs(): number {
+    const policy = loadTimeoutPolicy();
+    return policy.breaker?.jitter_ms ?? 500;
+}
 
 function writeMcpLog(line: string) {
     try {
-        const root = process.env.WORLD_OLLAMA_ROOT || process.cwd();
-        const logDir = path.join(root, "logs", "mcp");
-        if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+        const cwdRoot = process.cwd();
+        const projectRoot = process.env.WORLD_OLLAMA_ROOT || cwdRoot;
         const entry = `[${new Date().toISOString()}] ${line}\n`;
-        fs.appendFileSync(path.join(logDir, "mcp-events.log"), entry, { encoding: "utf-8" });
+
+        // Primary log under current working root
+        const primaryDir = path.join(cwdRoot, "logs", "mcp");
+        if (!fs.existsSync(primaryDir)) fs.mkdirSync(primaryDir, { recursive: true });
+        fs.appendFileSync(path.join(primaryDir, "mcp-events.log"), entry, { encoding: "utf-8" });
+
+        // Optional mirroring to project root logs when running from subfolder (e.g., mcp-shell)
+        const enableMirror = (process.env.MCP_LOG_MIRROR_ROOT || "1") === "1"; // default on per PHASE 2.3
+        if (enableMirror && path.resolve(projectRoot) !== path.resolve(cwdRoot)) {
+            const mirrorDir = path.join(projectRoot, "logs", "mcp");
+            if (!fs.existsSync(mirrorDir)) fs.mkdirSync(mirrorDir, { recursive: true });
+            fs.appendFileSync(path.join(mirrorDir, "mcp-events.log"), entry, { encoding: "utf-8" });
+        }
     } catch (e) {
         console.error(`[MCP] Log write failed: ${e}`);
     }
@@ -164,7 +187,8 @@ function recordFailure(classification: string) {
     writeMcpLog(`FAIL classification=${classification} count=${mcpState.consecutiveFailures}`);
     if (mcpState.consecutiveFailures >= FAILURE_THRESHOLD && mcpState.breaker === "CLOSED") {
         mcpState.breaker = "OPEN";
-        mcpState.nextProbeTs = Date.now() + BASE_BACKOFF_MS;
+        const jitter = Math.floor(Math.random() * getJitterMs());
+        mcpState.nextProbeTs = Date.now() + getBaseBackoffMs() + jitter;
         writeMcpLog(`STATE_CHANGE CLOSED→OPEN threshold=${FAILURE_THRESHOLD}`);
     }
 }
@@ -208,10 +232,35 @@ function getRetryConfig(cmd: string): { maxRetries: number; baseBackoffMs: numbe
 const server = new Server(
   {
     name: "mcp-shell",
-    version: "1.3.0", // Phase 2.1: Added health_check + circuit breaker
+        version: "1.3.1", // Phase 2.3: UX error mapping, retry/watchdog finalized
   },
   { capabilities: { tools: {} } }
 );
+
+// === P5: Concurrency Limiter (max 5 concurrent execute_command) ===
+const MAX_CONCURRENT = 5;
+let activeCount = 0;
+const pendingQueue: Array<() => void> = [];
+
+function acquireSlot(): Promise<void> {
+    return new Promise(resolve => {
+        const tryAcquire = () => {
+            if (activeCount < MAX_CONCURRENT) {
+                activeCount++;
+                resolve();
+            } else {
+                pendingQueue.push(tryAcquire);
+            }
+        };
+        tryAcquire();
+    });
+}
+
+function releaseSlot() {
+    activeCount = Math.max(0, activeCount - 1);
+    const next = pendingQueue.shift();
+    if (next) setImmediate(next);
+}
 
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -275,7 +324,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             meta: {
                                 breakerState: mcpState.breaker,
                                 fallbackSuggested: true,
-                                consecutiveFailures: mcpState.consecutiveFailures
+                                consecutiveFailures: mcpState.consecutiveFailures,
+                                errorCode: "MCP_BREAKER_OPEN",
+                                userMessage: "Сервис MCP временно недоступен. Переключаюсь на Terminal fallback."
                             }
                         }, null, 2)
                     }
@@ -374,6 +425,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         return;
                     }
                     recordFailure(noOutputKilled ? "no_output_timeout" : "timeout_exec");
+                    const classification: Classification = noOutputKilled ? "no_output_timeout" : "timeout_exec";
+                    const err = getErrorInfo(classification);
                     resolve({
                         content: [{
                             type: "text",
@@ -385,10 +438,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                     : `Command timeout after ${timeoutMs / 1000}s`,
                                 meta: {
                                     breakerState: mcpState.breaker,
-                                    classification: noOutputKilled ? "no_output_timeout" : "timeout_exec",
+                                    classification,
                                     durationMs: Date.now() - startTs,
                                     retryAttempt: attemptNumber,
-                                    maxRetries: retryConfig.maxRetries
+                                    maxRetries: retryConfig.maxRetries,
+                                    errorCode: err.code,
+                                    userMessage: err.userMessage
                                 }
                             }, null, 2)
                         }],
@@ -397,9 +452,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     return;
                 }
                 // Normal close
-                const classification = code === 0 ? "success" : (stderr ? "exec_error" : "unknown_error");
+                let classificationNorm: Classification | "success" = code === 0 ? "success" : (stderr ? "exec_error" : "unknown_error");
+                if (code !== 0 && stderr) {
+                    const refined = classifyByStderr(stderr);
+                    if (refined) classificationNorm = refined;
+                }
                 if (code === 0) {
                     recordSuccess();
+                    // Log HALF_OPEN probe recovery
+                    if (mcpState.breaker === "HALF_OPEN") {
+                        writeMcpLog(`PROBE_RESULT state=HALF_OPEN outcome=success`);
+                    }
+                    writeMcpLog(`SUCCESS durationMs=${Date.now() - startTs} breakerState=${mcpState.breaker}`);
                 } else {
                     // P4: Retry for exec_error if idempotent
                     if (canRetry && attemptNumber < retryConfig.maxRetries + 1) {
@@ -410,7 +474,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                         }, backoffMs);
                         return;
                     }
-                    recordFailure(classification);
+                    // Log HALF_OPEN probe failure
+                    if (mcpState.breaker === "HALF_OPEN") {
+                        writeMcpLog(`PROBE_RESULT state=HALF_OPEN outcome=failure`);
+                        // return to OPEN with nextProbe scheduled
+                        mcpState.breaker = "OPEN";
+                        const jitter = Math.floor(Math.random() * getJitterMs());
+                        mcpState.nextProbeTs = Date.now() + getBaseBackoffMs() + jitter;
+                    }
+                    recordFailure(typeof classificationNorm === "string" ? classificationNorm : "unknown_error");
                 }
                 resolve({
                     content: [{
@@ -421,17 +493,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                             stderr,
                             meta: {
                                 breakerState: mcpState.breaker,
-                                classification,
+                                classification: classificationNorm,
                                 consecutiveFailures: mcpState.consecutiveFailures,
                                 fallbackSuggested: mcpState.breaker === "OPEN",
                                 durationMs: Date.now() - startTs,
                                 retryAttempt: attemptNumber,
-                                maxRetries: retryConfig.maxRetries
+                                maxRetries: retryConfig.maxRetries,
+                                ...(code === 0 ? {} : (() => { const err = getErrorInfo(classificationNorm as Classification); return { errorCode: err.code, userMessage: err.userMessage }; })())
                             }
                         }, null, 2)
                     }],
                     isError: code !== 0
                 });
+                releaseSlot();
             });
 
             proc.on("error", error => {
@@ -440,11 +514,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 if (timedOut || noOutputKilled) return;
                 recordFailure("spawn_error");
                 reject(new Error(`Failed to execute command: ${error.message}`));
+                releaseSlot();
             });
         });
     };
-
-    return executeWithRetry();
+    return acquireSlot().then(() => executeWithRetry()).catch(err => {
+        releaseSlot();
+        throw err;
+    });
 });
 
 // Start server

@@ -1,0 +1,185 @@
+{
+  "name": "vscode-indexation-tools",
+  "displayName": "VS Code Indexation Tools",
+  "description": "Automatic documentation indexation tools for VS Code projects",
+  "version": "2.0.0",
+  "publisher": "GateVibeIsrael",
+  "author": {
+    "name": "Andrey Grushin",
+    "email": "support@gatevibe.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets"
+  ],
+  "keywords": [
+    "documentation",
+    "indexation",
+    "markdown",
+    "automation",
+    "project-management"
+  ],
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GateVibeIsrael/vscode-indexation-tools"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "indexation.fullReindex",
+        "title": "Indexation: Full Reindex",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.incrementalUpdate",
+        "title": "Indexation: Incremental Update",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.startWatcher",
+        "title": "Indexation: Start File Watcher",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.stopWatcher",
+        "title": "Indexation: Stop File Watcher",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.installGitHook",
+        "title": "Indexation: Install Git Post-Commit Hook",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.createScheduledTask",
+        "title": "Indexation: Create Scheduled Task",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.removeScheduledTask",
+        "title": "Indexation: Remove Scheduled Task",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.showLogs",
+        "title": "Indexation: Show Logs",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.runTests",
+        "title": "Indexation: Run Tests",
+        "category": "Indexation"
+      },
+      {
+        "command": "indexation.openConfiguration",
+        "title": "Indexation: Open Configuration File",
+        "category": "Indexation"
+      }
+    ],
+    "configuration": {
+      "title": "VS Code Indexation Tools",
+      "properties": {
+        "indexation.scriptsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to indexation scripts directory. Leave empty for auto-detection."
+        },
+        "indexation.indexFile": {
+          "type": "string",
+          "default": "docs/project/RUNTIME_LOGS_JOURNAL_INDEX.md",
+          "description": "Relative path to index file from workspace root"
+        },
+        "indexation.filePatterns": {
+          "type": "array",
+          "default": ["*.md"],
+          "description": "File patterns to monitor (e.g., *.md, *.rst, *.adoc)"
+        },
+        "indexation.excludePaths": {
+          "type": "array",
+          "default": [
+            "node_modules",
+            ".git",
+            "venv",
+            "__pycache__",
+            "dist",
+            "build"
+          ],
+          "description": "Directories to exclude from indexation"
+        },
+        "indexation.autoWatch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start file watcher on workspace open"
+        },
+        "indexation.notifyOnUpdate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notification after index update"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "indexation.fullReindex",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.incrementalUpdate",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.startWatcher",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.stopWatcher",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.installGitHook",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.createScheduledTask",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.removeScheduledTask",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.showLogs",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.runTests",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "indexation.openConfiguration",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "vsce": "^2.15.0"
+  }
+}

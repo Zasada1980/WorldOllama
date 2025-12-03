@@ -64,7 +64,7 @@ Desktop Client v0.3.1 **стабилен и готов к продакшену**
 ### 📚 База знаний (TRIZ + AI)
 
 **Контент v0.1.0:**
-- 486+ документов по ТРИЗ (Теория Решения Изобретательских Задач)
+- 183 документа по ТРИЗ (Теория Решения Изобретательских Задач)
 - AI методологии и best practices
 - Размер: ~7.7 MB текстовых данных
 
@@ -79,8 +79,17 @@ Desktop Client v0.3.1 **стабилен и готов к продакшену**
 Управление системой через структурированные команды:
 
 ```
-- 🟢 CORTEX (порт 8004) — RAG сервер, response time
-- 🟡 Neuro-Terminal (порт 8501) — опциональный Chainlit UI
+
+**Backend Services (требуют запуска):**
+- 🟢 **Ollama** (порт 11434) — LLM сервер (обязательно для CORTEX)
+- 🟢 **CORTEX** (порт 8004) — RAG сервер (LightRAG + GraphRAG)
+- 🟡 **Neuro-Terminal** (порт 8501) — опциональный веб-интерфейс (Chainlit)
+
+**Desktop Client (standalone app):**
+- 🟢 **Tauri App** — нативное приложение (Windows exe, без порта)
+  - 7 панелей: Chat, System Status, Settings, Library, Commands, Training, Git, Flows
+  - Подключается к CORTEX (http://localhost:8004)
+  - Подключается к Ollama (http://localhost:11434)
 
 **Auto-refresh:** каждые 15 секунд  
 **Диагностика:** детальные подсказки при сбоях
@@ -233,6 +242,7 @@ UI (TrainingPanel.svelte)
 | `git_check` | Git Check | 1 | Verify repository state |
 | `train_default` | Train Default | 2 | STATUS + Start training |
 | `index_and_train` | Index & Train | 3 | STATUS + INDEX + TRAIN |
+| `health_check` | Health Check | 1 | Comprehensive system check |
 
 **Flow Commands:**
 - `STATUS` - System health check (ollama, cortex)
@@ -288,6 +298,8 @@ Execution History UI
 │  │   - LibraryPanel                                         │   │
 │  │   - CommandsPanel                                        │   │
 │  │   - TrainingPanel                                        │   │
+│  │   - GitPanel                                             │   │
+│  │   - FlowsPanel                                           │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                                ↓ Tauri Commands (Rust)
@@ -320,6 +332,71 @@ Execution History UI
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### 📂 Структура проекта
+
+**scripts/** — ✅ 26 PowerShell scripts (cleaned 03.12.2025)
+
+```
+scripts/
+├── Orchestration (3):
+│   ├── START_ALL.ps1             # ⚡ Start all services
+│   ├── STOP_ALL.ps1              # 🛑 Stop all services
+│   └── CHECK_STATUS.ps1          # 🔍 Health monitoring
+├── Auto-indexation (5):          # NEW: 03.12.2025
+│   ├── UPDATE_PROJECT_INDEX.ps1  # Core reindexing logic
+│   ├── WATCH_FILE_CHANGES.ps1    # Real-time FileSystemWatcher
+│   ├── INSTALL_GIT_HOOK.ps1      # Git hook installer
+│   ├── post-commit.hook          # Git post-commit hook
+│   └── CREATE_SCHEDULED_TASK.ps1 # Daily scheduled task (03:00)
+├── Training (2):
+│   ├── start_agent_training.ps1  # LLaMA Factory training
+│   └── BUILD_RELEASE.ps1         # Tauri release build
+├── Infrastructure (5):
+│   ├── ingest_watcher.ps1        # LightRAG ingestion watcher
+│   ├── generate_map.ps1          # Generate PROJECT_MAP.md
+│   ├── generate_project_index_v51.ps1
+│   ├── CLEANUP_VSCODE_TOOLS.ps1  # VS Code cleanup (71→51 ext)
+│   └── cleanup_project.ps1       # Project maintenance
+├── Testing (6):
+│   ├── analyze_mcp_metrics.ps1   # MCP metrics analysis
+│   ├── collect_mcp_metrics.ps1   # MCP dashboard
+│   ├── test_compilation.ps1      # CI/CD validation
+│   ├── test_compilation_detailed.ps1
+│   └── tests/                    # E2E test suite (3 scripts)
+└── Utilities (7):
+    ├── analyze_workspace.ps1
+    ├── validate_sandbox.ps1
+    ├── docker_build.ps1
+    ├── sync_to_cloud.ps1
+    ├── start_lightrag.ps1        # Standalone CORTEX
+    ├── start_neuro_terminal.ps1  # Standalone UI
+    └── start_training_ui.ps1     # LLaMA Board
+```
+
+**archive/** — ✅ Архив моделей и скриптов
+
+```
+archive/
+├── TD010v2_triz_extended/        # Legacy TD-010v2 model
+├── Qwen2-7B_checkpoint/          # R&D potential checkpoint
+└── scripts/                      # NEW: 03.12.2025 (15 archived scripts)
+    ├── td009/                    # TD-009 iteration (3 files)
+    │   ├── start_training_td009.ps1
+    │   ├── monitor_td009.ps1
+    │   └── export_td009_gguf.ps1
+    ├── td010_iterations/         # TD-010 development (9 files)
+    │   ├── train_td010v3_*.ps1   # v3 experiments (3 files)
+    │   ├── start_training.ps1    # Old training script
+    │   ├── export_td010v2_gguf.ps1
+    │   └── ... (4 more)
+    ├── legacy/                   # Obsolete utilities (2 files)
+    │   ├── old_status_check.ps1
+    │   └── deprecated_sync.ps1
+    └── README_ARCHIVE.md         # 📖 Archival history + rollback commands
+```
+
+**Детали:** См. `PROJECT_MAP.md` (полная структура), `docs/infra/SCRIPTS_AUDIT_REPORT.md` (аудит), `archive/scripts/README_ARCHIVE.md` (история архивации)
+
 ---
 
 ## 🚀 Быстрый старт
@@ -342,6 +419,24 @@ Execution History UI
 > - CORTEX/LightRAG: увеличьте интенсивность CPU-части — `top_k` до 30–40, пул воркеров эмбеддингов 8–12 (оставляя `LLM_MAX_ASYNC = 1`, чтобы не перегружать GPU).
 > - Индексация: используйте более крупные кэши/буферы и повышайте степень параллелизма (напр., `preprocessing_num_workers: 2–4` в YAML-конфигурациях подготовки/обучения).
 > - Обучение: на профилях Qwen увеличивайте `preprocessing_num_workers` и величины батчей, если это не ведёт к росту VRAM (ориентируйтесь на `nvidia-smi`).
+
+### ⚡ Автоматическая индексация документации (NEW в v0.3.1)
+
+WORLD_OLLAMA автоматически поддерживает актуальность `RUNTIME_LOGS_JOURNAL_INDEX.md`:
+
+- **FileSystemWatcher:** Мониторит .md файлы в реальном времени
+- **Git Post-Commit Hook:** Обновляет после каждого коммита
+- **Windows Scheduled Task:** Ежедневная переиндексация в 03:00
+
+**Установка (один раз):**
+```powershell
+pwsh scripts/INSTALL_GIT_HOOK.ps1  # Git hook
+pwsh scripts/CREATE_SCHEDULED_TASK.ps1  # Daily task (требует admin)
+```
+
+**Детали:** См. раздел "🛠️ Разработка > Автоматическая индексация"
+
+---
 
 ### Установка (Developer Setup)
 
@@ -469,18 +564,31 @@ Phases 0-4: ████████████████████ 100% �
 OVERALL:     ██████████████████████ 100% ✅ v0.3.0-alpha
 ```
 
-### Roadmap v0.3.1 (Polish & Enhancements)
+### ✅ v0.3.1 ЗАВЕРШЁН (02.12.2025)
 
-**🔜 Запланировано:**
+**Реализовано в релизе v0.3.1:**
 
-- 🔜 **Flow Scheduling:** Cron-like automation
-- 🔜 **UI Log Viewer:** Browse logs in-app (vs file access)
-- 🔜 **Flow Editor:** Create/edit flows in UI
-- 🔜 **Flow Cancellation:** Stop running flows
-- 🔜 **PULSE v2:** Enhanced training monitoring
+- ✅ **Bugfix Pack (ORDER 40):** Исправление 5 критических проблем
+  - 40.1: Index Path Resolution (STATUS cmd теперь работает корректно)
+  - 40.2: GitPanel CWD (правильная рабочая директория для git команд)
+  - 40.3: TRAIN Flow Unlock (UI validation синхронизирована с backend)
+  - 40.4: Warnings Cleanup (очистка устаревших предупреждений)
+  - 40.5: Flows E2E (end-to-end тестирование автоматизации)
+- ✅ **ORDER 52:** Final bugfix verification (E2E тесты для всех flows)
 
-**🎯 Запланировано (v0.4.0+):**
+**Детали:** См. `CHANGELOG.md` → [0.3.1] - 2025-12-02
 
+---
+
+### 🔜 Roadmap v0.4.0+ (Future Enhancements)
+
+**Запланировано на будущие релизы:**
+
+- 🔜 **Flow Scheduling:** Cron-like automation (периодические запуски flows)
+- 🔜 **UI Log Viewer:** Browse logs in-app (просмотр логов без файлового доступа)
+- 🔜 **Flow Editor:** Create/edit flows in UI (визуальный редактор flows)
+- 🔜 **Flow Cancellation:** Stop running flows (остановка запущенных flows)
+- 🔜 **PULSE v2:** Enhanced training monitoring (улучшенный мониторинг обучения)
 - 🔜 **Performance Optimization:** VRAM usage monitoring
 - 🔜 **Security Enhancements:** JWT tokens, rate limiting
 - 🔜 **Monitoring Dashboard:** Prometheus + Grafana
@@ -587,11 +695,11 @@ async def verify_api_key(request: Request, call_next):
 
 | Документ | Назначение | Статус |
 |----------|------------|--------|
-| **README.md** | Главная точка входа | ✅ v3.0 (v0.2.0-rc1) |
+| **README.md** | Главная точка входа | ✅ v3.0 (v0.3.1) |
 | **MANUAL.md** | Пользовательское руководство | ✅ Актуален |
 | **PROJECT_MAP.md** | Карта архитектуры проекта | ✅ Актуален |
-| **CHANGELOG.md** | История изменений (все версии) | ✅ Актуален |
-| **CHANGELOG_v0.2.0.md** | 🆕 Detailed v0.2.0-rc1 Release Notes | ✅ NEW |
+| **CHANGELOG.md** | История изменений (v0.1.0 → v0.3.1) | ✅ Актуален |
+| **PROJECT_STATUS_SNAPSHOT_v4.0.md** | Статус проекта (ORDER 40+52) | ✅ Актуален |
 | **INDEX.md** | Навигация по документации | ✅ Актуален |
 
 ### Консолидированные отчёты (новое!)
@@ -747,7 +855,7 @@ client/
 ├── src/                         # Svelte frontend
 │   ├── routes/+page.svelte      # Главная страница
 │   └── lib/
-│       ├── components/          # UI компоненты (6 панелей)
+│       ├── components/          # UI компоненты (7 панелей)
 │       ├── api/client.ts        # API client (Core Bridge)
 │       └── stores/              # Svelte stores
 │

@@ -34,9 +34,14 @@ E:\WORLD_OLLAMA\
 │       ├── adapter_model.safetensors # 35.27 MB
 │       └── all_results.json
 │
-├── archive/                           # ✅ Архив моделей
+├── archive/                           # ✅ Архив моделей и скриптов
 │   ├── TD010v2_triz_extended/        # Legacy (eval_loss 0.9358)
-│   └── Qwen2-7B_checkpoint/          # R&D potential (539 MB)
+│   ├── Qwen2-7B_checkpoint/          # R&D potential (539 MB)
+│   └── scripts/                      # NEW: 03.12.2025 (archived 14 scripts)
+│       ├── td009/                    # TD-009 iteration (3 files)
+│       ├── td010_iterations/         # TD-010 development (9 files)
+│       ├── legacy/                   # Obsolete utilities (2 files)
+│       └── README_ARCHIVE.md         # Архивация история
 │
 ├── saves/                             # Training checkpoints
 │
@@ -62,17 +67,43 @@ E:\WORLD_OLLAMA\
 │       ├── model-00002-of-00002.safetensors  # 1061 MB
 │       └── Modelfile                         # Ollama config
 │
-├── scripts/                           # ✅ 20 PowerShell scripts
-│   ├── generate_map.ps1
-│   ├── ingest_watcher.ps1
-│   ├── start_lightrag.ps1
-│   ├── start_neuro_terminal.ps1
-│   ├── start_training_ui.ps1
-│   ├── start_training.ps1
-│   ├── cleanup_project.ps1           # NEW: Project cleanup
-│   ├── export_td010v2_gguf.ps1       # NEW: Export merged model
-│   ├── train_td010v3_*.ps1           # NEW: TD-010v3 training variants
-│   └── ... (14 more training scripts)
+├── scripts/                           # ✅ 28 PowerShell scripts (cleaned 03.12.2025)
+│   ├── Orchestration (3):
+│   │   ├── START_ALL.ps1             # Start all services
+│   │   ├── STOP_ALL.ps1              # Stop all services
+│   │   └── CHECK_STATUS.ps1          # Health monitoring
+│   ├── Auto-indexation (5):         # NEW: 03.12.2025 (Consensus.app Research)
+│   │   ├── UPDATE_PROJECT_INDEX.ps1  # Core reindexing logic
+│   │   ├── WATCH_FILE_CHANGES.ps1    # Real-time FileSystemWatcher
+│   │   ├── INSTALL_GIT_HOOK.ps1      # Git hook installer
+│   │   ├── post-commit.hook          # Git post-commit hook
+│   │   └── CREATE_SCHEDULED_TASK.ps1 # Daily scheduled task (03:00)
+│   ├── Training (2):
+│   │   ├── start_agent_training.ps1  # Universal training launcher
+│   │   └── BUILD_RELEASE.ps1         # Tauri release build
+│   ├── Infrastructure (5):
+│   │   ├── ingest_watcher.ps1        # RAG auto-indexation
+│   │   ├── generate_map.ps1          # PROJECT_MAP generator
+│   │   ├── generate_project_index_v51.ps1
+│   │   ├── CLEANUP_VSCODE_TOOLS.ps1  # VS Code cleanup (71→51 ext)
+│   │   └── cleanup_project.ps1       # Project maintenance
+│   ├── Testing (6):
+│   │   ├── analyze_mcp_metrics.ps1   # MCP metrics
+│   │   ├── collect_mcp_metrics.ps1   # MCP dashboard
+│   │   ├── test_compilation.ps1      # CI/CD validation
+│   │   ├── test_compilation_detailed.ps1
+│   │   └── tests/                    # E2E test suite
+│   │       ├── TEST_AGENT_INTEGRATION.ps1
+│   │       ├── TEST_SYSTEM_INTEGRITY.ps1
+│   │       └── TEST_UPDATE_SIMULATION.ps1
+│   └── Utilities (7):
+│       ├── analyze_workspace.ps1
+│       ├── validate_sandbox.ps1
+│       ├── docker_build.ps1
+│       ├── sync_to_cloud.ps1
+│       ├── start_lightrag.ps1        # Standalone CORTEX
+│       ├── start_neuro_terminal.ps1  # Standalone UI
+│       └── start_training_ui.ps1     # LLaMA Board
 │
 ├── services/                          # ✅ Microservices
 │   ├── connectors/

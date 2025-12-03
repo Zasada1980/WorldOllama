@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Git post-commit hook для автоматической переиндексации WORLD_OLLAMA
+# 
+# Установка:
+#   1. Скопировать в .git/hooks/post-commit
+#   2. chmod +x .git/hooks/post-commit
+#
+# Версия: 1.0
+# Автор: AI Agent (GitHub Copilot)
+# Дата: 03.12.2025
+
+echo "[POST-COMMIT HOOK] Запуск автоматической переиндексации..."
+
+# Определить корень проекта
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+UPDATE_SCRIPT="$PROJECT_ROOT/scripts/UPDATE_PROJECT_INDEX.ps1"
+
+# Проверить наличие скрипта
+if [ ! -f "$UPDATE_SCRIPT" ]; then
+    echo "[POST-COMMIT HOOK] ПРЕДУПРЕЖДЕНИЕ: UPDATE_PROJECT_INDEX.ps1 не найден"
+    exit 0
+fi
+
+# Получить изменённые .md файлы в последнем коммите
+CHANGED_MD_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD | grep '\.md$')
+
+if [ -z "$CHANGED_MD_FILES" ]; then
+    echo "[POST-COMMIT HOOK] Нет изменений в .md файлах, пропуск переиндексации"
+    exit 0
+fi
+
+echo "[POST-COMMIT HOOK] Изменённые .md файлы:"
+echo "$CHANGED_MD_FILES"
+
+# Запуск PowerShell скрипта
+# Windows: использовать pwsh (PowerShell Core) если доступен
+if command -v pwsh >/dev/null 2>&1; then
+    echo "[POST-COMMIT HOOK] Запуск pwsh -File \"$UPDATE_SCRIPT\" -IncrementalMode"
+    pwsh -File "$UPDATE_SCRIPT" -IncrementalMode -TriggerFile "$(echo "$CHANGED_MD_FILES" | head -n 1)"
+    EXIT_CODE=$?
+elif command -v powershell >/dev/null 2>&1; then
+    echo "[POST-COMMIT HOOK] Запуск powershell -File \"$UPDATE_SCRIPT\" -IncrementalMode"
+    powershell -File "$UPDATE_SCRIPT" -IncrementalMode -TriggerFile "$(echo "$CHANGED_MD_FILES" | head -n 1)"
+    EXIT_CODE=$?
+else
+    echo "[POST-COMMIT HOOK] ОШИБКА: PowerShell не найден (требуется pwsh или powershell)"
+    exit 1
+fi
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "[POST-COMMIT HOOK] Переиндексация завершена успешно ✅"
+else
+    echo "[POST-COMMIT HOOK] ОШИБКА: Переиндексация завершилась с кодом $EXIT_CODE ❌"
+    # Не блокируем коммит, только предупреждаем
+fi
+
+exit 0

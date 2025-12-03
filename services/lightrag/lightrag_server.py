@@ -191,7 +191,7 @@ async def execute_query_with_fallbacks(query_text: str, primary_mode: str):
             query_text,
             param=QueryParam(
                 mode=mode,
-                top_k=20,  # [PLAN C] Увеличено с 10 до 20
+                top_k=35,  # [Plan C — 64GB RAM] увеличено с 20 до 35 для более широкого кандидата-пула
                 only_need_context=True,
                 enable_rerank=False  # [FIX] Явно отключаем rerank для подавления WARNING
             )

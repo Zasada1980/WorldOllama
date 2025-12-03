@@ -1,0 +1,13 @@
+434A4860F847539F46C0F366BDE2E8EBD2DF12116060B5016F59893F1EBBC215  vscode-indexation-tools-v2.0.zip
+
+# Verification
+# PowerShell:
+#   Get-FileHash -Path "vscode-indexation-tools-v2.0.zip" -Algorithm SHA256
+# Expected: 434A4860F847539F46C0F366BDE2E8EBD2DF12116060B5016F59893F1EBBC215
+
+# Linux/macOS:
+#   sha256sum "vscode-indexation-tools-v2.0.zip"
+# Expected: 434a4860f847539f46c0f366bde2e8ebd2df12116060b5016f59893f1ebbc215
+
+# Generated: 2025-12-03 14:53:17
+# Package: VS Code Indexation Tools v2.0
