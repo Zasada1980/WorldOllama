@@ -17,6 +17,12 @@ mod git_manager;       // NEW: TASK 17 - Git Push Safety
 mod flow_manager;      // NEW: TASK 24 - Agent Automation
 mod index_manager;     // NEW: ORDER 37 - INDEX Rust Wrapper
 mod utils;             // NEW: ORDER 37-FIX - Path utilities
+mod automation;        // NEW: ЭТАП 1 - Desktop Automation
+mod automation_commands; // NEW: ЭТАП 2 - Automation Tauri Commands
+
+// Windows-specific modules (ORDER 43 - Crash Fix)
+#[cfg(windows)]
+mod windows_job;       // Job Objects for zombie process cleanup
 // ===== /CORE MODULES =====
 
 // ===== TAURI IMPORTS (НЕ ТРОГАТЬ) =====
@@ -50,6 +56,15 @@ use crate::commands::{
     get_flow_history,
     // </AI_EDIT_REGION:COMMANDS_LIST>
 };
+
+// NEW: ЭТАП 2 - Desktop Automation Commands
+use crate::automation_commands::{
+    automation_get_screen_state,
+    automation_capture_screenshot,
+    automation_click,
+    automation_type_text,
+    automation_get_windows,
+};
 // ===== /TAURI COMMANDS EXPORT =====
 
 // NEW: Flow Commands (inline - require state)
@@ -78,7 +93,28 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    // ORDER 43: Windows Job Objects for zombie process cleanup
+    // CRITICAL: _job_guard MUST stay in scope for entire app lifetime
+    #[cfg(windows)]
+    let _job_guard = match windows_job::JobObject::new() {
+        Ok(job) => {
+            if let Err(e) = job.assign_current_process() {
+                eprintln!("[WARN] Failed to assign Job Object: {}", e);
+                eprintln!("[WARN] Zombie process cleanup may not work. Fallback to PowerShell cleanup.");
+                None
+            } else {
+                println!("[INFO] Job Object assigned. Zombie cleanup enabled.");
+                Some(job) // Keep alive until run() exits
+            }
+        }
+        Err(e) => {
+            eprintln!("[WARN] Failed to create Job Object: {}", e);
+            eprintln!("[WARN] Falling back to PowerShell cleanup only.");
+            None
+        }
+    };
+
+    let _app_result = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let app_handle = app.handle();
@@ -135,8 +171,19 @@ pub fn run() {
             run_flow,
             get_flow_status,
             get_flow_history,
+            // NEW: ЭТАП 2 Desktop Automation Commands
+            automation_get_screen_state,
+            automation_capture_screenshot,
+            automation_click,
+            automation_type_text,
+            automation_get_windows,
             // </AI_EDIT_REGION:HANDLER_LIST>
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    
+    // Job Object cleanup happens here when _job_guard goes out of scope
+    // This triggers JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE → all children killed
+    #[cfg(windows)]
+    drop(_job_guard);
 }

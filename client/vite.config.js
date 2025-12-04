@@ -16,7 +16,9 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // CRITICAL FIX: Explicit IPv4 binding to prevent blank white screen on Windows 11
+    // Windows 11 prioritizes IPv6 (::1) over 127.0.0.1, causing WebView2 connection failure
+    host: host || "127.0.0.1",
     hmr: host
       ? {
           protocol: "ws",

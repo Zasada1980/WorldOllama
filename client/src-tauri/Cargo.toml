@@ -29,3 +29,14 @@ chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 env_logger = "0.11"
 
+# Windows-specific dependencies for crash fix (ORDER 43)
+[target.'cfg(windows)'.dependencies]
+# Using inline FFI for Job Objects (no external crate needed)
+
+# Desktop Automation dependencies (ЭТАП 0)
+enigo = "0.2.0-rc2"                 # Mouse/keyboard simulation (latest prerelease)
+accesskit = "0.12"                  # Cross-platform Accessibility
+notify = "6.1"                      # File system watcher
+image = "0.24"                      # Screenshot processing
+screenshots = "0.8"                 # Screenshot capture
+
