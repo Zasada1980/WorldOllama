@@ -68,7 +68,7 @@ Thumbs.db
 # ========================================
 # ЗАЩИТА: IDE И РЕДАКТОРЫ
 # ========================================
-.vscode/
+# .vscode/ - removed, see exception at end of file
 .idea/
 *.swp
 *.swo
@@ -142,3 +142,11 @@ client/node_modules/
 
 # Rust артефакты (Tauri)
 client/src-tauri/target/
+
+# ========================================
+# ИСКЛЮЧЕНИЯ: UI-First Workflow Integration (v0.4.0)
+# ========================================
+# Exception: VS Code settings for UI-First Workflow enforcement
+# Note: .vscode/ rule removed from "IDE И РЕДАКТОРЫ" section
+!.vscode/
+!.vscode/settings.json

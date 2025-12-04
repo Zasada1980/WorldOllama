@@ -87,7 +87,182 @@ pwsh scripts/CHECK_STATUS.ps1 -Detailed
 
 ---
 
+### 🔒 ENFORCEMENT MECHANISMS (v0.4.0)
+
+**Автоматическая проверка соблюдения UI-First Workflow:**
+
+**1. Integration Test Suite:**
+```powershell
+# Запуск тестов соблюдения UI-First
+pwsh client/test_ui_first_enforcement.ps1
+
+# Ожидаемый результат:
+# ✅ TEST 1: Agent Response Analysis (0 terminal command suggestions)
+# ✅ TEST 2: Desktop Client Accessibility (http://localhost:1420 responding)
+# ✅ TEST 3: Panel Navigation (all tasks via UI)
+# ✅ TEST 4: Terminal Exception Validation (compliant)
+# Success Rate: 100% (4/4 tests)
+```
+
+**2. Violation Detection Patterns:**
+
+| Violation Type | Example | Detection |
+|----------------|---------|-----------|
+| **Direct Command** | "Run `pwsh start_training.ps1`" | Search response for backticked PowerShell commands |
+| **Manual Instruction** | "Execute `git status`" | Search for "execute", "run", "type" + command pattern |
+| **Terminal Redirect** | "Open terminal and run..." | Search for "terminal" + command verbs |
+
+**3. Automated Compliance Checks:**
+```typescript
+// Pre-commit hook: Scan agent interactions for violations
+const violations = scanAgentResponses({
+  pattern: /(?:run|execute|type)\s+`(?:pwsh|git|npm|ollama)/gi,
+  excludePatterns: [
+    /internal check/i,
+    /for debugging/i,
+    /runTests tool/i
+  ]
+});
+
+if (violations.length > 0) {
+  console.error("❌ UI-First violations detected:", violations);
+  // Fail commit or alert reviewer
+}
+```
+
+**4. Example Corrections:**
+
+❌ **VIOLATION #1: Training Command**
+```
+Agent: "Run the following command to start training:
+pwsh scripts/start_agent_training.ps1 -Profile TD-010v3"
+```
+✅ **CORRECT:**
+```
+Agent: "Open Desktop Client (http://localhost:1420):
+1. Navigate to TrainingPanel
+2. Select profile: TD-010v3
+3. Click 'Start Training'
+4. Monitor progress in UI"
+```
+
+❌ **VIOLATION #2: Git Status Check**
+```
+Agent: "Execute `git status` to verify repository state"
+```
+✅ **CORRECT:**
+```
+Agent: "Open Desktop Client → GitPanel to view current status
+(Agent internally checks via: run_in_terminal for verification only)"
+```
+
+❌ **VIOLATION #3: Service Status**
+```
+Agent: "Run CHECK_STATUS.ps1 to see if services are up"
+```
+✅ **CORRECT:**
+```
+Agent: "Open Desktop Client → SystemStatusPanel to view:
+• Ollama (port 11434)
+• CORTEX (port 8004)
+• Desktop Client (port 1420)
+(Agent uses Test-NetConnection internally for validation)"
+```
+
+**5. Integration Test Reference:**
+
+**Test File:** `client/test_ui_first_enforcement.ps1`
+
+**Test Suite:**
+```powershell
+# TEST 1: Agent Response Analysis
+# Scans recent Copilot chat logs for terminal command suggestions
+# Expected: 0 violations (no backticked commands for user execution)
+
+# TEST 2: Desktop Client Accessibility
+# Verifies http://localhost:1420 is responsive
+# Expected: 200 OK, UI panels accessible
+
+# TEST 3: Panel Navigation Simulation
+# Simulates user tasks → validates Desktop Client usage
+# Tasks: Training start, Git operations, Status checks
+# Expected: All tasks completed through UI panels
+
+# TEST 4: Terminal Exception Validation
+# Verifies agent uses terminal ONLY for internal checks
+# Allowed: Get-Process, Test-NetConnection, Get-Content logs, runTests
+# Expected: No user-facing terminal commands
+```
+
+**6. CI/CD Integration (Future):**
+```yaml
+# .github/workflows/ui-first-enforcement.yml
+name: UI-First Workflow Enforcement
+
+on: [pull_request]
+
+jobs:
+  enforce-ui-first:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run UI-First Enforcement Tests
+        run: pwsh client/test_ui_first_enforcement.ps1
+      - name: Fail if violations detected
+        run: |
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "UI-First violations detected"
+            exit 1
+          }
+```
+
+**7. Compliance Metrics:**
+
+Track in `temp/UI_FIRST_COMPLIANCE_REPORT.md`:
+- **Violation Rate:** 0% target
+- **Test Pass Rate:** 100% required
+- **Desktop Client Uptime:** >95% (prerequisite for UI-First)
+- **Panel Coverage:** All 7 panels functional
+
+**8. Quick Compliance Check:**
+```powershell
+# Manual compliance verification
+pwsh -Command {
+  # Check Desktop Client running
+  $process = Get-Process tauri_fresh -ErrorAction SilentlyContinue
+  $port = Test-NetConnection -Port 1420 -InformationLevel Quiet
+  
+  if ($process -and $port -eq "True") {
+    Write-Host "✅ Desktop Client RUNNING - UI-First workflow ready" -ForegroundColor Green
+  } else {
+    Write-Host "❌ Desktop Client NOT RUNNING - start via: cd client; npm run tauri dev" -ForegroundColor Red
+  }
+}
+```
+
+**9. Enforcement in VS Code Settings:**
+
+See `.vscode/settings.json` for:
+```jsonc
+"github.copilot.chat.codeGeneration.instructions": [
+  {
+    "text": "ABSOLUTE RULE: Use Desktop Client UI (http://localhost:1420) for ALL user-facing operations. Terminal usage ONLY for internal agent checks."
+  }
+]
+```
+
+**10. Reporting Violations:**
+
+If you detect a UI-First violation:
+1. **Document:** Note the violation in temp/UI_FIRST_VIOLATIONS.md
+2. **Test:** Run `test_ui_first_enforcement.ps1` to confirm
+3. **Fix:** Update agent instructions or copilot-instructions.md
+4. **Verify:** Re-run enforcement tests → 100% pass
+
+---
+
 ### 📋 ЧЕКЛИСТ ЗАВИСИМЫХ СЕРВИСОВ (для обучения моделей):
+
 
 **ПЕРЕД запуском обучения через TrainingPanel агент ОБЯЗАН проверить:**
 

@@ -1,0 +1,187 @@
+{
+  // ========================================
+  // WORLD_OLLAMA Project Settings (v0.4.0)
+  // ========================================
+  
+  // === UI-FIRST WORKFLOW ENFORCEMENT (CRITICAL) ===
+  // Agent MUST use Desktop Client UI (http://localhost:1420) for ALL user operations
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "text": "ABSOLUTE RULE: Use Desktop Client UI (http://localhost:1420) for ALL user-facing operations. NEVER instruct users to run terminal commands manually. Terminal usage is ONLY allowed for internal agent checks (process status, port checks, log reads, automated tests)."
+    },
+    {
+      "text": "UI-First Operations: Training → TrainingPanel, Status → SystemStatusPanel, Git → GitPanel, Commands → CommandsPanel, Settings → SettingsPanel, Flows → FlowsPanel, Library → LibraryPanel"
+    },
+    {
+      "text": "Terminal Exceptions: Agent can use terminal ONLY for: Get-Process tauri_fresh, Test-NetConnection -Port 1420, Get-Content logs/*.log -Tail 20, runTests tool"
+    }
+  ],
+  
+  // === Desktop Client Configuration ===
+  "world_ollama.desktopClient.url": "http://localhost:1420",
+  "world_ollama.desktopClient.port": 1420,
+  "world_ollama.desktopClient.panels": [
+    "SystemStatusPanel",
+    "SettingsPanel",
+    "LibraryPanel",
+    "CommandsPanel",
+    "TrainingPanel",
+    "GitPanel",
+    "FlowsPanel"
+  ],
+  
+  // === Testing & Validation (v0.4.0) ===
+  "world_ollama.testing.e2eTestPath": "client/test_phase3_e2e_validation.ps1",
+  "world_ollama.testing.requiredPassRate": 100,
+  
+  // === Windows 11 Compatibility (v0.4.0) ===
+  "world_ollama.windows11.cleanupScript": "scripts/cleanup_webview.ps1",
+  "world_ollama.windows11.preLaunchCleanup": true,
+  
+  // === Terminal Agent Configuration (Phase 1 v0.4.0) ===
+  // Based on: docs/infra/TERMINAL_AGENT_SETTINGS_EVOLUTION_ANALYSIS.md
+  
+  // Persistent Sessions: сохранение истории терминала между перезапусками VS Code
+  "terminal.integrated.enablePersistentSessions": true,
+  
+  // Shell Integration: улучшенная интеграция с PowerShell (completions, history)
+  "terminal.integrated.shellIntegration.enabled": true,
+  
+  // Environment Variables: опциональная переменная для определения контекста агента
+  "terminal.integrated.env.windows": {
+    "VSCODE_AGENT_ENABLED": "1"
+  },
+  
+  // === MCP Configuration ===
+  // Model Context Protocol servers для AI агента
+  "github.copilot.chat.mcp.enabled": true,
+  "github.copilot.chat.mcp.servers": {
+    "myshell": {
+      "command": "node",
+      // P2.3: используем скомпилированный JavaScript (быстрее + стабильнее)
+      "args": ["mcp-shell/dist/server.js"],
+      "env": {
+        // WORLD_OLLAMA_ROOT для поиска config/terminal_timeout_policy.json
+        "WORLD_OLLAMA_ROOT": "E:/WORLD_OLLAMA",
+        // Дублирование логов в корень проекта для debugging
+        "MCP_LOG_MIRROR_ROOT": "1"
+      }
+    }
+  },
+  
+  // === Project Structure ===
+  "world_ollama.paths.projectRoot": "E:/WORLD_OLLAMA",
+  "world_ollama.paths.clientRoot": "client",
+  "world_ollama.paths.tauriRoot": "client/src-tauri",
+  
+  // === Service Ports ===
+  "world_ollama.services.ollamaPort": 11434,
+  "world_ollama.services.cortexPort": 8004,
+  "world_ollama.services.desktopClientPort": 1420,
+  
+  // === Editor Settings (Rust/Svelte/TypeScript) ===
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  
+  // === Rust Settings ===
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "rust-analyzer.checkOnSave.allTargets": false,
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true
+  },
+  
+  // === Svelte Settings ===
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode",
+    "editor.formatOnSave": true
+  },
+  "svelte.enable-ts-plugin": true,
+  
+  // === TypeScript/JavaScript Settings ===
+  "[typescript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+    "editor.formatOnSave": true
+  },
+  
+  // === PowerShell Settings ===
+  "[powershell]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-vscode.powershell"
+  },
+  "powershell.codeFormatting.preset": "OTBS",
+  
+  // === Project-specific Settings ===
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/target": true,
+    "**/.venv": true,
+    "**/llamaboard_cache": true,
+    "**/archive": true,
+    "**/backups/daily": true,
+    "**/backups/weekly": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true
+  },
+  
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/node_modules/**": true,
+    "**/.venv/**": true,
+    "**/venv/**": true,
+    "**/llamaboard_cache/**": true
+  },
+  
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/target": true,
+    "**/.venv": true,
+    "**/llamaboard_cache": true,
+    "**/archive": true,
+    "**/backups": true,
+    "**/*.log": true,
+    "**/*.jsonl": true
+  },
+  
+  // === Git Settings ===
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  
+  // === Terminal Settings ===
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    }
+  },
+  
+  // === GitHub Copilot Settings ===
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": true,
+    "plaintext": true,
+    "markdown": true,
+    "rust": true,
+    "svelte": true,
+    "typescript": true,
+    "javascript": true,
+    "powershell": true
+  },
+  
+  // === File Associations ===
+  "files.associations": {
+    "*.ps1": "powershell",
+    "*.svelte": "svelte",
+    "*.toml": "toml",
+    "Cargo.lock": "toml",
+    "*.jsonl": "jsonl"
+  }
+}
+
