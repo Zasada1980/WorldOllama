@@ -109,7 +109,7 @@ function Test-HttpEndpoint {
 # Функция проверки Ollama моделей
 function Test-OllamaModels {
     param(
-        [string[]]$RequiredModels = @("qwen2.5:14b", "nomic-embed-text:latest")
+        [string[]]$RequiredModels = @("mistral-small:latest", "nomic-embed-text:latest")
     )
     
     $check = @{
@@ -250,7 +250,7 @@ $results.checks += Test-HttpEndpoint -Name "Ollama Service" -Url "http://localho
 $results.checks += Test-HttpEndpoint -Name "CORTEX Service" -Url "http://localhost:8004/health" -Critical $true
 
 # 3. Ollama Models
-$results.checks += Test-OllamaModels -RequiredModels @("qwen2.5:14b", "nomic-embed-text:latest", "triz-td010v2:latest")
+$results.checks += Test-OllamaModels -RequiredModels @("mistral-small:latest", "nomic-embed-text:latest", "triz-td010v2:latest")
 
 # 4. Library Documents
 $results.checks += Test-FileSystemComponent -Name "Library Documents" -Path "E:\WORLD_OLLAMA\library\raw_documents" -Critical $false

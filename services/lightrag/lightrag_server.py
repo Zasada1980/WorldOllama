@@ -62,12 +62,12 @@ LIBRARY_DIR = PROJECT_ROOT / "library" / "raw_documents"
 
 # Ollama настройки
 OLLAMA_BASE_URL = "http://localhost:11434"
-LLM_MODEL = "qwen2.5:14b"  # Совпадает с ollama list (без -instruct-q4_k_m)
+LLM_MODEL = "mistral-small:latest"  # Используем mistral-small (22B, ~14 GB) - совместим с Ollama 0.12.10
 EMBEDDING_MODEL = "nomic-embed-text:latest"  # ИСПРАВЛЕНО: добавлен тег :latest
 # [PLAN C] Rerank временно ЗАМОРОЖЕН до 10.12.2025 из-за падений CORTEX.
 # См. инцидент "Custom Rerank Pipeline crashes CORTEX, 27.11.2025".
 # POST-PROCESSING rerank (строки ~416-431) оставлен для улучшения читаемости ответов.
-RERANK_MODEL = "qwen2.5:14b"  # Используем ТОЛЬКО для post-processing (НЕ для retrieval)
+RERANK_MODEL = "mistral-small:latest"  # Используем ТОЛЬКО для post-processing (НЕ для retrieval)
 
 # КРИТИЧНО: Ограничение параллелизма для 16GB VRAM
 LLM_MAX_ASYNC = 1  # СТРОГО 1 (не перегружаем GPU)

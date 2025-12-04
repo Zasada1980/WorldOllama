@@ -23,7 +23,7 @@
 
   // Состояние компонента
   let settings: AppSettings = {
-    ollama_model: "qwen2.5:14b-instruct-q4_k_m",
+    ollama_model: "mistral-small:latest",
     max_tokens: null,
     cortex_top_k: 20,
     cortex_mode: "local",
@@ -35,8 +35,8 @@
 
   // Доступные модели Ollama (из тестов проекта)
   const availableModels = [
-    "qwen2.5:14b-instruct-q4_k_m",
-    "qwen2.5:3b-instruct",
+    "ministral-3:14b",
+    "mistral-small:latest",
     "triz-td010v2:latest",
     "llama3.1:8b",
     "librarian-lite",

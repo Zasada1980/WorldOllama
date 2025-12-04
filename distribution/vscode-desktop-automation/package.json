@@ -1,0 +1,161 @@
+{
+  "name": "vscode-desktop-automation",
+  "displayName": "Desktop Automation Tools",
+  "description": "Desktop UI automation tools for VS Code agent - screen capture, mouse/keyboard simulation",
+  "version": "1.0.0",
+  "publisher": "WorldOllama",
+  "author": {
+    "name": "WORLD_OLLAMA Project",
+    "email": "support@gatevibe.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "automation",
+    "testing",
+    "ui-automation",
+    "screenshot",
+    "mouse-keyboard"
+  ],
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zasada1980/WorldOllama"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "automation.getScreenState",
+        "title": "Automation: Get Screen State",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.captureScreenshot",
+        "title": "Automation: Capture Screenshot",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.clickAt",
+        "title": "Automation: Click at Coordinates",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.typeText",
+        "title": "Automation: Type Text",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.getWindows",
+        "title": "Automation: Get Active Windows",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.runScenario",
+        "title": "Automation: Run Test Scenario",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.showLogs",
+        "title": "Automation: Show Logs",
+        "category": "Desktop Automation"
+      },
+      {
+        "command": "automation.openConfiguration",
+        "title": "Automation: Open Configuration",
+        "category": "Desktop Automation"
+      }
+    ],
+    "configuration": {
+      "title": "Desktop Automation Tools",
+      "properties": {
+        "automation.tauriAppPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Tauri app executable (leave empty for auto-detection)"
+        },
+        "automation.defaultMonitor": {
+          "type": "number",
+          "default": 0,
+          "description": "Default monitor index for screenshots (0 = primary)"
+        },
+        "automation.clickDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "Delay after click in milliseconds (recommended: 500)"
+        },
+        "automation.screenshotsPath": {
+          "type": "string",
+          "default": "automation/screenshots",
+          "description": "Relative path to save screenshots"
+        },
+        "automation.logLevel": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "Logging level for automation commands"
+        },
+        "automation.autoStartTauri": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start Tauri app on activation"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "automation.getScreenState",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.captureScreenshot",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.clickAt",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.typeText",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.getWindows",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.runScenario",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.showLogs",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "automation.openConfiguration",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "vsce": "^2.15.0"
+  }
+}

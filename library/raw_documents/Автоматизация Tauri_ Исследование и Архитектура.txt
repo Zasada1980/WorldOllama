@@ -1,0 +1,395 @@
+﻿Исследование архитектуры и реализация агента автоматизации Desktop-окружения для приложений на базе Tauri
+1. Контекст и цель исследования
+В современной экосистеме разработки десктопных приложений фреймворк Tauri занимает уникальную нишу, предоставляя возможность создания легковесных, безопасных и производительных приложений за счет использования системного WebView (WebView2 в Windows, WebKitGTK в Linux и WKWebView в macOS) и бэкенда на Rust. Однако эта архитектурная особенность создает существенные сложности для автоматизации пользовательских действий по сравнению с решениями, включающими собственный браузерный движок (например, Electron), где протокол Chrome DevTools Protocol (CDP) доступен унифицировано на всех платформах.
+Целью данного исследования является проектирование архитектуры и выбор инструментария для создания «Desktop Automation Agent» — программного слоя, который позволит локальному ИИ-оркестратору взаимодействовать с Tauri-клиентом. Этот агент должен выйти за рамки классического E2E-тестирования, обеспечивая возможность динамического выполнения задач: от навигации по меню до сложного ввода данных, имитируя поведение человека. Ключевым требованием является способность агента не только выполнять действия («нажать»), но и верифицировать состояние интерфейса («увидеть результат»), работая как в локальной среде разработчика, так и в headless-режиме CI/CD пайплайнов.
+Анализ проводится с позиции системного архитектора, специализирующегося на автоматизации UI и разработке автономных агентов. В отчете рассматриваются существующие подходы, от стандартных WebDriver-решений до передовых методов визуального граундинга (Visual Grounding) и использования протокола Model Context Protocol (MCP) для интеграции с большими языковыми моделями (LLM).
+________________
+2. Блок 1 — Карта существующих подходов к автоматизации Tauri-приложений
+Для построения надежного агента автоматизации необходимо детально проанализировать ландшафт доступных технологий, оценив их применимость к специфической архитектуре Tauri. Существующие решения можно разделить на три категории: веб-стандарты (WebDriver/CDP), нативная автоматизация ОС (Accessibility API) и гибридные подходы.
+2.1 Подходы на основе веб-стандартов (WebDriver и CDP)
+Поскольку интерфейс Tauri рендерится внутри WebView, логичным первым шагом является использование инструментов, предназначенных для веб-автоматизации. Однако их эффективность варьируется в зависимости от операционной системы из-за различий в реализации WebView.
+2.1.1 Официальный tauri-driver и WebDriver
+Проект Tauri предоставляет tauri-driver — кроссплатформенную обертку, которая проксирует команды к нативному драйверу WebDriver операционной системы.1
+* Архитектура: Инструмент работает как промежуточный узел (Intermediary Node). Он запускает экземпляр приложения Tauri и перенаправляет команды (например, «найти элемент», «кликнуть») в msedgedriver (Windows) или WebKitWebDriver (Linux).2
+* Совместимость и ограничения:
+   * Windows: Использует драйвер Microsoft Edge. Критическим требованием является полное совпадение версий установленного WebView2 Runtime и драйвера. Рассинхронизация версий, часто возникающая при автоматических обновлениях ОС, приводит к зависанию тестов и нестабильности агента.2
+   * Linux: Использует WebKitWebDriver. Требует наличия системных зависимостей (webkit2gtk-driver), но в целом обеспечивает стабильное взаимодействие с DOM-деревом.2
+   * macOS: Поддержка отсутствует. Apple safaridriver не поддерживает управление экземплярами WKWebView, встроенными в сторонние приложения. Это делает tauri-driver непригодным для создания кроссплатформенного агента, так как он не может управлять приложением на macOS.2
+* Вердикт для ИИ-агента: Подход на базе tauri-driver слишком ограничен для роли универсального «тела» агента. Отсутствие поддержки macOS является блокирующим фактором для заявленных целей полного цикла работы. Кроме того, протокол WebDriver часто недостаточно быстр для динамического взаимодействия в реальном времени, требуемого для ИИ-агентов.
+2.1.2 Playwright и Chrome DevTools Protocol (CDP)
+Playwright, де-факто стандарт современного веб-тестирования, может подключаться к существующим экземплярам браузеров через WebSocket, используя CDP.
+* Механизм работы: Для активации этого режима приложение Tauri должно быть запущено с флагом --remote-debugging-port=9222. Это заставляет встроенный WebView открыть локальный сервер отладки.6 Агент Playwright затем подключается к этому порту через browserType.connectOverCDP, получая полный контроль над контекстом страницы.7
+* Анализ платформ:
+   * Windows: WebView2 основан на Chromium, поэтому поддержка CDP здесь первоклассная. Агент получает доступ к полному дереву DOM, сетевым запросам и консоли. Это позволяет реализовывать надежные сценарии с ожиданием событий и селекторами.6
+   * Linux: WebKitGTK имеет экспериментальную поддержку протокола инспектора, но она не полностью совместима с CDP, используемым Playwright. Существуют обходные пути через переменные окружения (WEBKIT_INSPECTOR_HTTP_SERVER), но стабильность такого решения для продакшн-использования низкая.10
+   * macOS: WKWebView использует протокол Safari Web Inspector, который несовместим с CDP. Подключение Playwright напрямую невозможно без сложных прокси-слоев (например, ios-webkit-debug-proxy), которые трудно настраивать для десктопных приложений.12
+* Вердикт для ИИ-агента: Отличное решение для подсистемы «зрения» и «действия» на Windows, обеспечивающее высокую точность. Однако зависимость от Chromium-специфичного протокола делает его неприменимым как единственное решение для всех платформ.
+2.2 OS-Native автоматизация (Accessibility API и WinAPI)
+Этот класс инструментов взаимодействует с приложением так, как его видит операционная система: как с окном, содержащим дерево элементов управления. Это единственный надежный способ взаимодействия с элементами, находящимися вне WebView (меню окна, системные диалоги открытия файлов, нативные уведомления).
+2.2.1 Экосистема Rust (accesskit, uiautomation, enigo)
+Учитывая, что Tauri написан на Rust, использование Rust-библиотек (crates) позволяет создать высокопроизводительный инструмент автоматизации, который может быть встроен непосредственно в приложение или работать рядом как sidecar-процесс.
+* accesskit: Фундаментальная библиотека для кроссплатформенной реализации доступности (accessibility). Она позволяет не только создавать доступные интерфейсы, но и (через адаптеры) считывать дерево доступности других приложений.13 Для ИИ-агента Accessibility Tree часто полезнее, чем сырой HTML, так как оно содержит семантическую информацию (роли, состояния, подписи), очищенную от визуального шума.14
+* uiautomation (Windows): Обертка над Windows UI Automation API. Позволяет находить окна по заголовкам, инспектировать иерархию элементов управления и вызывать паттерны действий (например, Invoke для нажатия кнопки). Это критически важно для управления окном самого приложения (свернуть, развернуть, переместить).16
+* macos-accessibility-client: Предоставляет биндинги к macOS Accessibility API. Позволяет агенту запрашивать атрибуты элементов (позиция, размер, роль) и выполнять действия. Это единственный надежный способ программного клика на macOS без использования координат мыши.17
+* enigo: Библиотека для симуляции ввода (мышь, клавиатура) на уровне ОС. Она работает «вслепую» по координатам, но поддерживает все основные платформы (Linux X11/Wayland, macOS, Windows).18
+2.2.2 Инструменты на Node.js (nut.js)
+nut.js представляет собой инструмент автоматизации рабочего стола, который комбинирует симуляцию ввода с поиском изображений на экране (Computer Vision).20
+* Плюсы: Позволяет писать сценарии вида «найди кнопку с иконкой дискеты и нажми на нее», что полезно для ИИ-агентов, работающих с визуальным контекстом.
+* Минусы: Высокая хрупкость (flakiness). Изменение разрешения экрана, темы оформления или рендеринга шрифтов ломает тесты. Для интеграции в CI требует наличия дисплея.
+2.3 Новое поколение: Визуальные ИИ-агенты и OmniParser
+С развитием мультимодальных LLM (MLLM) появились подходы, основанные на анализе скриншотов.
+* Microsoft OmniParser: Специализированная модель для разбора скриншотов пользовательского интерфейса. Она преобразует пиксели в структурированные данные (координаты, функциональное описание элементов), которые затем передаются в LLM.22 OmniParser V2 показывает высокую точность в распознавании интерактивных элементов, которые могут быть пропущены в Accessibility Tree.24
+* Anthropic Computer Use: API, позволяющий модели Claude 3.5 Sonnet напрямую управлять компьютером, анализируя скриншоты и выдавая команды перемещения мыши. Требует специфической среды исполнения (контейнер с Xvfb) и потребляет значительное количество токенов.25
+Сравнительная таблица подходов
+Подход
+	Платформы
+	Стабильность
+	Глубина взаимодействия
+	Пригодность для ИИ-агента
+	Tauri Driver
+	Win, Lin
+	Средняя
+	DOM (через WebDriver)
+	Низкая. Нет поддержки macOS, сложная настройка версий.
+	Playwright (CDP)
+	Win (отлично), Lin (слабо)
+	Высокая
+	Глубокий DOM, Сеть
+	Средняя. Идеально для Windows, но требует костылей для других ОС.
+	OS Native (Rust)
+	Все (Win/Mac/Lin)
+	Высокая
+	Окно, Accessibility Tree
+	Высокая. Единственный способ надежно управлять окном и системными диалогами.
+	Visual AI / OmniParser
+	Все
+	Экспериментальная
+	Поверхностная (Визуальная)
+	Перспективная. Высокая стоимость (latency/tokens), но максимальная универсальность.
+	Вывод по Блоку 1
+Для создания полноценного «Desktop Automation Agent» невозможно полагаться на один инструмент. Наиболее реалистичная архитектура — гибридная. Агенту необходим «низкоуровневый драйвер» на базе Rust (accesskit + enigo) для кроссплатформенного управления окнами и вводом, дополненный «высокоуровневым зрением» (через Accessibility Tree или скриншоты для OmniParser) для понимания контекста.14 Использование только WebDriver или Playwright оставит агента «слепым» на macOS и беспомощным перед системными окнами.
+________________
+3. Блок 2 — Симуляция действий пользователя (мышь, клавиатура, фокус)
+В этом разделе детально разбираются механизмы реализации действий агента. Для ИИ-оркестратора критически важно различать синтетические действия (события JavaScript внутри WebView) и нативные действия (события операционной системы).
+3.1 Клик по элементу
+3.1.1 Нативный клик (через координаты и Accessibility API)
+Этот метод наиболее близок к действиям реального пользователя. Он требует сначала определить координаты элемента, а затем переместить туда курсор ОС.
+Алгоритм:
+1. Получение координат: Агент запрашивает Accessibility Tree приложения (через accesskit или платформенные API), находит узел кнопки (например, по имени "Save") и считывает его атрибут BoundingRectangle.
+2. Перемещение и клик: Используется библиотека enigo (Rust) для генерации событий ввода.
+Пример кода (Rust - концептуальный):
+
+
+Rust
+
+
+
+
+use enigo::{Enigo, MouseControllable, MouseButton};
+
+// Функция, вызываемая агентом
+fn perform_native_click(x: i32, y: i32) {
+   let mut enigo = Enigo::new();
+   // Важно: на macOS может потребоваться разрешение на Accessibility
+   enigo.mouse_move_to(x, y); 
+   // Небольшая задержка для имитации человека и обработки hover-эффектов
+   std::thread::sleep(std::time::Duration::from_millis(50));
+   enigo.mouse_click(MouseButton::Left);
+}
+
+Риски: Если пользователь физически сдвинет мышь во время работы агента, клик произойдет не там. На macOS требуется выдача прав Accessibility приложению-агенту.27
+3.1.2 Синтетический клик (через инъекцию JS)
+Более надежный способ для функционального тестирования, так как не зависит от фокуса окна ОС. Работает через выполнение JavaScript внутри контекста WebView.
+Реализация в Tauri:
+Агент может отправить команду через внутренний канал (если он встроен в приложение) или через протокол отладки.
+
+
+JavaScript
+
+
+
+
+// JS, выполняемый внутри WebView
+function syntheticClick(selector) {
+   const el = document.querySelector(selector);
+   if (el) {
+       // Создаем и диспатчим событие, чтобы сработали все слушатели
+       const ev = new MouseEvent('click', {
+           view: window,
+           bubbles: true,
+           cancelable: true
+       });
+       el.dispatchEvent(ev);
+       return true;
+   }
+   return false;
+}
+
+Этот метод мгновенный и не «крадет» курсор у пользователя, но не проверит, перекрыта ли кнопка другим окном.
+3.2 Ввод текста и горячие клавиши
+3.2.1 Ввод текста
+Нативный метод (enigo):
+Имитирует нажатия клавиш на клавиатуре. Требует, чтобы поле ввода имело фокус.
+
+
+Rust
+
+
+
+
+use enigo::{Enigo, KeyboardControllable};
+
+let mut enigo = Enigo::new();
+// Сначала кликаем в поле, чтобы установить фокус
+enigo.key_sequence("password123"); 
+
+Синтетический метод:
+Установка значения value напрямую через JS (input.value = 'text') часто не вызывает события input или change, на которые реагируют фреймворки (React/Vue). Правильный подход требует генерации событий:
+
+
+JavaScript
+
+
+
+
+// Эмуляция ввода для React
+const input = document.querySelector('#username');
+const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+valueSetter.call(input, "agent_user");
+input.dispatchEvent(new Event('input', { bubbles: true }));
+
+3.2.2 Горячие клавиши (Shortcuts)
+Для вызова глобальных шорткатов (например, Ctrl+S для сохранения) необходима нативная эмуляция, так как JS-события могут быть перехвачены браузером или не выйти за пределы WebView.
+
+
+Rust
+
+
+
+
+use enigo::{Enigo, KeyboardControllable, Key};
+
+let mut enigo = Enigo::new();
+enigo.key_down(Key::Control);
+enigo.key_click(Key::Layout('s'));
+enigo.key_up(Key::Control);
+
+3.3 Управление фокусом и ожидание состояния
+Одной из главных проблем автоматизации является асинхронность интерфейса. Элемент может присутствовать в DOM, но быть невидимым (opacity: 0) или еще не иметь привязанных обработчиков событий (hydration gap).
+Стратегии ожидания:
+1. Polling (Опрос): Агент в цикле запрашивает состояние элемента (например, каждые 100 мс) с таймаутом.
+2. Event-Driven (Событийная модель): Использование MutationObserver внутри WebView для отслеживания изменений DOM и отправки сигнала агенту при появлении элемента.
+Пример надежного ожидания (Псевдокод):
+
+
+Python
+
+
+
+
+def wait_for_element(selector, timeout=5000):
+   start_time = time.time()
+   while time.time() - start_time < timeout:
+       # Проверяем не только наличие, но и видимость
+       is_visible = agent.execute_js(f"""
+           const el = document.querySelector('{selector}');
+           return el && el.getBoundingClientRect().width > 0 && window.getComputedStyle(el).visibility!== 'hidden';
+       """)
+       if is_visible:
+           return True
+       sleep(0.1)
+   raise TimeoutError(f"Element {selector} not visible")
+
+3.4 Пример полного цикла
+Сценарий: Запуск приложения -> Ожидание загрузки -> Клик "Войти" -> Ввод логина.
+
+
+Rust
+
+
+
+
+// Rust-оркестратор (используя API инструментария)
+fn main() {
+   // 1. Запуск процесса
+   let app = Command::new("tauri-app").spawn().expect("failed to start");
+   
+   // 2. Подключение инструмента автоматизации (например, через MCP или Socket)
+   let client = AutomationClient::connect();
+   
+   // 3. Ожидание окна (через OS API)
+   client.wait_for_window("Tauri App", Duration::from_secs(10));
+   
+   // 4. Поиск элемента через Accessibility Tree (устойчиво к смене координат)
+   let btn_coords = client.find_element_coords(By::Name("Войти"));
+   
+   // 5. Нативный клик
+   client.mouse_click(btn_coords.x, btn_coords.y);
+   
+   // 6. Ожидание появления поля ввода (проверка изменения состояния)
+   client.wait_for_element(By::Id("username_input"));
+   
+   // 7. Ввод текста
+   client.type_text("test_user");
+}
+
+Надежность: Использование Accessibility Tree вместо жестко заданных координат делает сценарий устойчивым к изменению размера окна и разрешения экрана.
+________________
+4. Блок 3 — Интеграция инструмента с ИИ-агентом (Архитектура)
+Для того чтобы ИИ-агент мог эффективно управлять приложением, необходим стандартизированный интерфейс обмена данными. Прямые вызовы API (как в примере выше) сложны для LLM. Предлагаемая архитектура базируется на Model Context Protocol (MCP) — открытом стандарте для подключения LLM к внешним инструментам.28
+4.1 Архитектурная диаграмма
+Система состоит из трех уровней:
+1. AI Orchestrator (Мозг):
+   * Среда: Python (LangChain/LlamaIndex) или Claude Desktop.
+   * Функция: Планирование действий, генерация стратегии («Нужно открыть настройки, чтобы сменить тему»). Генерирует вызовы инструментов MCP.
+   * Коммуникация: JSON-RPC over Stdio или WebSocket.
+2. Desktop Automation Server (Руки и Глаза — MCP Server):
+   * Реализация: Отдельный процесс (предпочтительно на Rust для интеграции с enigo/accesskit или Node.js).
+   * Функция: Транслирует высокоуровневые интенты («кликни на кнопку Save») в низкоуровневые команды ОС или WebView. Хранит состояние соединения с Tauri-клиентом.
+   * Компоненты:
+      * Visualizer: Модуль снятия скриншотов или дампа Accessibility Tree.
+      * Executor: Модуль ввода (enigo).
+      * Bridge: Модуль связи с WebView (CDP или инжекция).
+3. Tauri Client (Среда):
+   * Целевое приложение. Должно быть скомпилировано с флагами, разрешающими Accessibility и отладку.
+4.2 API Инструмента (MCP Tools Definition)
+Инструмент должен экспортировать следующий набор функций, понятных LLM:
+Функция
+	Параметры
+	Описание для LLM
+	Реализация
+	get_screen_state
+	`format: "json"
+	"screenshot"`
+	Возвращает текущее состояние UI. JSON (Accessibility Tree) предпочтительнее для экономии токенов, Screenshot — для OmniParser.
+	click_element
+	selector: String (или element_id)
+	Кликает по элементу интерфейса. Предпочитает использование ID из get_screen_state.
+	Вычисляет центр элемента по его BoundingBox и вызывает enigo.mouse_click.
+	type_text
+	text: String, submit: Bool
+	Вводит текст в текущее активное поле. Если submit=true, нажимает Enter.
+	enigo.key_sequence.
+	execute_script
+	script: String
+	Выполняет произвольный JS в контексте окна. Используется для сложных проверок.
+	Через CDP (Runtime.evaluate) или Tauri IPC.
+	wait_for_update
+	timeout_ms: Int
+	Ждет визуального изменения на экране (окончания анимации/загрузки).
+	Сравнивает хеши скриншотов или деревьев UI.
+	4.3 Сценарии запуска
+Локальный эксперимент (Human-in-the-loop)
+Разработчик запускает MCP-сервер локально. ИИ-агент (например, через интерфейс Claude Desktop или IDE) подключается к серверу.
+* Сценарий: «ИИ, пройди онбординг в приложении».
+* Агент вызывает get_screen_state, анализирует дерево, находит кнопку "Next", вызывает click_element, снова анализирует состояние.
+CI/CD Пайплайн (Headless)
+В CI среде (GitHub Actions, GitLab CI) отсутствует физический монитор.
+* Linux: Использование xvfb-run (X Virtual Framebuffer) обязательно. Это создает виртуальный дисплей, в котором Tauri-приложение может отрисоваться.4
+* Команда запуска:
+Bash
+xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+
+./desktop-automation-agent --target./my-tauri-app
+```
+   * Агент в этом режиме должен полагаться преимущественно на Accessibility Tree, так как скриншоты с Xvfb могут иметь артефакты рендеринга.
+4.4 Интеграция с GitHub Copilot и VS Code
+Современные среды разработки, такие как VS Code, начинают поддерживать «Agent Mode» с интеграцией MCP серверов.34 Это позволяет разработчику запустить команду: «Протестируй форму логина» прямо в терминале IDE. VS Code автоматически поднимет MCP-сервер (описанный в .vscode/mcp.json), запустит приложение и выполнит действия, отображая прогресс в чате.36
+________________
+5. Блок 4 — Надёжность, безопасность и ограничения
+Автоматизация десктопа сопряжена с рисками, которые отсутствуют в веб-тестировании.
+5.1 Проблемы стабильности (Flakiness) и их решение
+   * Гонка анимаций: Агент пытается кликнуть по элементу, который еще движется.
+   * Решение: Реализовать механизм «Debounce» на стороне MCP-сервера. Перед кликом проверять, не изменились ли координаты элемента за последние 100мс. Использовать FileSystemWatcher или внутренние хуки для отслеживания окончания рендеринга.38
+   * Потеря фокуса: В локальном запуске всплывающее уведомление или случайное движение мыши пользователем может сбить агента.
+   * Решение: В «боевом» режиме (CI) использовать изолированные контейнеры. В локальном режиме использовать синтетические клики (JS) там, где это возможно, так как они не требуют захвата курсора.
+5.2 Безопасность
+   * Риск «Runaway Agent»: Агент, получивший контроль над мышью, теоретически может свернуть приложение и начать кликать по системе (удалять файлы, менять настройки ОС).
+   * Митигация (Sandboxing): Запуск приложения и агента внутри Docker-контейнера или виртуальной машины.
+   * Ограничение контекста: MCP-сервер должен программно ограничивать координаты клика границами окна Tauri-приложения. Если агент запрашивает клик по координатам (0,0) (системное меню), сервер должен отклонить команду.
+   * Права доступа: На macOS для использования Accessibility API и симуляции ввода требуются специальные разрешения. Приложение должно быть подписано, а в CI среде необходимо использовать инструменты типа tccutil для предварительной выдачи прав базе данных TCC (Transparency, Consent, and Control).40
+5.3 Технические ограничения
+   * Сложность с Canvas/WebGL: Если Tauri-приложение использует <canvas> (например, для графиков или игр), Accessibility Tree будет пустым. В этом случае единственным решением остается визуальный анализ скриншотов (OmniParser/Computer Vision).22
+   * Кеширование контекста: Передача полного дерева UI или скриншота на каждый шаг дорого стоит (как по времени, так и по токенам). Необходимо внедрение кеширования на стороне MCP-сервера, отправляющего в LLM только диффы (изменения) состояния или упрощенную текстовую репрезентацию.42
+________________
+6. Блок 5 — Итоговый вывод и рекомендации по реализации
+6.1 Рекомендуемая архитектура
+Для реализации инструмента «Desktop Automation Agent» рекомендуется Гибридная архитектура на базе MCP, сочетающая надежность нативных API с гибкостью веб-технологий.
+Выбранные технологии:
+   1. Протокол: Model Context Protocol (MCP) через stdio.
+   2. Ядро агента (Сервер): Rust-приложение (tauri-mcp-server), интегрирующее:
+   * accesskit / macos-accessibility-client / uiautomation-rs для чтения состояния.
+   * enigo для ввода.
+   * Встроенный HTTP-клиент для связи с CDP (на Windows/Linux) для выполнения JS.
+   3. Оркестратор: Claude Desktop (для отладки) или Python-скрипт с LangChain (для CI).
+6.2 Пошаговый план внедрения
+Шаг 1: Proof of Concept (PoC) — «Слепой клик»
+   * Задача: Запустить приложение и кликнуть по кнопке, зная её координаты.
+   * Реализация: Написать Rust-скрипт, использующий std::process::Command для запуска Tauri-app и enigo для перемещения мыши и клика.
+   * Критерий успеха: Кнопка нажимается, приложение реагирует.
+Шаг 2: Реализация «Зрения» (Accessibility Dump)
+   * Задача: Получить структуру окна в JSON.
+   * Реализация:
+   * На Windows: Использовать crate uiautomation для обхода дерева элементов.
+   * На macOS: Использовать macos-accessibility-client или Swift-бидинги для дампа AXUIElement иерархии.44
+   * Критерий успеха: Получение JSON, содержащего координаты и названия всех кнопок окна.
+Шаг 3: Создание MCP-сервера
+   * Задача: Обернуть функционал шагов 1 и 2 в MCP-инструменты.
+   * Реализация: Использовать tauri-plugin-mcp или написать свой сервер, реализующий методы get_screen_state и click_element.
+   * Интеграция: Подключить сервер к Claude Desktop и попросить ИИ «Нажать кнопку Войти».
+Шаг 4: CI/CD Интеграция
+   * Задача: Запуск в GitHub Actions.
+   * Реализация: Настроить workflow с xvfb, установкой зависимостей (libwebkit2gtk, libayatana-appindicator), запуском MCP-сервера и агента-оркестратора.
+6.3 Чек-лист для разработки
+   * [ ] Настройка Tauri: Включить devtools в tauri.conf.json (хотя бы для debug сборок) для возможности использования CDP.46
+   * [ ] macOS Permissions: Добавить ключи NSAppleEventsUsageDescription и Privacy - Accessibility Usage Description в Info.plist.40
+   * [ ] Инструменты: Установить xcode-select (macOS), libwebkit2gtk-4.0-dev (Linux).
+   * [ ] Зависимости Rust: Добавить enigo, accesskit, serde_json, tokio в Cargo.toml агента.
+   * [ ] Сценарий №1: Логин в приложение (ввод текста + клик).
+   * [ ] Сценарий №2: Обработка модального окна (ожидание появления + клик).
+Данный отчет предоставляет исчерпывающую техническую базу для создания инструмента, который станет «руками и глазами» ИИ в вашем Desktop-клиенте, преодолевая ограничения стандартных средств тестирования.
+Источники
+   1. Automating Testing of Tauri App with Selenium | by Wipro Tech Blogs - Medium, дата последнего обращения: декабря 3, 2025, https://wiprotechblogs.medium.com/automating-testing-of-tauri-app-with-selenium-1a58f64a6233
+   2. WebDriver - Tauri, дата последнего обращения: декабря 3, 2025, https://v2.tauri.app/develop/tests/webdriver/
+   3. tauri-driver - crates.io: Rust Package Registry, дата последнего обращения: декабря 3, 2025, https://crates.io/crates/tauri-driver
+   4. Continuous Integration - Tauri, дата последнего обращения: декабря 3, 2025, https://v2.tauri.app/develop/tests/webdriver/ci/
+   5. [bug] tauri-driver fails to install · Issue #5551 - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/tauri/issues/5551
+   6. Would an app developed using Tauri, be difficult to functional test using playwright?, дата последнего обращения: декабря 3, 2025, https://stackoverflow.com/questions/77823389/would-an-app-developed-using-tauri-be-difficult-to-functional-test-using-playwr
+   7. WebView2 | Playwright, дата последнего обращения: декабря 3, 2025, https://playwright.dev/docs/webview2
+   8. BrowserType | Playwright, дата последнего обращения: декабря 3, 2025, https://playwright.dev/docs/api/class-browsertype#browser-type-connect-over-cdp
+   9. BrowserType - Playwright, дата последнего обращения: декабря 3, 2025, https://playwright.dev/docs/api/class-browsertype
+   10. how to support remote-debugger like electron? · Issue #786 · tauri-apps/wry - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/wry/issues/786
+   11. Functional WebRTC in WebkitGTK on Linux! · tauri-apps · Discussion #8426 - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/tauri/discussions/8426
+   12. Debugging the front-end part in a non-WebView environment · Issue #13636 · tauri-apps/tauri - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/tauri/issues/13636
+   13. AccessKit/accesskit: Accessibility infrastructure for UI toolkits - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/AccessKit/accesskit
+   14. Beyond Pixels: Exploring DOM Downsampling for LLM-Based Web Agents - arXiv, дата последнего обращения: декабря 3, 2025, https://arxiv.org/html/2508.04412v1
+   15. How can AI use your browser? A deep dive into automation frameworks | by Chris Wu, дата последнего обращения: декабря 3, 2025, https://medium.com/@chriswhp04/how-can-ai-use-your-browser-a-deep-dive-into-automation-frameworks-da3447196087
+   16. uiautomation - crates.io: Rust Package Registry, дата последнего обращения: декабря 3, 2025, https://crates.io/crates/uiautomation
+   17. macos_accessibility_client - Rust - Docs.rs, дата последнего обращения: декабря 3, 2025, https://docs.rs/macos-accessibility-client
+   18. enigo - Rust - Docs.rs, дата последнего обращения: декабря 3, 2025, https://docs.rs/enigo/
+   19. Rustautogui, a GUI automation tool that lets you control mouse, send keyboard inputs and find image on screen, made after popular python Pyautogui : r/rust - Reddit, дата последнего обращения: декабря 3, 2025, https://www.reddit.com/r/rust/comments/1ea7xbg/rustautogui_a_gui_automation_tool_that_lets_you/
+   20. nut-tree/nut.js: Native UI testing / controlling with node - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/nut-tree/nut.js/
+   21. nut.js - Cross-platform desktop automation with node - Reddit, дата последнего обращения: декабря 3, 2025, https://www.reddit.com/r/node/comments/gdmv52/nutjs_crossplatform_desktop_automation_with_node/
+   22. OmniParser: Microsoft's Breakthrough in AI-Powered UI Interaction | by Malyaj Mishra | Data Science in Your Pocket | Medium, дата последнего обращения: декабря 3, 2025, https://medium.com/data-science-in-your-pocket/omniparser-microsofts-breakthrough-in-ai-powered-ui-interaction-08c7c2cc28d5
+   23. OmniParser for Pure Vision Based GUI Agent, дата последнего обращения: декабря 3, 2025, https://microsoft.github.io/OmniParser/
+   24. OmniParser V2: Turning Any LLM into a Computer Use Agent - Microsoft Research, дата последнего обращения: декабря 3, 2025, https://www.microsoft.com/en-us/research/articles/omniparser-v2-turning-any-llm-into-a-computer-use-agent/
+   25. Computer use tool - Claude Docs, дата последнего обращения: декабря 3, 2025, https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool
+   26. Developing a computer use model - Anthropic, дата последнего обращения: декабря 3, 2025, https://www.anthropic.com/news/developing-computer-use
+   27. [bug] use `enigo` in tauri cause app crashed · Issue #6421 - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/tauri/issues/6421
+   28. Model Context Protocol (MCP). MCP is an open protocol that… | by Aserdargun | Nov, 2025, дата последнего обращения: декабря 3, 2025, https://medium.com/@aserdargun/model-context-protocol-mcp-e453b47cf254
+   29. Docker MCP Catalog and Toolkit: Simplifying Model Context Protocol Integration | by Nayeem Islam | Nov, 2025, дата последнего обращения: декабря 3, 2025, https://medium.com/@nomannayeem/docker-mcp-catalog-and-toolkit-simplifying-model-context-protocol-integration-039ede17de14
+   30. Architecture overview - Model Context Protocol, дата последнего обращения: декабря 3, 2025, https://modelcontextprotocol.io/docs/learn/architecture
+   31. Headless Tauri · Issue #1061 - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/tauri-apps/tauri/issues/1061
+   32. Use MCP servers in VS Code, дата последнего обращения: декабря 3, 2025, https://code.visualstudio.com/docs/copilot/customization/mcp-servers
+   33. Use Agent Mode - Visual Studio (Windows) - Microsoft Learn, дата последнего обращения: декабря 3, 2025, https://learn.microsoft.com/en-us/visualstudio/ide/copilot-agent-mode?view=visualstudio
+   34. Connect to local MCP servers - Model Context Protocol, дата последнего обращения: декабря 3, 2025, https://modelcontextprotocol.io/docs/develop/connect-local-servers
+   35. Quickstart - Create a minimal MCP server and publish to NuGet - .NET - Microsoft Learn, дата последнего обращения: декабря 3, 2025, https://learn.microsoft.com/en-us/dotnet/ai/quickstarts/build-mcp-server
+   36. A Reusable File System Event Watcher for PowerShell - Microsoft Developer Blogs, дата последнего обращения: декабря 3, 2025, https://devblogs.microsoft.com/powershell-community/a-reusable-file-system-event-watcher-for-powershell/
+   37. Simple debounce - GitHub Gist, дата последнего обращения: декабря 3, 2025, https://gist.github.com/cocowalla/5d181b82b9a986c6761585000901d1b8
+   38. ayangweb/tauri-plugin-macos-permissions - GitHub, дата последнего обращения: декабря 3, 2025, https://github.com/ayangweb/tauri-plugin-macos-permissions
+   39. When I install and run Tauri on Mac OS Monterey I get immediate error - Stack Overflow, дата последнего обращения: декабря 3, 2025, https://stackoverflow.com/questions/75013520/when-i-install-and-run-tauri-on-mac-os-monterey-i-get-immediate-error/75580172
+   40. mcp-cache | MCP Servers - LobeHub, дата последнего обращения: декабря 3, 2025, https://lobehub.com/mcp/swapnilsurdi-mcp-cache
+   41. MCP Filesystem Server - Glama, дата последнего обращения: декабря 3, 2025, https://glama.ai/mcp/servers/@safurrier/mcp-filesystem
+   42. Create command line tools with Swift, дата последнего обращения: декабря 3, 2025, https://swift.org/get-started/command-line-tools/
+   43. macOS Accessibility API - kAXErrorAttributeUnsupported when querying Books.app, дата последнего обращения: декабря 3, 2025, https://stackoverflow.com/questions/66969764/macos-accessibility-api-kaxerrorattributeunsupported-when-querying-books-app
+   44. Configuration - Tauri, дата последнего обращения: декабря 3, 2025, https://v2.tauri.app/reference/config/

@@ -223,7 +223,8 @@ $(foreach ($cat in $Categories.Keys | Sort-Object) {
     
     # Update categories (if section exists)
     foreach ($cat in $Categories.Keys) {
-        $content = $content -replace "(\*\*$cat:\*\*\s+)\d+", "`$1$($Categories[$cat])"
+        # Use ${cat} to safely interpolate variable before a colon in regex
+        $content = $content -replace "(\*\*${cat}:\*\*\s+)\d+", "`$1$($Categories[$cat])"
     }
     
     $content | Set-Content $IndexFile -NoNewline -Encoding UTF8

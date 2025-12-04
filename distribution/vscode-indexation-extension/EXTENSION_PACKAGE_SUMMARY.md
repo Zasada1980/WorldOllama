@@ -294,6 +294,31 @@ Remove-Item "$env:USERPROFILE\.vscode\extensions\gatevibe-vscode-indexation-tool
 **License:** MIT  
 **Repository:** https://github.com/GateVibeIsrael/vscode-indexation-tools
 
+## Distribution Checksums (UPDATED 2025-12-03 15:40)
+
+### Extension Package
+
+```
+File: vscode-indexation-extension-v2.0.zip
+Size: 35.33 KB
+SHA256: 635A683E812E40743329122E0E88BF399543097D98C31DB46EEB5B31FE670DDC
+```
+
+### Tools Package
+
+```
+File: vscode-indexation-tools-v2.0.zip
+Size: 47.43 KB
+SHA256: AB3214E046F6055AA8EC1AA2FFDE072B3CC4163775A5AEB85BF0242EEB27BB12
+```
+
+**⚠️ Important:** Verify SHA256 checksums after download to ensure package integrity.
+
+```powershell
+# Verify checksum (PowerShell)
+Get-FileHash -Path "vscode-indexation-extension-v2.0.zip" -Algorithm SHA256
+```
+
 ## Changelog
 
 ### 2.0.0 (2025-12-03)
@@ -309,6 +334,8 @@ Remove-Item "$env:USERPROFILE\.vscode\extensions\gatevibe-vscode-indexation-tool
 - ✅ Test suite integration
 - ✅ PowerShell installer
 - ✅ VSIX build support
+- 🐛 Fixed PowerShell parser error in UPDATE_PROJECT_INDEX.ps1 (line 226: `$cat:` → `${cat}`)
+- 🐛 Fixed file watcher parameter mismatch (extension.js: `-ProjectRoot` → `-WatchPath`)
 
 ---
 

@@ -5,7 +5,7 @@
     Запуск когнитивного ядра WORLD_OLLAMA с логированием
     
     Архитектура:
-    - Модель: qwen2.5:14b-instruct-q4_k_m (Ollama port 11434)
+    - Модель: mistral-small:latest (Ollama port 11434)
     - Embeddings: nomic-embed-text
     - Индекс: E:\WORLD_OLLAMA\services\lightrag\data
     - Источник: E:\WORLD_OLLAMA\library\raw_documents (131 файл)
@@ -64,7 +64,7 @@ try {
 }
 
 # Проверка моделей
-$requiredModels = @("qwen2.5:14b", "nomic-embed-text")  # Исправлено: убран несуществующий суффикс -instruct-q4_k_m
+$requiredModels = @("mistral-small:latest", "nomic-embed-text")  # Mistral Small 22B параметров
 foreach ($model in $requiredModels) {
     $modelExists = $ollamaTest.models | Where-Object { $_.name -like "$model*" }
     if ($modelExists) {

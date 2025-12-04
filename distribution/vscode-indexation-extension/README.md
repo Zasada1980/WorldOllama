@@ -152,6 +152,44 @@ Index File (*.md)
 - Ensure workspace is open (`workspaceFolderCount > 0`)
 - Reload window: `Ctrl+Shift+P → Developer: Reload Window`
 
+### Parser Error on First Reindex (FIXED in 2.0.0)
+
+**Symptom:** Error message: `Variable reference is not valid. ':' was not followed by a valid variable name character.`
+
+**Cause:** PowerShell parser issue in UPDATE_PROJECT_INDEX.ps1 line 226 (versions before 2.0.0)
+
+**Solution:**
+- ✅ Fixed in version 2.0.0 — ensure you have the latest package
+- If still occurring, manually update line 226 in `UPDATE_PROJECT_INDEX.ps1`:
+  ```powershell
+  # BEFORE (broken):
+  $content = $content -replace "(\*\*$cat:\*\*\s+)\d+", "`$1$($Categories[$cat])"
+  
+  # AFTER (fixed):
+  $content = $content -replace "(\*\*${cat}:\*\*\s+)\d+", "`$1$($Categories[$cat])"
+  ```
+
+### File Watcher Won't Start (FIXED in 2.0.0)
+
+**Symptom:** Command completes but no watcher process running
+
+**Cause:** Parameter mismatch in extension.js (versions before 2.0.0)
+
+**Solution:**
+- ✅ Fixed in version 2.0.0 — ensure you have the latest package
+- **After installing updates:** Reload VS Code window: `Ctrl+Shift+P → Developer: Reload Window`
+
+### Extension Updates Not Applied
+
+**Symptom:** Changes to extension files don't take effect immediately
+
+**Cause:** VS Code caches extension code in memory
+
+**Solution:** Always reload window after manual updates:
+```
+Ctrl+Shift+P → Developer: Reload Window
+```
+
 ### Scripts Not Found
 
 1. Check **Output → Indexation Tools** for errors
@@ -162,11 +200,12 @@ Index File (*.md)
    }
    ```
 
-### File Watcher Not Working
+### File Watcher Stops Unexpectedly
 
 - Check exclusion patterns in settings
 - Verify `logs/file_watcher.log` for errors
 - Restart watcher: Stop → Start
+- Check disk space (low space can cause file system events to fail)
 
 ### Permission Errors (Scheduled Task)
 
@@ -236,3 +275,5 @@ SOFTWARE.
 - ✅ Windows Task Scheduler support
 - ✅ Comprehensive logging
 - ✅ Test suite integration
+- 🐛 Fixed PowerShell parser error in UPDATE_PROJECT_INDEX.ps1 (line 226)
+- 🐛 Fixed file watcher parameter mismatch (extension.js → WATCH_FILE_CHANGES.ps1)

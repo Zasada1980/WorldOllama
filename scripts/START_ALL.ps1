@@ -6,7 +6,7 @@
 # ========================================
 
 param(
-    [switch]$SkipNeuroTerminal = $false,
+    [switch]$SkipNeuroTerminal = $true,  # По умолчанию пропускать (опционален)
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 
@@ -124,7 +124,7 @@ try {
     Write-Log "✓ Ollama is running" "SUCCESS"
     
     # Check for required models
-    $requiredModels = @("qwen2.5:14b", "nomic-embed-text:latest")
+    $requiredModels = @("mistral-small:latest", "nomic-embed-text:latest")
     $availableModels = $ollamaModels.models.name
     
     foreach ($model in $requiredModels) {

@@ -14,7 +14,7 @@ pub struct AppSettings {
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
-            ollama_model: "qwen2.5:14b".to_string(),
+            ollama_model: "mistral-small".to_string(),
             max_tokens: None,
             cortex_top_k: 20,
             cortex_mode: "local".to_string(),

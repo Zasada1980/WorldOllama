@@ -1,0 +1,327 @@
+﻿Экосистемная устойчивость фреймворка Tauri: Глубокий анализ регрессии ERROR_CLASS_ALREADY_EXISTS, архитектурные конфликты WebView2 и стратегии изоляции через Docker и WSL2
+Введение
+Современная разработка кроссплатформенных десктопных приложений переживает парадигмальный сдвиг от тяжеловесных решений, включающих полный браузерный движок (например, Electron), к более легковесным архитектурам, использующим системные компоненты рендеринга. Фреймворк Tauri, написанный на Rust, стал флагманом этого движения, предлагая минимальный размер бинарных файлов и высокую производительность за счет использования Microsoft Edge WebView2 в среде Windows. Однако эта зависимость от системных компонентов, управляемых операционной системой, а не разработчиком приложения, создает уникальный вектор уязвимости. Недавние изменения в политиках безопасности Windows 11, в частности внедрение функции «Защита администратора» (Administrator Protection), в сочетании с особенностями управления жизненным циклом процессов в WebView2, привели к критической регрессии, парализующей разработку и эксплуатацию приложений.
+Данный отчет представляет собой исчерпывающее техническое исследование феномена, проявляющегося через системную ошибку ERROR_CLASS_ALREADY_EXISTS (код 1411). Мы проанализируем каскад отказов, начинающийся с конфликта привилегий доступа к файловой системе, приводящий к появлению «зомби-процессов» и завершающийся невозможностью регистрации оконных классов Win32 API. В документе детально рассматриваются методы устранения этой проблемы, разработанные сообществом и инженерами Tauri: от низкоуровневых патчей исходного кода Rust и манипуляций с токенами безопасности Windows до полной архитектурной изоляции среды разработки с использованием контейнеризации Docker и подсистемы WSL2.
+Раздел I: Анатомия регрессии и механизм возникновения конфликта
+Центральной проблемой, с которой столкнулось сообщество Tauri, является ошибка инициализации графического интерфейса, при которой приложение либо аварийно завершает работу сразу после запуска, либо отображает пустое («белое») окно, не реагирующее на ввод. Корневой причиной этого поведения является сложная интеракция между механизмом регистрации оконных классов в Windows и новой моделью безопасности.
+1.1 Механика Win32 API и ошибка 1411
+В архитектуре Windows каждое графическое окно должно принадлежать к определенному «Классу окна» (Window Class). Этот класс определяет фундаментальные свойства поведения окна, включая процедуру обработки сообщений (lpfnWndProc). Регистрация класса производится функцией RegisterClassEx, которая требует уникальности имени класса в рамках процесса (или глобально для системы, если используется стиль CS_GLOBALCLASS).
+Ошибка ERROR_CLASS_ALREADY_EXISTS (1411) возникает, когда приложение пытается зарегистрировать класс с именем, которое уже присутствует в таблице атомов процесса.1 В контексте Tauri и WebView2 конфликт происходит вокруг класса с именем Chrome_WidgetWin_0. Этот класс используется движком Chromium (лежащим в основе WebView2) для создания скрытых служебных окон, управляющих межпроцессным взаимодействием (IPC) и рендерингом.2
+Нормальный жизненный цикл приложения Tauri выглядит следующим образом:
+1. Инициализация: Приложение запускается, библиотека Wry (слой рендеринга Tauri) инициализирует WebView2.
+2. Регистрация: WebView2 регистрирует класс Chrome_WidgetWin_0.
+3. Работа: Окна создаются и функционируют.
+4. Завершение: При выходе вызывается UnregisterClass, освобождающий имя класса.
+Регрессия возникает, когда этап завершения нарушается. Если процесс WebView2 (msedgewebview2.exe) завершается аварийно (краш) или зависает («зомби-процесс»), функция UnregisterClass не вызывается или завершается с ошибкой 1412 (ERROR_CLASS_HAS_WINDOWS), означающей, что у класса еще есть живые окна.4 При следующей попытке запуска новое приложение (или перезапущенный процесс) сталкивается с тем, что имя класса Chrome_WidgetWin_0 уже занято, что приводит к фатальной ошибке инициализации.
+1.2 Влияние функции «Защита администратора» в Windows 11
+Анализ инцидентов показывает, что триггером массового проявления этой ошибки стало внедрение функции Administrator Protection в инсайдерских сборках Windows 11 (версия 25H2, сборка 26200.5710 и новее).1 Эта функция фундаментально меняет работу токенов доступа.
+Цепочка отказа при включенной защите:
+1. Запуск от администратора: Пользователь запускает приложение Tauri с повышенными привилегиями.
+2. Разделение личностей: Под действием Administrator Protection приложение выполняется с токеном, отличным от токена стандартного пользователя, фактически под другим идентификатором безопасности.
+3. Вычисление путей: Tauri вычисляет путь к LocalAppData для текущего (административного) пользователя и передает его в WebView2 как директорию пользовательских данных (User Data Folder — UDF).
+4. Деэскалация привилегий WebView2: Движок WebView2, обнаружив запуск с правами администратора, в целях безопасности принудительно понижает свои права (де-элевация), переключаясь на токен стандартного пользователя.
+5. Конфликт доступа (Access Denied): Пониженный процесс WebView2 пытается обратиться к UDF, который был создан или путь к которому был вычислен для административного контекста. Файловая система (NTFS ACLs) блокирует доступ.
+6. Аварийное завершение: WebView2 падает из-за невозможности чтения/записи профиля. Из-за паники ресурсы (включая оконные классы и файлы блокировок в UDF) не освобождаются корректно.
+7. Блокировка повторного запуска: Последующие запуски сталкиваются либо с ERROR_CLASS_ALREADY_EXISTS (из-за зависших процессов), либо с ошибками доступа к поврежденной папке профиля (EBWebView).6
+1.3 Сравнительный анализ проявлений ошибки
+На основе собранных данных можно выделить различные формы проявления данного сбоя, зависящие от версии Tauri и конфигурации среды.
+
+
+Симптом
+	Вероятная причина
+	Код ошибки / Лог
+	Источник
+	Мгновенное закрытие ("Flash")
+	Паника Rust-кода при инициализации webview из-за невозможности создать папку профиля.
+	WindowsError(Error { code: HRESULT(0x80070002)... })
+	6
+	Зависание / Белое окно
+	Успешное создание нативного окна (CreateWindow), но провал инициализации WebView2 из-за конфликта классов.
+	Отсутствие логов или зависание на build()
+	7
+	Ошибка при выходе
+	Некорректное освобождение ресурсов при закрытии приложения.
+	Failed to unregister class Chrome_WidgetWin_0. Error = 1412
+	4
+	Блокировка запуска
+	Наличие зависшего процесса msedgewebview2.exe от предыдущей сессии.
+	ERROR_CLASS_ALREADY_EXISTS (1411)
+	1
+	________________
+Раздел II: Программные решения и патчи на уровне Rust
+Сообщество разработчиков Tauri отреагировало на кризис разработкой ряда программных решений, направленных на устранение как первопричины (проблемы с путями и правами), так и симптомов (конфликты имен классов).
+2.1 Алгоритм коррекции путей для Administrator Protection
+Наиболее глубоким техническим решением является модификация логики определения путей к данным приложения. Вместо использования стандартного LocalAppData текущего процесса, необходимо программно получить токен связанного стандартного пользователя, когда приложение запущено с правами администратора.1
+Техническая реализация:
+Для реализации этого патча требуется использование Windows API функций GetTokenInformation с классом TokenLinkedToken. Логика следующая:
+1. Получить токен текущего процесса.
+2. Проверить тип элевации (TokenElevationType).
+3. Если тип TokenElevationTypeFull (Администратор), запросить связанный токен (TokenLinkedToken), который соответствует правам обычного пользователя.
+4. Использовать этот связанный токен в функции SHGetKnownFolderPath для получения корректного пути LocalAppData.
+5. Установить переменную окружения WEBVIEW2_USER_DATA_FOLDER в вычисленное значение перед инициализацией контекста Tauri.
+Это гарантирует, что даже после де-элевации WebView2, он будет обращаться к директории, к которой у него есть легитимный доступ, предотвращая краш и последующее «зомбирование» процессов.
+2.2 Кастомизация имени оконного класса (Window Classname)
+Для устранения конфликтов имен классов, особенно в Tauri v1 и ранних версиях v2, был внедрен механизм ручного задания имени класса. В ранних версиях имя "Window Class" было жестко закодировано в библиотеках tao и winit, что делало невозможным запуск двух разных приложений Tauri, если одно из них зависало.10
+Внедрение в Tauri v1 и v2:
+Патчи, интегрированные в tao (PR #770) и winit (PR #2978), добавили метод with_window_classname (или поле конфигурации windowClassname в v2).12
+Пример конфигурации в tauri.conf.json (v2):
+
+
+JSON
+
+
+
+
+{
+ "tauri": {
+   "windows": [
+     {
+       "label": "main",
+       "windowClassname": "MyUniqueAppClass_v1"
+     }
+   ]
+ }
+}
+
+Пример реализации в Rust (Builder Pattern):
+
+
+Rust
+
+
+
+
+use tauri::WindowBuilder;
+
+fn main() {
+ tauri::Builder::default()
+  .setup(|app| {
+     let window = WindowBuilder::new(
+       app,
+       "main",
+       tauri::WindowUrl::App("index.html".into())
+     )
+     // Установка уникального имени класса предотвращает коллизии с дефолтным "Window Class"
+     // и изолирует приложение от других инстансов Tauri
+    .window_classname("UniqueInterceptorClass") 
+    .build()?;
+     Ok(())
+   })
+  .run(tauri::generate_context!())
+  .expect("error while running tauri application");
+}
+
+Использование уникального имени класса для каждого приложения (или даже для каждой версии) позволяет избежать блокировки запуска из-за глобальной регистрации имени класса другим зависшим процессом.10
+2.3 Стратегия "Fixed Version" Runtime
+Для корпоративных сред, где стабильность превалирует над новизной, использование "Evergreen" (автоматически обновляемого) WebView2 Runtime представляет риск. Ошибка с Administrator Protection пришла именно через обновление Evergreen.
+Решение: Использование фиксированной версии (Fixed Version) WebView2.
+Это позволяет "заморозить" версию браузерного движка, которая гарантированно работает с текущим кодом приложения, и распространять её вместе с инсталлятором.14
+Преимущества:
+* Полный контроль над API и поведением рендеринга.
+* Изоляция от системных обновлений Windows, ломающих совместимость.
+* Возможность хранения бинарных файлов WebView2 в локальной папке приложения, что упрощает расчет прав доступа.
+Недостатки:
+* Увеличение размера инсталлятора (~180 МБ).16
+* Необходимость самостоятельного патчинга уязвимостей безопасности.
+________________
+Раздел III: Операционные методы устранения (Workarounds)
+До внедрения исправлений в код, разработчики вынуждены использовать операционные методы для восстановления работоспособности среды разработки.
+3.1 Скрипты очистки процессов (PowerShell)
+Поскольку стандартное закрытие окна терминала или IDE часто не убивает дочерние процессы msedgewebview2.exe, они продолжают удерживать атомы оконных классов. Эффективным решением является использование PowerShell скриптов для принудительной очистки.17
+Скрипт полной зачистки (The "Nuke" Script):
+
+
+PowerShell
+
+
+
+
+# Принудительное завершение всех процессов WebView2
+Get-Process -Name "msedgewebview2" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Принудительное завершение основного процесса приложения (замените 'tauri-app')
+Get-Process -Name "tauri-app" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Очистка папки пользовательских данных для удаления файлов блокировок (lockfiles)
+# Внимание: Удаляет локальное хранилище и cookies!
+$UserDataDir = "$env:LOCALAPPDATA\Ваш_App_Identifier"
+if (Test-Path $UserDataDir) {
+   Remove-Item -Path $UserDataDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Этот скрипт рекомендуется запускать перед каждой командой npm run tauri dev в качестве пре-хука, чтобы гарантировать чистый старт.17
+3.2 Ручная очистка директории EBWebView
+При возникновении ошибки доступа (Access is denied или ошибка 5) часто помогает ручное удаление подпапки EBWebView внутри директории данных приложения. Эта папка содержит профиль браузера, который может быть создан с неправильными правами доступа (под админом) и стать недоступным для обычного пользователя.6 Удаление папки заставляет WebView2 пересоздать её с корректными правами текущего контекста безопасности (при условии применения патча из раздела 2.1).
+________________
+Раздел IV: Изоляция среды разработки через Docker и WSL2
+Учитывая нестабильность нативного стека Windows/WebView2, многие разработчики переходят на стратегию полной изоляции среды разработки с использованием Linux-контейнеров внутри Windows. Это позволяет использовать стабильный стек WebKitGTK (Linux) вместо WebView2 (Windows) на этапе разработки, избегая ошибок класса 1411.
+4.1 Архитектура решения: WSLg против VcXsrv
+Существует два основных подхода к запуску графических Linux-приложений (Tauri) на Windows через Docker:
+1. WSLg (Windows Subsystem for Linux GUI):
+   * Механизм: Нативная интеграция в Windows 11. Использует Wayland и RDP для проброса графики. Автоматически монтирует сокеты X11.
+   * Преимущества: Аппаратное ускорение GPU, отсутствие необходимости в стороннем софте, интеграция буфера обмена.20
+   * Настройка: Требует обновления WSL (wsl --update).
+2. VcXsrv / Xming (Сторонние X-серверы):
+   * Механизм: Windows-приложение, запускающее X-сервер. Контейнер Docker соединяется с ним через TCP/IP.
+   * Преимущества: Работает на Windows 10 и старых сборках.
+   * Недостатки: Требует ручной настройки переменной DISPLAY, настройки брандмауэра (Firewall), часто возникают проблемы с HiDPI и буфером обмена.22
+4.2 Оптимизированный Dockerfile для Tauri
+Для успешной компиляции и запуска Tauri в Docker необходимо установить специфические системные зависимости, отсутствующие в стандартных образах Rust или Node. Ключевым отличием является использование libwebkit2gtk вместо WebView2.
+Пример Dockerfile (Multi-stage build) 24:
+
+
+Dockerfile
+
+
+
+
+# Используем официальный образ Rust
+FROM rust:latest
+
+# Установка системных зависимостей для сборки Tauri (Linux target)
+# libwebkit2gtk-4.0-dev - ключевая зависимость для рендеринга
+# build-essential, curl, wget - стандартные инструменты
+# libssl-dev - для криптографии
+# libgtk-3-dev, libayatana-appindicator3-dev - для UI и трея
+RUN apt-get update && apt-get install -y \
+   libwebkit2gtk-4.0-dev \
+   build-essential \
+   curl \
+   wget \
+   file \
+   libssl-dev \
+   libgtk-3-dev \
+   libayatana-appindicator3-dev \
+   librsvg2-dev \
+   x11-apps \
+   xauth \
+   && rm -rf /var/lib/apt/lists/*
+
+# Установка Node.js (необходим для frontend сборки)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+   apt-get install -y nodejs
+
+# Установка Tauri CLI глобально
+RUN cargo install tauri-cli
+
+# Настройка рабочей директории
+WORKDIR /app
+
+# Порт для dev-сервера (Vite/Webpack)
+EXPOSE 1420
+
+CMD ["/bin/bash"]
+
+4.3 Настройка X11 Forwarding
+Для того чтобы окно приложения, запущенного в Docker, отобразилось на Windows-хосте, необходимо правильно пробросить дисплей.
+Сценарий А: Использование WSLg (Рекомендуемый для Win 11)
+В этом сценарии сокет X11 уже находится в /tmp/.X11-unix внутри WSL2 дистрибутива. При запуске Docker контейнера необходимо пробросить этот сокет.
+
+
+Bash
+
+
+
+
+# Команда запуска Docker внутри WSL2 терминала
+docker run -it --rm \
+ -e DISPLAY=$DISPLAY \
+ -e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
+ -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+ -e PULSE_SERVER=$PULSE_SERVER \
+ -v /tmp/.X11-unix:/tmp/.X11-unix \
+ -v /mnt/wslg:/mnt/wslg \
+ -v $(pwd):/app \
+ my-tauri-image \
+ npm run tauri dev
+
+Примечание: Монтирование /mnt/wslg критично для работы Wayland-композитора.
+Сценарий Б: Использование VcXsrv (Windows 10)
+1. Установите VcXsrv: choco install vcxsrv.
+2. Запустите XLaunch с параметром "Disable access control" (для разрешения входящих соединений).
+3. Определите IP адрес хоста. В WSL2 это часто IP виртуального адаптера vEthernet (WSL).
+4. Запустите контейнер, передав IP адрес в переменную DISPLAY.
+
+
+Bash
+
+
+
+
+# Получение IP хоста (выполнять в WSL)
+export DISPLAY_IP=$(grep nameserver /etc/resolv.conf | awk '{print $2}')
+
+docker run -it --rm \
+ -e DISPLAY=$DISPLAY_IP:0.0 \
+ -v $(pwd):/app \
+ my-tauri-image \
+ npm run tauri dev
+
+4.4 Ограничения подхода Docker/WSL2
+Хотя этот метод полностью устраняет ошибки, связанные с Windows WebView2 (ERROR_CLASS_ALREADY_EXISTS), он вносит платформенную дивергенцию:
+1. Различия в рендеринге: WebKitGTK (Linux) и WebView2 (Chromium) имеют разные движки рендеринга. CSS, работающий в Docker, может выглядеть иначе в нативном Windows-сборке.25
+2. Системные API: Функции, специфичные для Windows (например, панели задач, уведомления, работа с реестром), не будут работать или будут эмулироваться некорректно внутри Linux-контейнера.
+3. Производительность: Проброс графики через X11/Wayland может давать задержки отрисовки по сравнению с нативным исполнением.
+________________
+Раздел V: Сравнительный анализ стратегий решения
+Для принятия решения о выборе метода устранения проблемы, приведена сравнительная таблица стратегий.
+Стратегия
+	Сложность внедрения
+	Стабильность (Dev)
+	Стабильность (Prod)
+	Побочные эффекты
+	PowerShell "Nuke" Script
+	Низкая
+	Средняя
+	Н/Д
+	Требует ручного запуска, удаляет данные пользователя (cookies/storage).
+	Rust Code Patch (UDF Path)
+	Высокая
+	Высокая
+	Высокая
+	Требует глубокого понимания Windows API и токенов безопасности. Решает корневую проблему.
+	Custom Window Classname
+	Средняя
+	Высокая
+	Высокая
+	Предотвращает коллизии с другими приложениями, но не с собственными зависшими процессами.
+	Docker / WSL2
+	Высокая
+	Очень Высокая
+	Н/Д
+	Различия в рендеринге (WebKit vs Chromium). Сложная настройка графики.
+	Fixed Version WebView2
+	Средняя
+	Высокая
+	Высокая
+	Значительно увеличивает размер инсталлятора (+180 МБ). Требует ручного обновления.
+	Заключение
+Регрессия ERROR_CLASS_ALREADY_EXISTS в экосистеме Tauri — это не просто программная ошибка, а следствие фундаментального конфликта между устаревающими механизмами Win32 API и современными политиками безопасности Windows 11 (Administrator Protection). Проблема усугубляется архитектурой WebView2, работающего как отдельный процесс с собственным жизненным циклом и привилегиями.
+Анализ показывает, что единственным надежным решением для продакшн-окружения является программная коррекция путей к папке данных (UDF) на уровне Rust-кода (использование связанных токенов), что предотвращает краш при де-элевации прав и последующее "зомбирование" процессов. Дополнительной мерой защиты служит использование уникальных имен оконных классов (windowClassname).
+Для среды разработки, где важна скорость итераций, оптимальной стратегией является использование гибридного подхода: автоматизация очистки процессов через PowerShell скрипты для быстрых тестов на Windows и использование изолированной среды Docker/WSL2 для разработки UI-компонентов, не зависящих от специфичных для Windows API. Это позволяет разорвать порочный круг блокировок файлов и оконных классов, обеспечивая стабильный процесс разработки даже в условиях нестабильности хост-системы.
+Источники
+1. [bug] [Windows] WebView2 fails to start when launched by an ..., дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/13926
+2. How to get the url from Chrome using delphi - Stack Overflow, дата последнего обращения: декабря 4, 2025, https://stackoverflow.com/questions/5222301/how-to-get-the-url-from-chrome-using-delphi
+3. Failed to unregister class Chrome_WidgetWin_0. Error - Stack Overflow, дата последнего обращения: декабря 4, 2025, https://stackoverflow.com/questions/70473431/failed-to-unregister-class-chrome-widgetwin-0-error
+4. [Windows] Failed to unregister class Chrome_WidgetWin_0 on shutdown [40720563], дата последнего обращения: декабря 4, 2025, https://issues.chromium.org/40720563
+5. [bug] Crash on: Failed to unregister class Chrome_WidgetWin_0. Error = 0 #7606 - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/7606
+6. [bug] The Tauri App fails to create a EBWebView folder under the APPDATA/Local/{tauri-app-identifier}/ . leading to the issue in which the app window opens and closes within a split second if you try to run it. WindowsError(Error { code: HRESULT(0x80070002) #12787 - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/12787
+7. Tauri window opens fine on macOS but hangs with blank window on Windows (no logs after #2) - Stack Overflow, дата последнего обращения: декабря 4, 2025, https://stackoverflow.com/questions/79757777/tauri-window-opens-fine-on-macos-but-hangs-with-blank-window-on-windows-no-logs
+8. [bug] Additional WebviewWindow Shows Blank Screen When Using additionalBrowserArgs in tauri.conf.json · Issue #13092 - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/13092
+9. [bug] [beta.2] [windows] Flakey error when creating new windows with tauri commands · Issue #8891 - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/8891
+10. [feat] On Windows, allow to customize the name of window class used · Issue #7498 · tauri-apps/tauri - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/7498
+11. On Windows, allow to customize the name of the Window Class (current value hard coded is "Window Class") · Issue #2977 · rust-windowing/winit - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/rust-windowing/winit/issues/2977
+12. tauri-apps/tauri tauri-v2.1.0 on GitHub - NewReleases.io, дата последнего обращения: декабря 4, 2025, https://newreleases.io/project/github/tauri-apps/tauri/release/tauri-v2.1.0
+13. Configuration - Tauri, дата последнего обращения: декабря 4, 2025, https://v2.tauri.app/reference/config/
+14. Evergreen vs. fixed version of the WebView2 Runtime - Microsoft Edge Developer documentation, дата последнего обращения: декабря 4, 2025, https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/evergreen-vs-fixed-version
+15. Microsoft Edge WebView2, дата последнего обращения: декабря 4, 2025, https://developer.microsoft.com/en-us/Microsoft-edge/webview2/
+16. Windows Installer - Tauri, дата последнего обращения: декабря 4, 2025, https://v2.tauri.app/distribute/windows-installer/
+17. Stop-Process (Microsoft.PowerShell.Management), дата последнего обращения: декабря 4, 2025, https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/stop-process?view=powershell-7.5
+18. PowerShell – Uninstall Microsoft Edge Browser - Lab Core | The Lab of MrNetTek, дата последнего обращения: декабря 4, 2025, https://eddiejackson.net/lab/2024/07/30/powershell-uninstall-microsoft-edge-browser/
+19. [bug] Tauri creating AppData\locale\*app*\EBWebView with privliges · Issue #7491 - GitHub, дата последнего обращения: декабря 4, 2025, https://github.com/tauri-apps/tauri/issues/7491
+20. Run Linux GUI apps with WSL - Microsoft Learn, дата последнего обращения: декабря 4, 2025, https://learn.microsoft.com/en-us/windows/wsl/tutorials/gui-apps
+21. Prerequisites - The Tauri Documentation WIP, дата последнего обращения: декабря 4, 2025, https://jonaskruckenberg.github.io/tauri-docs-wip/prerequisites.html
+22. How to use GUI apps in linux docker container from Windows Host - Medium, дата последнего обращения: декабря 4, 2025, https://medium.com/@potatowagon/how-to-use-gui-apps-in-linux-docker-container-from-windows-host-485d3e1c64a3
+23. Run GUI app in linux docker container on windows host - DEV Community, дата последнего обращения: декабря 4, 2025, https://dev.to/darksmile92/run-gui-app-in-linux-docker-container-on-windows-host-4kde
+24. Cross-Platform builds with Tauri and Docker - Alexander - The Great, дата последнего обращения: декабря 4, 2025, https://www.the-great.dev/blog/2024-02-04-tauri-docker
+25. Tiny cross-platform webview library for C/C++ - Hacker News, дата последнего обращения: декабря 4, 2025, https://news.ycombinator.com/item?id=40507170

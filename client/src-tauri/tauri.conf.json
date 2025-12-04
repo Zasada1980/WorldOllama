@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "WORLD_OLLAMA",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "identifier": "com.zasada.worldollama",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "WORLD_OLLAMA v0.3.1 (Preview Release)",
+        "title": "WORLD_OLLAMA v0.4.0 (Stability Release)",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,

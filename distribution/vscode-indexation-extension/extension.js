@@ -208,8 +208,10 @@ async function startWatcher() {
         outputChannel.appendLine('\n🔍 Starting file watcher...');
         outputChannel.show(true);
         
-        watcherProcess = exec(`pwsh -NoProfile -File "${scriptFile}"`, {
-            cwd: getWorkspaceRoot()
+        const workspaceRoot = getWorkspaceRoot();
+        // Pass explicit WatchPath so logs and exclusions resolve to workspace
+        watcherProcess = exec(`pwsh -NoProfile -File "${scriptFile}" -WatchPath "${workspaceRoot}"`, {
+            cwd: workspaceRoot
         });
         
         watcherProcess.stdout.on('data', (data) => {

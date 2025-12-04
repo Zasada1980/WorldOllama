@@ -4,7 +4,7 @@
     "timeouts": {
         "default_exec_timeout_sec": 120,
         "max_exec_timeout_sec": 900,
-        "no_output_timeout_sec": 30,
+        "no_output_timeout_sec": 60,
         "soft_kill_timeout_sec": 10,
         "hard_kill_timeout_sec": 5,
         "global_agent_timeout_sec": 90
@@ -17,7 +17,8 @@
         "index_knowledge": 600,
         "train_agent": 900,
         "git_clone": 300,
-        "docker_build": 600
+        "docker_build": 600,
+        "start_all": 300
     },
     "command_classification": {
         "fast": {
