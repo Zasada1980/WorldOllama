@@ -45,7 +45,12 @@ npm run tauri dev
 2. 🔵 **ORDER 41 - PULSE v2** (улучшенный протокол training status)
 3. 🟢 **ORDER 44 - Safe Git v2** (diff preview + secrets detection)
 
-**Детали:** См. `temp/PHASE_3_E2E_RESULTS.md`, `CHANGELOG.md` (v0.4.0) и `PROJECT_STATUS_SNAPSHOT_v4.0.md`
+**Recent Updates (04.12.2025):**
+- ✅ **Agent Settings Optimization** — Compliance rate 87% → 95% (модульная архитектура, token budget -85%)
+- ✅ **Documentation Cleanup** — Temp files migrated, Quick Index updated (266 files)
+- ✅ **CoT Auto-Detection** — Enhanced planning protocol for complex tasks
+
+**Детали:** См. `docs/journals/12_project_management/PROJECT_STATUS_SNAPSHOT_v4.0.md` (v4.1 changelog)
 
 ---
 
