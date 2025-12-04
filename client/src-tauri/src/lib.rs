@@ -23,6 +23,8 @@ mod automation_commands; // NEW: ЭТАП 2 - Automation Tauri Commands
 // Windows-specific modules (ORDER 43 - Crash Fix)
 #[cfg(windows)]
 mod windows_job;       // Job Objects for zombie process cleanup
+#[cfg(windows)]
+mod linked_token;      // NEW: Phase 2C - Linked Token UDF Resolver
 // ===== /CORE MODULES =====
 
 // ===== TAURI IMPORTS (НЕ ТРОГАТЬ) =====
@@ -93,6 +95,40 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // ORDER 43 - PHASE 2C: WebView2 UDF Path Resolution
+    // Resolve correct UDF path using linked token (de-elevated) to avoid access denied
+    #[cfg(windows)]
+    {
+        match linked_token::resolve_webview_udf_path("WorldOllama") {
+            Ok(udf_path) => {
+                println!("[INFO] WebView2 UDF path resolved: {}", udf_path.display());
+                
+                // Ensure directory exists
+                if let Err(e) = std::fs::create_dir_all(&udf_path) {
+                    eprintln!("[WARN] Failed to create UDF directory: {}", e);
+                } else {
+                    println!("[INFO] UDF directory ensured: {}", udf_path.display());
+                }
+                
+                // Set environment variable for WebView2
+                std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &udf_path);
+                println!("[INFO] WEBVIEW2_USER_DATA_FOLDER set to: {}", udf_path.display());
+                
+                // Log elevation status
+                if linked_token::is_elevated() {
+                    println!("[INFO] Process is running ELEVATED (Administrator)");
+                    println!("[INFO] Using de-elevated UDF path for WebView2 compatibility");
+                } else {
+                    println!("[INFO] Process is running NON-ELEVATED (standard user)");
+                }
+            }
+            Err(e) => {
+                eprintln!("[WARN] Failed to resolve UDF path: {}", e);
+                eprintln!("[WARN] WebView2 will use default UDF (may cause access denied in elevated mode)");
+            }
+        }
+    }
+
     // ORDER 43: Windows Job Objects for zombie process cleanup
     // CRITICAL: _job_guard MUST stay in scope for entire app lifetime
     #[cfg(windows)]
