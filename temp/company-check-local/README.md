@@ -1,7 +1,7 @@
 # CompanyCheck - React Admin Panel
 
-![E2E Tests](https://github.com/Zasada1980/WorldOllama/workflows/E2E%20Tests%20-%20CompanyCheck/badge.svg)
-![Tests](https://img.shields.io/badge/tests-36%2F38%20passing-brightgreen)
+![E2E Tests](https://github.com/Zasada1980/WorldOllama/actions/workflows/e2e-tests.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-36%2F38%20passing-green)
 ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)
 
 ## React + TypeScript + Vite

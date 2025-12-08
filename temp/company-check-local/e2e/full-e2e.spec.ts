@@ -16,7 +16,7 @@ import { expect, test } from '@playwright/test';
  */
 
 const BASE_URL = 'http://46.224.36.109/company-check/';
-const ADMIN_PASSWORD = 'admin2024';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin2024';
 
 test.describe('🏠 ГЛАВНАЯ СТРАНИЦА', () => {
     test.beforeEach(async ({ page }) => {
@@ -95,20 +95,21 @@ test.describe('🔍 ПОИСК И РЕЗУЛЬТАТЫ', () => {
         }).toPass({ timeout: 3000 });
 
         // Ожидание результатов или ошибки (max 10 секунд)
-        await page.waitForTimeout(10000);
-
-        // Проверка что показались результаты ИЛИ сообщение об ошибке
-        const hasResults = await page.locator('text=/Company ID|מספר חברה/').isVisible().catch(() => false);
-        const hasError = await page.locator('text=/not found|לא נמצא/').isVisible().catch(() => false);
-
-        expect(hasResults || hasError).toBeTruthy();
+        await expect(async () => {
+            const hasResults = await page.locator('text=/Company ID|מספר חברה/').isVisible();
+            const hasError = await page.locator('text=/not found|לא нמצא/').isVisible();
+            expect(hasResults || hasError).toBeTruthy();
+        }).toPass({ timeout: 10000 });
     });
 
     test('05 - Premium Information заблокирована для не-админов', async ({ page }) => {
         // Выполнить поиск
         await page.locator('input[type="text"]').first().fill('516053675');
         await page.getByRole('main').getByRole('button', { name: /Search/i }).click();
-        await page.waitForTimeout(10000);
+        await Promise.race([
+            page.waitForSelector('text=/Company ID|מספר חברה/', { timeout: 10000 }),
+            page.waitForSelector('text=/not found|לא נמצא/', { timeout: 10000 })
+        ]).catch(() => { });
 
         // Проверить наличие Premium блока
         const premiumSection = page.getByRole('heading', { name: /Premium Information/i });
@@ -126,7 +127,10 @@ test.describe('🔍 ПОИСК И РЕЗУЛЬТАТЫ', () => {
         // Выполнить поиск
         await page.locator('input[type="text"]').first().fill('516053675');
         await page.getByRole('main').getByRole('button', { name: /Search/i }).click();
-        await page.waitForTimeout(10000);
+        await Promise.race([
+            page.waitForSelector('text=/Company ID|מספר חברה/', { timeout: 10000 }),
+            page.waitForSelector('text=/not found|לא נמצא/', { timeout: 10000 })
+        ]).catch(() => { });
 
         // Найти кнопку AI анализа
         const aiButton = page.getByRole('button', { name: /Smart Analysis|анализ/i });
@@ -154,7 +158,10 @@ test.describe('🔍 ПОИСК И РЕЗУЛЬТАТЫ', () => {
         // Выполнить поиск
         await page.locator('input[type="text"]').first().fill('516053675');
         await page.getByRole('main').getByRole('button', { name: /Search/i }).click();
-        await page.waitForTimeout(10000);
+        await Promise.race([
+            page.waitForSelector('text=/Company ID|מספר חברה/', { timeout: 10000 }),
+            page.waitForSelector('text=/not found|לא נמצא/', { timeout: 10000 })
+        ]).catch(() => { });
 
         // Проверить наличие планов (используем getByRole для заголовков)
         await expect(page.getByRole('heading', { name: /SILVER/i })).toBeVisible();
