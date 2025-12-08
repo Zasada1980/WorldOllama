@@ -245,7 +245,7 @@ test.describe('📊 ADMIN PANEL - НАВИГАЦИЯ', () => {
 
         // Orders
         await page.locator('aside').getByText(/Заказы/i).first().click();
-        
+
         // Ждём появления контента Orders с retry (поддержка русского/английского)
         await expect(async () => {
             const ordersContent = page.locator('text=/ORD-|Plan|Amount|Сумма|Статус|Status/i').first();
@@ -377,7 +377,7 @@ test.describe('💻 DEVELOPER MODE - 7 ВКЛАДОК', () => {
         await expect(async () => {
             const jobsHeader = page.locator('h3', { hasText: /Background Jobs/i });
             await expect(jobsHeader).toBeVisible();
-            
+
             // Также проверяем наличие Refresh кнопки
             const refreshButton = page.locator('button', { hasText: /Refresh/i });
             await expect(refreshButton).toBeVisible();
