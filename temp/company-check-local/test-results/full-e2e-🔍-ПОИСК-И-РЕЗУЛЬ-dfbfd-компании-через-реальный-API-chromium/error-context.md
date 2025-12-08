@@ -1,0 +1,128 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img [ref=e7]
+        - generic [ref=e11]: CompanyCheck
+      - navigation [ref=e12]:
+        - button "Search" [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+          - text: Search
+        - button "Pricing" [ref=e17] [cursor=pointer]
+        - button "About" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - button "HE" [ref=e21] [cursor=pointer]
+          - button "EN" [ref=e22] [cursor=pointer]
+          - button "RU" [ref=e23] [cursor=pointer]
+        - button "Login" [ref=e24] [cursor=pointer]
+  - main [ref=e25]:
+    - generic [ref=e26]:
+      - button "Back to search" [ref=e27] [cursor=pointer]:
+        - img [ref=e28]
+        - text: Back to search
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: 🏢
+          - generic [ref=e33]:
+            - heading "METALPRESS FIRE DOORS AND PARTITIONS LTD" [level=1] [ref=e34]
+            - paragraph [ref=e35]: "516053675"
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - generic [ref=e39]: Status
+              - generic [ref=e40]: Active
+            - generic [ref=e41]:
+              - generic [ref=e42]: Registration Date
+              - generic [ref=e43]: 10/07/2019
+            - generic [ref=e44]:
+              - generic [ref=e45]: Address
+              - generic [ref=e46]: המלאכה, 4, בת ים, 5959405
+            - generic [ref=e47]:
+              - generic [ref=e48]: Capital
+              - generic [ref=e49]: ₪0
+          - generic [ref=e50]:
+            - heading "Premium Information" [level=2] [ref=e51]:
+              - img [ref=e52]
+              - text: Premium Information
+            - generic [ref=e55]:
+              - generic [ref=e57]: Shareholders (5 owners)
+              - generic [ref=e59]: Directors and CEO
+              - generic [ref=e61]: Collateral (2 active)
+            - generic [ref=e63]:
+              - img [ref=e64]
+              - paragraph [ref=e67]: Locked Data
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - heading "AI Analysis" [level=2] [ref=e70]:
+              - img [ref=e71]
+              - text: AI Analysis
+            - button "Get Smart Analysis" [ref=e74] [cursor=pointer]:
+              - img [ref=e75]
+              - text: Get Smart Analysis
+          - generic [ref=e78]: Click "Get Smart Analysis" to get AI-powered business insights powered by Google Gemini
+      - generic [ref=e79]:
+        - heading "Choose Plan and Get Full Report" [level=2] [ref=e80]
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - heading "SILVER" [level=3] [ref=e83]
+            - generic [ref=e84]: ₪139
+            - list [ref=e85]:
+              - listitem [ref=e86]:
+                - generic [ref=e87]: ✓
+                - generic [ref=e88]: Full Extract
+              - listitem [ref=e89]:
+                - generic [ref=e90]: ✓
+                - generic [ref=e91]: Collateral List
+            - button "Select" [ref=e92] [cursor=pointer]
+          - generic [ref=e93]:
+            - heading "BRONZE" [level=3] [ref=e94]
+            - generic [ref=e95]: ₪189
+            - list [ref=e96]:
+              - listitem [ref=e97]:
+                - generic [ref=e98]: ✓
+                - generic [ref=e99]: All from Silver
+              - listitem [ref=e100]:
+                - generic [ref=e101]: ✓
+                - generic [ref=e102]: Bank of Israel Check
+            - button "Select" [ref=e103] [cursor=pointer]
+          - generic [ref=e104]:
+            - generic [ref=e105]: Most Popular
+            - heading "GOLD" [level=3] [ref=e106]
+            - generic [ref=e107]: ₪299
+            - list [ref=e108]:
+              - listitem [ref=e109]:
+                - generic [ref=e110]: ✓
+                - generic [ref=e111]: All from Bronze
+              - listitem [ref=e112]:
+                - generic [ref=e113]: ✓
+                - generic [ref=e114]: Execution Office
+            - button "Select" [ref=e115] [cursor=pointer]
+          - generic [ref=e116]:
+            - heading "PLATINUM" [level=3] [ref=e117]
+            - generic [ref=e118]: ₪499
+            - list [ref=e119]:
+              - listitem [ref=e120]:
+                - generic [ref=e121]: ✓
+                - generic [ref=e122]: All from Gold
+              - listitem [ref=e123]:
+                - generic [ref=e124]: ✓
+                - generic [ref=e125]: Real Estate
+              - listitem [ref=e126]:
+                - generic [ref=e127]: ✓
+                - generic [ref=e128]: Full History
+            - button "Select" [ref=e129] [cursor=pointer]
+  - contentinfo [ref=e130]:
+    - generic [ref=e131]:
+      - generic [ref=e132]:
+        - img [ref=e133]
+        - generic [ref=e137]: CompanyCheck
+      - generic [ref=e138]:
+        - button "Search" [ref=e139] [cursor=pointer]
+        - button "Pricing" [ref=e140] [cursor=pointer]
+        - button "About" [ref=e141] [cursor=pointer]
+      - paragraph [ref=e142]: © 2025 CompanyCheck. All rights reserved. Data provided by Israeli Government Open Data.
+```

@@ -1,0 +1,123 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6] [cursor=pointer]:
+      - generic [ref=e7]: C
+      - generic [ref=e8]: CompanyCheck
+    - navigation [ref=e9]:
+      - button "Дашборд" [ref=e10] [cursor=pointer]:
+        - img [ref=e12]
+        - generic [ref=e17]: Дашборд
+      - button "Пользователи" [ref=e18] [cursor=pointer]:
+        - img [ref=e20]
+        - generic [ref=e25]: Пользователи
+      - button "Заказы" [ref=e26] [cursor=pointer]:
+        - img [ref=e28]
+        - generic [ref=e32]: Заказы
+      - button "Данные" [ref=e33] [cursor=pointer]:
+        - img [ref=e35]
+        - generic [ref=e39]: Данные
+      - button "AI Manager" [ref=e40] [cursor=pointer]:
+        - img [ref=e42]
+        - generic [ref=e45]: AI Manager
+      - button "UI Editor" [ref=e47] [cursor=pointer]:
+        - img [ref=e49]
+        - generic [ref=e53]: UI Editor
+      - button "Theme Editor" [ref=e54] [cursor=pointer]:
+        - img [ref=e56]
+        - generic [ref=e62]: Theme Editor
+      - button "API Config" [ref=e63] [cursor=pointer]:
+        - img [ref=e65]
+        - generic [ref=e68]: API Config
+      - button "Components" [ref=e69] [cursor=pointer]:
+        - img [ref=e71]
+        - generic [ref=e75]: Components
+      - button "Analytics" [ref=e76] [cursor=pointer]:
+        - img [ref=e78]
+        - generic [ref=e80]: Analytics
+      - button "Developer Mode" [ref=e82] [cursor=pointer]:
+        - img [ref=e84]
+        - generic [ref=e86]: Developer Mode
+      - button "Настройки" [ref=e87] [cursor=pointer]:
+        - img [ref=e89]
+        - generic [ref=e92]: Настройки
+    - button "Главная (Admin)" [ref=e94] [cursor=pointer]:
+      - img [ref=e95]
+      - generic [ref=e98]: Главная (Admin)
+  - generic [ref=e99]:
+    - banner [ref=e100]:
+      - heading "developer" [level=2] [ref=e101]
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - img [ref=e104]
+          - textbox "Поиск..." [ref=e107]
+        - button [ref=e108] [cursor=pointer]:
+          - img [ref=e109]
+    - main [ref=e114]:
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - button "Web IDE" [active] [ref=e118] [cursor=pointer]:
+            - img [ref=e119]
+            - text: Web IDE
+          - button "SQL Console" [ref=e124] [cursor=pointer]:
+            - img [ref=e125]
+            - text: SQL Console
+          - button "Terminal" [ref=e129] [cursor=pointer]:
+            - img [ref=e130]
+            - text: Terminal
+          - button "Monitor" [ref=e132] [cursor=pointer]:
+            - img [ref=e133]
+            - text: Monitor
+          - button "API Playground" [ref=e135] [cursor=pointer]:
+            - img [ref=e136]
+            - text: API Playground
+          - button "Job Queues" [ref=e139] [cursor=pointer]:
+            - img [ref=e140]
+            - text: Job Queues
+          - button "Webhooks" [ref=e142] [cursor=pointer]:
+            - img [ref=e143]
+            - text: Webhooks
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - heading "File Explorer" [level=3] [ref=e149]
+              - button [ref=e150] [cursor=pointer]:
+                - img [ref=e151]
+            - generic [ref=e154]:
+              - generic [ref=e155]:
+                - generic [ref=e156] [cursor=pointer]:
+                  - img [ref=e157]
+                  - img [ref=e159]
+                  - generic [ref=e161]: config/
+                - generic [ref=e162]:
+                  - generic [ref=e163] [cursor=pointer]:
+                    - img [ref=e164]
+                    - generic [ref=e167]: app.json
+                  - generic [ref=e168] [cursor=pointer]:
+                    - img [ref=e169]
+                    - generic [ref=e172]: database.json
+                  - generic [ref=e173] [cursor=pointer]:
+                    - img [ref=e174]
+                    - generic [ref=e177]: redis.json
+              - generic [ref=e179] [cursor=pointer]:
+                - img [ref=e180]
+                - img [ref=e182]
+                - generic [ref=e184]: src/
+              - generic [ref=e186] [cursor=pointer]:
+                - img [ref=e187]
+                - img [ref=e189]
+                - generic [ref=e191]: public/
+          - generic [ref=e192]:
+            - generic [ref=e193]:
+              - generic [ref=e194]: config/app.json
+              - generic [ref=e195]:
+                - button "Save" [ref=e196] [cursor=pointer]:
+                  - img [ref=e197]
+                  - text: Save
+                - button "Delete" [ref=e201] [cursor=pointer]:
+                  - img [ref=e202]
+                  - text: Delete
+            - textbox [ref=e205]: "// config/app.json // Demo file content { \"demo\": true, \"path\": \"config/app.json\", \"note\": \"This is demo data. Connect backend for real content.\" }"
+```

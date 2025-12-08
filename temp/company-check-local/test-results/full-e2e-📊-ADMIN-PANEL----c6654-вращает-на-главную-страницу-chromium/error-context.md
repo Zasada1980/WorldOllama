@@ -1,0 +1,66 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img [ref=e7]
+        - generic [ref=e11]: CompanyCheck
+      - navigation [ref=e12]:
+        - button "Search" [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+          - text: Search
+        - button "Pricing" [ref=e17] [cursor=pointer]
+        - button "About" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - button "ADMIN PANEL" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+          - text: ADMIN PANEL
+        - generic [ref=e24]:
+          - button "HE" [ref=e25] [cursor=pointer]
+          - button "EN" [ref=e26] [cursor=pointer]
+          - button "RU" [ref=e27] [cursor=pointer]
+        - button "Login" [ref=e28] [cursor=pointer]
+  - main [ref=e29]:
+    - generic [ref=e30]:
+      - heading "Check Israeli Companies" [level=1] [ref=e31]
+      - paragraph [ref=e32]: Get full company report in 2 minutes
+      - generic [ref=e33]:
+        - textbox "Enter Company ID (ח.פ) or Name" [ref=e34]
+        - button "Search" [ref=e35] [cursor=pointer]:
+          - img [ref=e36]
+          - text: Search
+      - generic [ref=e39]:
+        - generic [ref=e40]:
+          - img [ref=e41]
+          - heading "Fast" [level=3] [ref=e43]
+          - paragraph [ref=e44]: 2 minutes instead of 2 hours
+        - generic [ref=e45]:
+          - img [ref=e46]
+          - heading "6 Sources" [level=3] [ref=e50]
+          - paragraph [ref=e51]: Data from company registry, etc.
+        - generic [ref=e52]:
+          - img [ref=e53]
+          - heading "Affordable" [level=3] [ref=e55]
+          - paragraph [ref=e56]: ₪139-₪499 instead of ₪200+
+  - contentinfo [ref=e57]:
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - img [ref=e60]
+        - generic [ref=e64]: CompanyCheck
+      - generic [ref=e65]:
+        - button "Search" [ref=e66] [cursor=pointer]
+        - button "Pricing" [ref=e67] [cursor=pointer]
+        - button "About" [ref=e68] [cursor=pointer]
+      - paragraph [ref=e69]: © 2025 CompanyCheck. All rights reserved. Data provided by Israeli Government Open Data.
+  - generic [ref=e71]:
+    - button "×" [ref=e72] [cursor=pointer]
+    - generic [ref=e73]:
+      - generic [ref=e74]: 🔐
+      - heading "Admin Access" [level=2] [ref=e75]
+      - paragraph [ref=e76]: Enter admin password to continue
+    - generic [ref=e77]:
+      - textbox "Admin Password" [active] [ref=e78]
+      - button "Unlock Admin Panel" [ref=e79] [cursor=pointer]
+```
