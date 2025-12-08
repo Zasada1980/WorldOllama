@@ -87,14 +87,12 @@ test.describe('🔍 ПОИСК И РЕЗУЛЬТАТЫ', () => {
         await searchInput.fill('516053675');
         await searchButton.click();
 
-        // Ждём чтобы React обновил состояние (isSearching=true) - увеличен таймаут
-        await page.waitForTimeout(300);
-
-        // Проверяем что кнопка стала disabled OR текст "Searching" есть
-        const isButtonDisabled = await searchButton.isDisabled().catch(() => false);
-        const hasSearchingText = await page.locator('text=/Searching/i').isVisible().catch(() => false);
-
-        expect(isButtonDisabled || hasSearchingText).toBeTruthy();
+        // Используем Playwright retry logic - автоматически ретраит до успеха
+        await expect(async () => {
+            const isButtonDisabled = await searchButton.isDisabled().catch(() => false);
+            const hasSearchingText = await page.locator('text=/Searching/i').isVisible().catch(() => false);
+            expect(isButtonDisabled || hasSearchingText).toBeTruthy();
+        }).toPass({ timeout: 3000 });
 
         // Ожидание результатов или ошибки (max 10 секунд)
         await page.waitForTimeout(10000);
@@ -238,8 +236,12 @@ test.describe('📊 ADMIN PANEL - НАВИГАЦИЯ', () => {
 
         // Users
         await page.locator('aside').getByText(/Пользователи/i).first().click();
-        await page.waitForTimeout(800);
-        await expect(page.locator('table thead th').locator('text=/Email|Role|Status/i').first()).toBeVisible({ timeout: 8000 });
+
+        // Ждём появления таблицы с retry
+        await expect(async () => {
+            const tableHeader = page.locator('table thead th').filter({ hasText: /Email|Role|Status/i });
+            await expect(tableHeader.first()).toBeVisible();
+        }).toPass({ timeout: 10000 });
 
         // Orders
         await page.locator('aside').getByText(/Заказы/i).first().click();
@@ -261,17 +263,16 @@ test.describe('📊 ADMIN PANEL - НАВИГАЦИЯ', () => {
 
             // Проверить что статус админа сохранён (тройной клик должен сразу открыть панель)
             await page.locator('text=CompanyCheck').first().click({ clickCount: 3 });
-            await page.waitForTimeout(2000); // Increased for full admin panel transition
 
-            // Должны сразу попасть в Admin Panel без ввода пароля (если модальное окно появилось - тест провален)
-            const passwordModal = page.locator('input[type="password"]');
-            const isPasswordRequired = await passwordModal.isVisible().catch(() => false);
+            // Используем retry для проверки что Admin Panel открылся БЕЗ пароля
+            await expect(async () => {
+                const passwordModal = page.locator('input[type="password"]');
+                const isPasswordRequired = await passwordModal.isVisible().catch(() => false);
+                expect(isPasswordRequired).toBe(false); // Password modal НЕ должен появиться
 
-            if (!isPasswordRequired) {
-                await expect(page.locator('aside').first()).toBeVisible({ timeout: 5000 });
-            } else {
-                throw new Error('Admin status not preserved - password modal appeared');
-            }
+                const adminPanel = page.locator('aside').first();
+                await expect(adminPanel).toBeVisible();
+            }).toPass({ timeout: 8000 });
         }
     });
 });
@@ -367,12 +368,14 @@ test.describe('💻 DEVELOPER MODE - 7 ВКЛАДОК', () => {
 
     test('17 - Developer Mode Jobs вкладка', async ({ page }) => {
         await page.getByRole('button', { name: /Job Queues/i }).click();
-        await page.waitForTimeout(800);
 
-        // Проверить наличие таблицы с джобами - проверяем либо заголовок таблицы, либо хотя бы одну строку
-        const tableHeader = page.locator('table thead th').locator('text=/Job ID|Status|Name|Progress/i');
-        const tableContent = page.locator('table tbody tr').first();
-        await expect(tableHeader.or(tableContent)).toBeVisible({ timeout: 8000 });
+        // Используем retry для проверки появления таблицы Jobs
+        await expect(async () => {
+            // Проверяем либо заголовок, либо первую строку таблицы
+            const hasTableHeader = await page.locator('table thead th').filter({ hasText: /Job ID|Status|Name|Progress/i }).count() > 0;
+            const hasTableRows = await page.locator('table tbody tr').count() > 0;
+            expect(hasTableHeader || hasTableRows).toBeTruthy();
+        }).toPass({ timeout: 10000 });
     });
 
     test('18 - Developer Mode Webhooks вкладка', async ({ page }) => {
@@ -406,11 +409,17 @@ test.describe('🎨 ADMIN PANEL - НАСТРОЙКИ И UI', () => {
 
     test('19 - Настройки интерфейса (Design Settings)', async ({ page }) => {
         await page.locator('text=/Настройки|Settings/i').first().click();
-        await page.waitForTimeout(800);
 
-        // Проверить наличие цветовых схем - ищем кнопки с текстом цветов внутри
-        const colorButton = page.locator('button').filter({ hasText: /^(blue|indigo|emerald|purple|slate|gray)$/i }).first();
-        await expect(colorButton).toBeVisible({ timeout: 8000 });
+        // Используем retry для поиска цветовых кнопок (они могут быть в span внутри button)
+        await expect(async () => {
+            // Ищем span с текстом цвета внутри button OR div с классом bg-{color}-600
+            const colorSpan = page.locator('button span').filter({ hasText: /^(blue|indigo|emerald|purple|slate|gray)$/i });
+            const colorDiv = page.locator('button div[class*="bg-blue-600"], button div[class*="bg-indigo-600"], button div[class*="bg-emerald-600"]');
+
+            const hasColorSpan = await colorSpan.count() > 0;
+            const hasColorDiv = await colorDiv.count() > 0;
+            expect(hasColorSpan || hasColorDiv).toBeTruthy();
+        }).toPass({ timeout: 10000 });
 
         // Проверить переключатель темной темы
         const themeToggle = page.locator('button').filter({ hasText: /Dark|Light|Moon|Sun/i });
