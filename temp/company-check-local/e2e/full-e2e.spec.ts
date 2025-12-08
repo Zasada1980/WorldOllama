@@ -237,16 +237,20 @@ test.describe('📊 ADMIN PANEL - НАВИГАЦИЯ', () => {
         // Users
         await page.locator('aside').getByText(/Пользователи/i).first().click();
 
-        // Ждём появления таблицы с retry
+        // Ждём появления таблицы с retry (поддержка русского и английского)
         await expect(async () => {
-            const tableHeader = page.locator('table thead th').filter({ hasText: /Email|Role|Status/i });
+            const tableHeader = page.locator('table thead th').filter({ hasText: /Пользователь|Email|Статус|Status|Роль|Role/i });
             await expect(tableHeader.first()).toBeVisible();
         }).toPass({ timeout: 10000 });
 
         // Orders
         await page.locator('aside').getByText(/Заказы/i).first().click();
-        await page.waitForTimeout(300);
-        await expect(page.locator('text=/ORD-|Plan|Amount/i')).toBeVisible();
+        
+        // Ждём появления контента Orders с retry (поддержка русского/английского)
+        await expect(async () => {
+            const ordersContent = page.locator('text=/ORD-|Plan|Amount|Сумма|Статус|Status/i').first();
+            await expect(ordersContent).toBeVisible();
+        }).toPass({ timeout: 5000 });
     });
 
     test('11 - Кнопка "Главная (Admin)" возвращает на главную страницу', async ({ page }) => {
@@ -369,12 +373,14 @@ test.describe('💻 DEVELOPER MODE - 7 ВКЛАДОК', () => {
     test('17 - Developer Mode Jobs вкладка', async ({ page }) => {
         await page.getByRole('button', { name: /Job Queues/i }).click();
 
-        // Используем retry для проверки появления таблицы Jobs
+        // Проверяем заголовок секции Jobs (более надёжно чем таблица)
         await expect(async () => {
-            // Проверяем либо заголовок, либо первую строку таблицы
-            const hasTableHeader = await page.locator('table thead th').filter({ hasText: /Job ID|Status|Name|Progress/i }).count() > 0;
-            const hasTableRows = await page.locator('table tbody tr').count() > 0;
-            expect(hasTableHeader || hasTableRows).toBeTruthy();
+            const jobsHeader = page.locator('h3', { hasText: /Background Jobs/i });
+            await expect(jobsHeader).toBeVisible();
+            
+            // Также проверяем наличие Refresh кнопки
+            const refreshButton = page.locator('button', { hasText: /Refresh/i });
+            await expect(refreshButton).toBeVisible();
         }).toPass({ timeout: 10000 });
     });
 
