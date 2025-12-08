@@ -36,8 +36,8 @@ export default defineConfig({
 
     // Общие настройки для всех проектов
     use: {
-        // Базовый URL (production сервер)
-        baseURL: 'http://46.224.36.109',
+        // Базовый URL (локальный dev сервер в CI, production локально)
+        baseURL: process.env.CI ? 'http://localhost:5173' : 'http://46.224.36.109',
 
         // Скриншоты при падении тестов
         screenshot: 'only-on-failure',
@@ -83,6 +83,11 @@ export default defineConfig({
         },
     ],
 
-    // Веб-сервер не нужен (тестируем production)
-    // webServer: undefined,
+    // Автоматический запуск dev сервера в CI
+    webServer: process.env.CI ? {
+        command: 'npm run dev',
+        url: 'http://localhost:5173',
+        reuseExistingServer: false,
+        timeout: 120 * 1000, // 2 минуты на старт
+    } : undefined,
 });
