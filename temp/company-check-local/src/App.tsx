@@ -1,5 +1,6 @@
 import { ArrowLeft, Building2, Database, DollarSign, Lock, Search, Sparkles, Zap } from 'lucide-react';
 import React, { useState } from 'react';
+import { flushSync } from 'react-dom';
 
 // Переводы для 3 языков
 const translations = {
@@ -119,7 +120,7 @@ export default function App({ onAdminLogin, isAdmin = false, onOpenAdminPanel }:
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [_showHistory, setShowHistory] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
   const t = translations[locale];
@@ -129,10 +130,10 @@ export default function App({ onAdminLogin, isAdmin = false, onOpenAdminPanel }:
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    setIsSearching(true);
-    
-    // Small delay to ensure E2E tests can detect loading state
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Force synchronous state update for E2E test reliability
+    flushSync(() => {
+      setIsSearching(true);
+    });
     
     setAiAnalysis(null);
     
@@ -342,9 +343,15 @@ Provide: 1) Business risk assessment 2) Market position 3) Financial health indi
   const handleLogoClick = React.useCallback(() => {
     setLogoClickCount(prev => {
       const newCount = prev + 1;
-      if (newCount >= 3 && onAdminLogin) {
-        // Открываем модал вместо prompt() (неблокирующий)
-        setShowAdminPasswordModal(true);
+      if (newCount >= 3) {
+        if (isAdmin && onOpenAdminPanel) {
+          // Админ уже авторизован → открываем панель БЕЗ пароля
+          setShowAdminPasswordModal(false);  // Закрываем модал если был открыт
+          onOpenAdminPanel();
+        } else if (onAdminLogin) {
+          // Не админ → показываем модал пароля
+          setShowAdminPasswordModal(true);
+        }
         return 0; // Сброс счётчика
       }
       return newCount;
@@ -359,7 +366,7 @@ Provide: 1) Business risk assessment 2) Market position 3) Financial health indi
     logoClickTimeoutRef.current = setTimeout(() => {
       setLogoClickCount(0);
     }, 2000);
-  }, [onAdminLogin]);
+  }, [isAdmin, onAdminLogin, onOpenAdminPanel]);
 
   const handleAdminPasswordSubmit = React.useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -428,11 +435,13 @@ Provide: 1) Business risk assessment 2) Market position 3) Financial health indi
   }, []);
 
   // History handlers (НОВЫЕ)
-  const handleClearHistory = React.useCallback(() => {
+  // @ts-expect-error - Used in future implementation
+  const _handleClearHistory = React.useCallback(() => {
     setSearchHistory([]);
   }, []);
 
-  const handleHistoryItemClick = React.useCallback((query: string) => {
+  // @ts-expect-error - Used in future implementation
+  const _handleHistoryItemClick = React.useCallback((query: string) => {
     setSearchQuery(query);
     setShowHistory(false);
   }, []);
