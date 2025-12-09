@@ -107,7 +107,19 @@ interface Company {
   capital: number;
 }
 
-export default function App({ onAdminLogin, isAdmin = false, onOpenAdminPanel }: { onAdminLogin?: (password: string) => boolean; isAdmin?: boolean; onOpenAdminPanel?: () => void }) {
+export default function App({ 
+  onAdminLogin, 
+  isAdmin = false, 
+  onOpenAdminPanel,
+  showPasswordModal: externalPasswordModal = false,
+  onClosePasswordModal
+}: { 
+  onAdminLogin?: (password: string) => boolean; 
+  isAdmin?: boolean; 
+  onOpenAdminPanel?: () => void;
+  showPasswordModal?: boolean;
+  onClosePasswordModal?: () => void;
+}) {
   const [locale, setLocale] = useState<'he' | 'en' | 'ru'>('en');
   const [view, setView] = useState<'home' | 'preview' | 'admin'>('home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -339,15 +351,23 @@ Provide: 1) Business risk assessment 2) Market position 3) Financial health indi
   const logoClickTimeoutRef = React.useRef<number | null>(null);
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
+
+  // Синхронизация с внешним состоянием модаля (из main.tsx через URL routing)
+  React.useEffect(() => {
+    setShowAdminPasswordModal(externalPasswordModal);
+  }, [externalPasswordModal]);
   
   const handleLogoClick = React.useCallback(() => {
     setLogoClickCount(prev => {
       const newCount = prev + 1;
       if (newCount >= 3) {
-        if (isAdmin && onOpenAdminPanel) {
+        // ВАЖНО: проверяем isAdmin ПЕРВЫМ (независимо от наличия callbacks)
+        if (isAdmin) {
           // Админ уже авторизован → открываем панель БЕЗ пароля
           setShowAdminPasswordModal(false);  // Закрываем модал если был открыт
-          onOpenAdminPanel();
+          if (onOpenAdminPanel) {
+            onOpenAdminPanel();
+          }
         } else if (onAdminLogin) {
           // Не админ → показываем модал пароля
           setShowAdminPasswordModal(true);
@@ -883,6 +903,10 @@ Provide: 1) Business risk assessment 2) Market position 3) Financial health indi
               onClick={() => {
                 setShowAdminPasswordModal(false);
                 setAdminPasswordInput('');
+                // Если закрытие управляется из main.tsx (URL routing)
+                if (onClosePasswordModal) {
+                  onClosePasswordModal();
+                }
               }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl"
             >

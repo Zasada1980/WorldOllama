@@ -254,31 +254,28 @@ test.describe('📊 ADMIN PANEL - НАВИГАЦИЯ', () => {
         }).toPass({ timeout: 5000 });
     });
 
-    test('11 - Кнопка "Главная (Admin)" возвращает на главную страницу', async ({ page }) => {
-        // Найти кнопку возврата на главную (она в aside с текстом "Главная (Admin)")
-        const homeButton = page.locator('aside').getByText(/Главная.*Admin/i);
+    test('11 - URL /admin открывает админ панель БЕЗ пароля для авторизованного', async ({ page }) => {
+        // Сначала авторизуемся как админ через sessionStorage
+        await page.goto('http://localhost:5173/');
+        await page.evaluate(() => {
+            sessionStorage.setItem('admin_authenticated', 'true');
+        });
 
-        if (await homeButton.isVisible()) {
-            await homeButton.click();
-            await page.waitForTimeout(1000);
+        // Переходим на /admin URL
+        await page.goto('http://localhost:5173/admin');
 
-            // Проверить что вернулись на главную страницу
-            await expect(page.locator('input[type="text"]').first()).toBeVisible();
-            await expect(page.locator('text=CompanyCheck').first()).toBeVisible();
+        // Проверяем что админ-панель открылась БЕЗ модаля пароля
+        await expect(async () => {
+            const passwordModal = page.locator('input[type="password"]');
+            const isPasswordRequired = await passwordModal.isVisible().catch(() => false);
+            expect(isPasswordRequired).toBe(false); // Password modal НЕ должен появиться
 
-            // Проверить что статус админа сохранён (тройной клик должен сразу открыть панель)
-            await page.locator('text=CompanyCheck').first().click({ clickCount: 3 });
+            const adminPanel = page.locator('aside').first();
+            await expect(adminPanel).toBeVisible();
+        }).toPass({ timeout: 5000 });
 
-            // Используем retry для проверки что Admin Panel открылся БЕЗ пароля
-            await expect(async () => {
-                const passwordModal = page.locator('input[type="password"]');
-                const isPasswordRequired = await passwordModal.isVisible().catch(() => false);
-                expect(isPasswordRequired).toBe(false); // Password modal НЕ должен появиться
-
-                const adminPanel = page.locator('aside').first();
-                await expect(adminPanel).toBeVisible();
-            }).toPass({ timeout: 8000 });
-        }
+        // Проверяем что URL = /admin
+        expect(page.url()).toBe('http://localhost:5173/admin');
     });
 });
 
